@@ -6,10 +6,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <string.h>
 
-#define PORT 1010
 #define PACKET_LIMIT 2048
 #define CONNECTIONS_LIMIT 2048
 
