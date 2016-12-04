@@ -1,6 +1,5 @@
 #include "util.hpp"
 
-
 int main(int argc, char** argv){
 	int serverfd, clientfd, num_clients = 1, num = 1;
 	long rlen = 1, wlen;
