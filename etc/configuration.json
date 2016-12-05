@@ -1,0 +1,4 @@
+{
+	"server_hostname": "localhost",
+	"public_directory": "/usr/share/nginx/html";
+}
