@@ -12,6 +12,7 @@ Too many C++ projects became a library. Currently a set of similarly designed ne
 6. [com](doc/comd.md)
 7. [comd](doc/comd.md)
 8. [read-stdin-tty](doc/comd.md)
+9. [pgsql-model-test](doc/pgsql-model.md)
 
 ## Notes
 
