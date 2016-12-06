@@ -161,5 +161,5 @@ int main(int argc, char** argv){
 		auto thread = std::thread(handle_connection, socketfd, hit);
 		thread.detach();
 	}
-	return 0;
+	// Should not end.
 }
