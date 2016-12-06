@@ -16,7 +16,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "ponal.hpp"
+#include "simple-tcp-client.hpp"
+#include "util.hpp"
 
 int get_line(std::istream& is, std::string& result){
 	std::streambuf* sb = is.rdbuf();
@@ -56,10 +57,10 @@ int main(int argc, char** argv){
 		}
 	}
 
-	Ponal ponal(port, hostname);
+	SimpleTcpClient client(hostname, port);
 
 	std::string request;
-	std::string response;
+	char response[PACKET_LIMIT];
 	while(1){
 		if(terminal)
 			std::cout << "> ";
@@ -68,7 +69,7 @@ int main(int argc, char** argv){
 			continue;
 		}
 
-		response = ponal.Communicate(request.c_str(), request.length());
+		client.communicate(request.c_str(), request.length(), response);
 
 		std::cout << response;
 		if(terminal)

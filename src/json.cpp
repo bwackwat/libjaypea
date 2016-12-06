@@ -236,8 +236,8 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 	}
 }
 
-JsonObject::JsonObject(enum JsonType type)
-:type(type){}
+JsonObject::JsonObject(enum JsonType new_type)
+:type(new_type){}
 
 JsonObject::JsonObject()
 :type(NOTYPE){}

@@ -20,16 +20,8 @@
 #include <arpa/inet.h>
 
 #include "util.hpp"
+#include "comd-util.hpp"
 #include "simple-tcp-server.hpp"
-
-int strict_compare(const char* first, const char* second, int count){
-	for(int i = 0; i < count; ++i){
-		if(first[i] != second[i]){
-			return 1;
-		}
-	}
-	return 0;
-}
 
 int shell_routine(int socketfd){
 	int pid;

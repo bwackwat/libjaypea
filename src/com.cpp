@@ -20,9 +20,10 @@
 #include <arpa/inet.h>
 
 #include "util.hpp"
+#include "comd-util.hpp"
+#include "simple-tcp-client.hpp"
 
-int socketfd;
-
+/*
 void send_sigint(uint8_t s){
 	DEBUG("CRTL C TO COMD")
 	uint8_t byte = s;
@@ -30,6 +31,7 @@ void send_sigint(uint8_t s){
 		std::cout << "Uh oh, write error." << std::endl;
 	}
 }
+*/
 
 bool stdin_available(){
 	struct timeval tv;
@@ -99,14 +101,12 @@ int ttyreset(int fd){
 }
 
 void sigcatch(int sig){
-	DEBUG("caught" << sig << " signal!")
+	PRINT("caught " << sig << " signal!")
 	ttyreset(STDIN_FILENO);
 	exit(0);
 }
 
-std::string hostname = "localhost";
-
-int shell_routine(int socketfd){
+int shell_routine(std::string hostname, int socketfd){
 	ssize_t res;
 	char packet[PACKET_LIMIT];
 	std::string res_data;
@@ -177,18 +177,15 @@ int shell_routine(int socketfd){
 }
 
 int main(int argc, char** argv){
-	int res;
 	ssize_t len;
-	struct hostent *host;	
-	struct sockaddr_in serv_addr;
 	char packet[PACKET_LIMIT];
 
 	std::string line;
 	std::string req_data;
 	std::string res_data;
 
-	std::string hostname = "localhost";
 	uint16_t port = 3424;
+	std::string hostname = "localhost";
 	std::string keyfile = "etc/keyfile";
 	std::string file_path;
 	enum Routine routine = SHELL;
@@ -227,38 +224,19 @@ int main(int argc, char** argv){
 		return 1;
 	}
 
-	if((socketfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-		std::cout << "System call to socket failed!\n" << socketfd << std::endl;
-		return 1;
-	}
-
-	if((host = gethostbyname(hostname.c_str())) == 0){
-		std::cout << "System call to gethostbyname failed!\n";
-		std::cout << hostname << std::endl;
-		return 1;
-	}
-
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr = *reinterpret_cast<struct in_addr *>(host->h_addr);
-	serv_addr.sin_port = htons(port);
-	bzero(&(serv_addr.sin_zero), 8);
-
-	if((res = connect(socketfd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof(serv_addr))) < 0){
-		std::cout << "System call to connect failed!\n" << res << errno << std::endl;
-		return 1;
-	}
+	SimpleTcpClient client(hostname, port);
 
 	// Handshake step 1:
 	// Identify yourself!
 	// No password protection; basically verifying the cypher.
 
-	if(send(socketfd, IDENTITY)){
+	if(send(client.fd, IDENTITY)){
 		std::cout << "Uh oh, send identity error." << std::endl;
 		return 1;
 	}
 
 	packet[0] = 0;
-	if((len = read(socketfd, packet, PACKET_LIMIT)) < 0){
+	if((len = read(client.fd, packet, PACKET_LIMIT)) < 0){
 		std::cout << "Uh oh, read verification error." << std::endl;
 		return 1;
 	}
@@ -270,13 +248,13 @@ int main(int argc, char** argv){
 	// Select a method!
 	// Default method, shell usage.
 
-	if(send(socketfd, ROUTINES[routine])){
+	if(send(client.fd, ROUTINES[routine])){
 		std::cout << "Uh oh, send routine error." << std::endl;
 		return 1;
 	}
 
 	packet[0] = 0;
-	if((len = read(socketfd, packet, PACKET_LIMIT)) < 0){
+	if((len = read(client.fd, packet, PACKET_LIMIT)) < 0){
 		std::cout << "Uh oh, read method error." << std::endl;
 		return 1;
 	}
@@ -287,12 +265,12 @@ int main(int argc, char** argv){
 	// Handshake complete !
 
 	if(routine == SEND_FILE){
-		if(send_file_routine(socketfd, file_path)){
+		if(send_file_routine(client.fd, file_path)){
 			std::cout << "Uh oh, send file routine error!" << std::endl;
 			return 1;
 		}
 	}else{
-		if(shell_routine(socketfd)){
+		if(shell_routine(hostname, client.fd)){
 			std::cout << "Uh oh, shell routine error!" << std::endl;
 			return 1;
 		}

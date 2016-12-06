@@ -18,6 +18,7 @@
 #include <openssl/err.h>
 
 #include "json.hpp"
+#include "simple-tcp-server.hpp"
 
 #define BUFFER_LIMIT 8192
 #define HTTP_404 "<h1>404 Not Found</h1>"
@@ -148,12 +149,9 @@ std::string routes(JsonObject* json){
 }
 
 pid_t http_redirect(){
-	int serverfd, clientfd;
+	int clientfd;
 	ssize_t len;
 	pid_t pid;
-	struct sockaddr_in addr;
-	struct sockaddr_in client_addr;
-	uint addr_len = sizeof(addr);
 	char* buffer[BUFFER_LIMIT];
 	
 	// Trivial 301 Redirect.	
@@ -177,48 +175,35 @@ pid_t http_redirect(){
 		"\n\n" +
 		response_body;
 	
-	addr.sin_family = AF_INET;
-        addr.sin_port = htons(80);
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
 	if((pid = fork()) < 0){
 		std::cout << "Uh oh, fork error!" << std::endl;
 		return -1;
 	}else if(pid > 0){
-	        if((serverfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-	                std::cout << "Uh oh, redirect socket error!" << std::endl;
-	                return -1;
-	        }
-	
-	        if(bind(serverfd, reinterpret_cast<struct sockaddr*>(&addr), addr_len) < 0){
-	                std::cout << "Uh oh, redirect bind error!" << std::endl;
-	                return -1;
-	        }
-	
-	        if(listen(serverfd, 5) < 0){
-	                std::cout << "Uh oh, redirect listen error!" << std::endl;
-	                return -1;
-	        }
-	
-	        while(1){
-	                if((clientfd = accept(serverfd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len)) < 0){
-	                        std::cout << "Uh oh, redirect accept error!" << std::endl;
-	                        continue;
-	                }
-			if((len = read(clientfd, buffer, BUFFER_LIMIT)) < 0){
-				std::cout << "Uh oh, redirect read error!" << std::endl;
-				continue;
+		try{
+			SimpleTcpServer server(80);
+		        while(1){
+				clientfd = server.accept_connection();
+				if((len = read(clientfd, buffer, BUFFER_LIMIT)) < 0){
+					std::cout << "Uh oh, redirect read error!" << std::endl;
+					continue;
+				}
+				buffer[len] = 0;
+				std::cout << "REDI:" << *buffer << std::endl;
+				if((len = write(clientfd, response.c_str(), response.length())) < 0){
+					std::cout << "Uh oh, redirect write error!" << std::endl;
+					continue;
+				}
+				if(close(clientfd) < 0){
+					std::cout << "Uh oh, redirect close error!" << std::endl;
+					continue;
+				}
 			}
-			buffer[len] = 0;
-			std::cout << "REDI:" << *buffer << std::endl;
-			if((len = write(clientfd, response.c_str(), response.length())) < 0){
-				std::cout << "Uh oh, redirect write error!" << std::endl;
-				continue;
+		}catch(std::exception& e){
+			std::cout << e.what() << std::endl;
+			if(kill(pid, SIGTERM) < 0){
+				std::cout << "Kill redirect fork error." << std::endl;
 			}
-			if(close(clientfd) < 0){
-				std::cout << "Uh oh, redirect close error!" << std::endl;
-				continue;
-			}
+			return 1;
 		}
 	}
 
@@ -226,53 +211,6 @@ pid_t http_redirect(){
 }		
 
 pid_t http_redirect_pid;
-
-int init(struct sockaddr_in* addr){
-	int serverfd;
-
-	JsonObject* routes_object = new JsonObject();
-        routes_object->type = OBJECT;
-        routes_object->objectValues["result"] = new JsonObject();
-        routes_object->objectValues["result"]->type = STRING;
-        routes_object->objectValues["result"]->stringValue = "This is a list of the routes and their required JSON parameters";
-        JsonObject* routes_sub_object = new JsonObject();
-        routes_sub_object->type = OBJECT;
-        for(auto iter = routemap.begin(); iter != routemap.end(); ++iter){
-                routes_sub_object->objectValues[iter->first] = new JsonObject();
-                routes_sub_object->objectValues[iter->first]->type = ARRAY;
-                for(auto &field : required_fields[iter->first]){
-                        JsonObject* array_item = new JsonObject();
-                        array_item->type = STRING;
-                        array_item->stringValue = field.first;
-                        routes_sub_object->objectValues[iter->first]->arrayValues.push_back(array_item);
-                }
-        }
-        routes_object->objectValues["routes"] = routes_sub_object;
-        routes_string = routes_object->stringify(true);
-        delete routes_object;
-
-	addr->sin_family = AF_INET;
-        addr->sin_port = htons(443);
-        addr->sin_addr.s_addr = htonl(INADDR_ANY);
-
-        if((serverfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-                std::cout << "Uh oh, socket error!" << std::endl;
-                return -1;
-        }
-
-        if(bind(serverfd, reinterpret_cast<struct sockaddr*>(addr), sizeof(struct sockaddr)) < 0){
-		perror("bind");
-                std::cout << "Uh oh, bind error!" << std::endl;
-                return -1;
-        }
-
-        if(listen(serverfd, 10) < 0){
-                std::cout << "Uh oh, listen error!" << std::endl;
-                return -1;
-        }
-
-	return serverfd;
-}
 
 int ssl_send(SSL* ssl, const char* buffer, int length){
 	int len = SSL_write(ssl, buffer, length);
@@ -312,11 +250,8 @@ int main(int argc, char **argv){
 		return 1;
 	}
 
-	int serverfd, clientfd, res;
+	int clientfd, res;
 	ssize_t len;
-	struct sockaddr_in serv_addr;
-	struct sockaddr_in client_addr;
-	uint addr_len = sizeof(client_addr);
 	struct stat route_stat;
 	SSL_CTX* ctx = 0;
 	SSL* ssl = 0;
@@ -356,27 +291,37 @@ int main(int argc, char **argv){
 
 	/*
 	 *
-	 * NOTE: I could not refactor the SSL init code above into init()...
+	 * NOTE: I could not refactor the SSL init code above into another function...
 	 * There was an undetermined issue with this, causing SSL_new to fail.
-	 * I believe it has to do with SSL_library_init(); more experiments must be made.
+	 * I believe it has to do with SSL_library_init() creating scoped variables.
 	 *
 	 */
 
-	if((serverfd = init(&serv_addr)) < 0){
-		std::cout << "Couldn't initialize." << std::endl;
-		if(kill(http_redirect_pid, SIGTERM) < 0){
-			std::cout << "Kill redirect fork error." << std::endl;
+	JsonObject* routes_object = new JsonObject();
+	routes_object->type = OBJECT;
+	routes_object->objectValues["result"] = new JsonObject();
+	routes_object->objectValues["result"]->type = STRING;
+	routes_object->objectValues["result"]->stringValue = "This is a list of the routes and their required JSON parameters";
+	JsonObject* routes_sub_object = new JsonObject();
+	routes_sub_object->type = OBJECT;
+	for(auto iter = routemap.begin(); iter != routemap.end(); ++iter){
+		routes_sub_object->objectValues[iter->first] = new JsonObject();
+		routes_sub_object->objectValues[iter->first]->type = ARRAY;
+		for(auto &field : required_fields[iter->first]){
+			JsonObject* array_item = new JsonObject();
+			array_item->type = STRING;
+			array_item->stringValue = field.first;
+			routes_sub_object->objectValues[iter->first]->arrayValues.push_back(array_item);
 		}
-		return 1;
 	}
+	routes_object->objectValues["routes"] = routes_sub_object;
+	routes_string = routes_object->stringify(true);
+	delete routes_object;
 
+	try{
+		SimpleTcpServer server(443);
 	while(1){
-		std::cout << "Accepting...\n";
-
-		if((clientfd = accept(serverfd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len)) < 0){
-			std::cout << "Uh oh, accept error!" << std::endl;
-			break;
-		}
+		clientfd = server.accept_connection();
 
 		if((ssl = SSL_new(ctx)) == 0){
 			std::cout << "SSL_new error!" << std::endl;
@@ -530,8 +475,12 @@ int main(int argc, char **argv){
 		SSL_free(ssl);
 		close(clientfd);
 	}
-
-	close(serverfd);
+	}catch(std::exception& e){
+		std::cout << e.what() << std::endl;
+		if(kill(http_redirect_pid, SIGTERM) < 0){
+			std::cout << "Kill redirect fork error." << std::endl;
+		}
+	}
 	SSL_CTX_free(ctx);
 	EVP_cleanup();
 }

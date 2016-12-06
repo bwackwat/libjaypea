@@ -1,27 +1,13 @@
 #include <iostream>
 
 #include "json.hpp"
-
-size_t strict_compare(std::string first, std::string second){
-	for(size_t i = 0; i < first.length() && i < second.length(); ++i){
-		if(first[i] != second[i]){
-			return i;
-		}
-	}
-	if(first.length() < second.length()){
-		return first.length() - 1;
-	}else if(first.length() > second.length()){
-		return second.length() - 1;
-	}
-	return 0;
-}
+#include "util.hpp"
 
 void test(std::string str){
 	JsonObject object;
 	std::string objectString;
 	JsonObject verify;
 	std::string verifyString;
-	size_t result;
 
 	std::cout << "----------------------------------------------\n";
 	std::cout << "Parsing:\n" << str << '\n';
@@ -38,8 +24,8 @@ void test(std::string str){
 
 	//std::cout << "\n\n" << objectString << "\n\n" << verifyString << "\n\n";
 
-	if((result = strict_compare(objectString, verifyString)) != 0){
-		std::cout << "Verification Failure on:\n" << (objectString.c_str() + result) << '\n';
+	if(strict_compare_inequal(objectString.c_str(), verifyString.c_str())){
+		std::cout << "Verification Failure...\n";
 	}else{
 		std::cout << "Verification Success!\n";
 	}

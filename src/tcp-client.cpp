@@ -1,11 +1,8 @@
 #include "util.hpp"
 
 int main(int argc, char** argv){
-	int serverfd, clientfd, num_clients = 1, num = 1;
+	int clientfd, num_clients = 1, num = 1;
 	long rlen = 1, wlen;
-	struct sockaddr_in client_addr;
-	struct hostent* host;
-	uint addr_len = sizeof(client_addr);
 	std::string hostname = "localhost";
 	uint16_t port = 80;
 

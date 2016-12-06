@@ -46,7 +46,7 @@ void PgSqlModel::Insert(std::vector<std::string> values){
 	txn.commit();
 }
 
-PgSqlModel::PgSqlModel(std::string conn, std::string table, std::vector<std::string> keys)
-:conn(conn),
-table(table),
-keys(keys){}
+PgSqlModel::PgSqlModel(std::string new_conn, std::string new_table, std::vector<std::string> new_keys)
+:conn(new_conn),
+table(new_table),
+keys(new_keys){}

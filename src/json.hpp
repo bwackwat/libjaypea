@@ -35,7 +35,7 @@ public:
 	const char* parse(const char* str);
 	std::string stringify(bool pretty = false, size_t depth = 0);
 
-	JsonObject(enum JsonType type);
+	JsonObject(enum JsonType new_type);
 	JsonObject();
 	~JsonObject();
 };
