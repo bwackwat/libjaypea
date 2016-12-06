@@ -28,7 +28,7 @@
 #define PRINT(msg) std::cout << msg << std::endl;
 #define ERROR(msg) std::cout << "Uh oh, " << msg << " error." << std::endl;
 
-#define DO_DEBUG
+//#define DO_DEBUG
 #if defined(DO_DEBUG)
 	#define DEBUG(msg) std::cout << msg << std::endl;
 	#define DEBUG_SLEEP(sec) sleep(sec);

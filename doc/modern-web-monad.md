@@ -2,6 +2,8 @@
 
 An HTTPS server with a built-in JSON API for modern web applications in simple Linux environments.
 
+## Features
+
 * Forks an HTTP server which simply redirects all traffic to the HTTPS site.
 * Requests are parsed for:
   * A URL route, e.g. "/api/user".

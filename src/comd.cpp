@@ -20,6 +20,7 @@
 #include <arpa/inet.h>
 
 #include "util.hpp"
+#include "simple-tcp-server.hpp"
 
 int strict_compare(const char* first, const char* second, int count){
 	for(int i = 0; i < count; ++i){
@@ -136,11 +137,8 @@ int shell_routine(int socketfd){
 }
 
 int main(int argc, char** argv){
-	int listenfd, socketfd, hit;
+	int socketfd;
 	ssize_t res;
-	struct sockaddr_in cli_addr;
-	struct sockaddr_in serv_addr;
-	socklen_t length = sizeof(cli_addr);
 	char packet[PACKET_LIMIT];
 
 	std::string req_data;
@@ -175,39 +173,16 @@ int main(int argc, char** argv){
 		return 1;
 	}
 
-	if((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-		std::cout << "System call to socket failed!" << std::endl << listenfd;
-		return 1;
-	}
+	SimpleTcpServer server(port, 0);
 
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	serv_addr.sin_port = htons(port);
-
-	if((hit = bind(listenfd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof(serv_addr))) < 0){
-		std::cout << "System call to bind failed!" << std::endl << hit << errno;
-		return 1;
-	}
-
-	if(listen(listenfd, 0) < 0){
-		std::cout << "System call to listen failed!" << std::endl;
-		return 1;
-	}
-
-	std::cout << "comd running on port " << port << "." << std::endl;
-
-	for(hit = 1;; hit++){
+	while(1){
 		// Easy DDOS protection. (This is not a multi-user tool.)
-		if(hit != 1){
+		if(server.hit != 1){
 			sleep(10);
 		}
 		std::cout << "Accepting a new connection." << std::endl;
-		if((socketfd = accept(listenfd, reinterpret_cast<struct sockaddr*>(&cli_addr), &length)) < 0){
-			std::cout << "System call to accept failed!" << std::endl;
-			return 1;
-		}
 
-		std::cout << "comd connection #" << hit << " engaged." << std::endl;
+		socketfd = server.accept_connection();
 
 		// Handshake step 1:
 		// Check that identity!
@@ -303,7 +278,7 @@ int main(int argc, char** argv){
 			}
 		}
 
-		std::cout << "Connection #" << hit << " is done." << std::endl;
+		std::cout << "Connection #" << server.hit << " is done." << std::endl;
 		close(socketfd);
 	}
 	// Should not end.
