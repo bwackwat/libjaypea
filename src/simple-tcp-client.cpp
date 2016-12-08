@@ -3,6 +3,8 @@
 #include <cstring>
 #include <iostream>
 #include <csignal>
+#include <typeinfo>
+#include <cstdio>
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -23,10 +25,11 @@
 #include "util.hpp"
 #include "simple-tcp-client.hpp"
 
-SimpleTcpClient::SimpleTcpClient(std::string new_hostname, uint16_t new_port)
+SimpleTcpClient::SimpleTcpClient(std::string new_hostname, uint16_t new_port, bool new_verbose)
 :hostname(new_hostname),
 port(new_port),
-name("SimpleTcpClient"){
+name("SimpleTcpClient"),
+verbose(new_verbose){
 	if((this->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		throw std::runtime_error(this->name + " socket");
 	}
@@ -42,7 +45,28 @@ name("SimpleTcpClient"){
 	if(connect(this->fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(server_addr)) < 0){
 		throw std::runtime_error(this->name + " connect");
 	}
-	PRINT(this->name << " connected on " << this->port)
+	if(this->verbose){
+		PRINT(this->name << " connected on " << this->port)
+	}
+}
+
+SimpleTcpClient::SimpleTcpClient(uint16_t new_port, struct in_addr addr, bool new_verbose)
+:name("SimpleTcpClient"),
+verbose(new_verbose){
+	struct sockaddr_in server_addr;
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr = addr;
+	server_addr.sin_port = htons(new_port);
+	bzero(&(server_addr.sin_zero), 8);
+	if((this->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+		throw std::runtime_error(this->name + " socket");
+	}
+	if(connect(this->fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(struct sockaddr_in)) < 0){
+		throw std::runtime_error(this->name + " connect");
+	}
+	if(this->verbose){
+		PRINT(this->name << " connected")
+	}
 }
 
 void SimpleTcpClient::communicate(const char* request, size_t length, char* response){
@@ -57,6 +81,9 @@ void SimpleTcpClient::communicate(const char* request, size_t length, char* resp
 }
 
 SimpleTcpClient::~SimpleTcpClient(){
+	if(this->verbose){
+		PRINT(this->name + " delete")
+	}
 	if(close(this->fd) < 0){
 		throw std::runtime_error(this->name + " close");
 	}

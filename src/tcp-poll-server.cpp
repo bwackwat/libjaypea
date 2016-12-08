@@ -42,7 +42,7 @@ int main(int argc, char** argv){
 		return 1;
 	}
 
-	if(listen(serverfd, 32) < 0){
+	if(listen(serverfd, 64) < 0){
 		ERROR("listen")
 		return 1;
 	}

@@ -152,7 +152,7 @@ pid_t http_redirect(){
 	int clientfd;
 	ssize_t len;
 	pid_t pid;
-	char* buffer[BUFFER_LIMIT];
+	char buffer[BUFFER_LIMIT];
 	
 	// Trivial 301 Redirect.	
 	std::string response_body = "<html>\n"
@@ -188,7 +188,7 @@ pid_t http_redirect(){
 					continue;
 				}
 				buffer[len] = 0;
-				std::cout << "REDI:" << *buffer << std::endl;
+				std::cout << "REDI:" << buffer << '|' << len << std::endl;
 				if((len = write(clientfd, response.c_str(), response.length())) < 0){
 					std::cout << "Uh oh, redirect write error!" << std::endl;
 					continue;
