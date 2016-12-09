@@ -52,8 +52,6 @@ public:
 	static void define_argument(std::string name, bool* value, std::vector<std::string> flags = {}, bool required = false);
 	static void parse_arguments(int argc, char** argv, std::string description);
 
-//	static void initialize_arguments(int argic, char** argv, std::vector<std::tuple<enum ArgumentType, std::string, void*, bool>> arguments, std::string description);
-
 	static bool strict_compare_inequal(const char* forst, const char* second, int count = -1);
 };
 

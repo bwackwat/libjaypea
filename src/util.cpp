@@ -15,53 +15,6 @@
 
 #include "util.hpp"
 
-/*void Util::initialize_arguments(int argc, char** argv, std::vector<std::tuple<enum ArgumentType, std::string, void*, bool>> arguments, std::string description){
-	PRINT("Arguments:")
-	for(int i = 0; i < argc ++i){
-		PRINT(argv[i])
-	}	
-	for(int i = 0; i < argc ++i){
-		if(std::strcmp(argv[i], "--help") == 0 ||
-		std::strcmp(argv[i], "-h") == 0){
-			PRINT("Usage: ")
-			for(auto& argument : arguments){
-				if(std::get<0>(argument) == ARG_BOOLEAN){
-					PRINT("\t--" << std::get<1>(argument))
-				}else{
-					PRINT("\t--" << std::get<1>(argument) << " <" << std::get<1>(argument) << '>')
-				}
-			}
-			PRINT("\n\n" << description)
-			exit(0);
-		}
-		for(auto& argument : arguments){
-			std::string arg_string = "--" + std::get<1>(argument);
-			if(std::strcmp(argv[i], arg_string.c_str()) == 0){
-				switch(std::get<0>(argument)){
-				case ARG_STRING:
-					if(argc > i){
-						*std::get<2>(argument) = std::string(argv[i + 1]);
-					}else{
-						PRINT("No value for " << std::get<1>(argument))
-					}
-					break;
-				case ARG_INTEGER:
-					if(argc > i){
-						*std::get<2>(argument) = std::stoi(argv[i + 1]);
-					}else{
-						PRINT("No value for " << std::get<1>(argument))
-					}
-					break;
-				case ARG_BOOLEAN:
-					*std::get<2>(argument) = true;
-					break;
-				}
-				break;
-			}
-		}
-	}
-}*/
-
 std::map<std::string, std::reference_wrapper<std::string>> Util::string_arguments;
 std::map<std::string, int*> Util::int_arguments;
 std::map<std::string, bool*> Util::bool_arguments;
@@ -93,98 +46,93 @@ void Util::define_argument(std::string name, bool* value, std::vector<std::strin
 }
 
 void Util::parse_arguments(int argc, char** argv, std::string description){
-	bool got_argument;
 	std::string check;
-
+	std::cout << "Arguments: ";
+	for(int i = 0; i < argc; ++i){
+		std::cout << argv[i] << ' ';
+	}
+	std::cout << '\n';
 	for(int i = 0; i < argc; ++i){
 		if(std::strcmp(argv[i], "--help") == 0 ||
 		std::strcmp(argv[i], "-h") == 0){
-			PRINT("Usage:")
+			PRINT("Usage: " << argv[0])
+			PRINT("     --help")
+			PRINT("  OR -h\n")
 			for(auto iter = string_arguments.begin(); iter != string_arguments.end(); ++iter){
-				std::cout << '\t';
 				if(std::find(required_arguments.begin(), required_arguments.end(), iter->first) != required_arguments.end()){
-					std::cout << "(REQUIRED) ";
+					PRINT("     REQUIRED")
 				}
-				PRINT("--" << iter->first << " <string:" << iter->first << '>')
+				PRINT("     --" << iter->first << " <string:" << iter->first << '>')
 				for(auto& flag : argument_flags[iter->first]){
-					PRINT("\t OR -" << flag << " <string:" << iter->first << '>')
+					PRINT("  OR " << flag << " <string:" << iter->first << '>')
 				}
-				PRINT("\t(Default value: " << iter->second.get() << "\n")
+				PRINT("     (Default value: " << iter->second.get() << ")\n")
 			}
 			for(auto iter = int_arguments.begin(); iter != int_arguments.end(); ++iter){
-				std::cout << '\t';
 				if(std::find(required_arguments.begin(), required_arguments.end(), iter->first) != required_arguments.end()){
-					std::cout << "(REQUIRED) ";
+					PRINT("     REQUIRED")
 				}
-				PRINT("--" << iter->first << " <integer:" << iter->first << '>')
+				PRINT("     --" << iter->first << " <integer:" << iter->first << '>')
 				for(auto& flag : argument_flags[iter->first]){
-					PRINT("\t OR -" << flag << " <integer:" << iter->first << '>')
+					PRINT("  OR " << flag << " <integer:" << iter->first << '>')
 				}
-				PRINT("\t(Default value: " << *iter->second << ")\n")
+				PRINT("     (Default value: " << *iter->second << ")\n")
 			}
 			for(auto iter = bool_arguments.begin(); iter != bool_arguments.end(); ++iter){
-				PRINT("\t(boolean toggle) --" << iter->first)
+				PRINT("     --" << iter->first)
 				for(auto& flag : argument_flags[iter->first]){
-					PRINT("\t OR " << flag)
+					PRINT("  OR " << flag)
 				}
-				PRINT("\t(Disabled by default.)\n")
+				PRINT("     (Disabled by default.)\n")
 			}
 			PRINT(description)
 			exit(0);
 		}
-		got_argument = false;
+		bool got_argument = false;
 		for(auto iter = string_arguments.begin(); iter != string_arguments.end(); ++iter){
 			check = "--" + iter->first;
-			if(std::strcmp(argv[i], check.c_str()) == 0){
+			auto check_lambda = [argc, i, iter, argv, check, got_argument]() mutable{
 				if(argc > i){
 					iter->second.get() = std::string(argv[i + 1]);
 					got_argument = true;
 				}else{
 					PRINT("No string provided for " << check)
 				}
+			};
+			if(std::strcmp(argv[i], check.c_str()) == 0){
+				check_lambda();
 				break;
 			}
 			for(auto& flag : argument_flags[iter->first]){
 				if(std::strcmp(argv[i], flag.c_str()) == 0){
-					if(argc > i){
-						iter->second.get() = std::string(argv[i + 1]);
-						got_argument = true;
-					}else{
-						PRINT("No string provided for " << flag)
-					}
+					check_lambda();
 					break;
 				}
 			}
 		}
-		if(got_argument){
-			continue;
-		}
+		if(got_argument)continue;
 		for(auto iter = int_arguments.begin(); iter != int_arguments.end(); ++iter){
 			check = "--" + iter->first;
-			if(std::strcmp(argv[i], check.c_str()) == 0){
+			auto check_lambda = [argc, i, iter, argv, check, got_argument]() mutable{
 				if(argc > i){
 					*iter->second = std::stoi(argv[i + 1]);
 					got_argument = true;
 				}else{
 					PRINT("No integer provided for " << check)
 				}
+			};
+			if(std::strcmp(argv[i], check.c_str()) == 0){
+				check_lambda();
 				break;
 			}
 			for(auto& flag : argument_flags[iter->first]){
 				if(std::strcmp(argv[i], flag.c_str()) == 0){
-					if(argc > i){
-						*iter->second = std::stoi(argv[i + 1]);
-						got_argument = true;
-					}else{
-						PRINT("No integer provided for " << flag)
-					}
+					check_lambda();
 					break;
 				}
 			}
 		}
-		if(got_argument){
-			continue;
-		}
+		if(got_argument)continue;
 		for(auto iter = bool_arguments.begin(); iter != bool_arguments.end(); ++iter){
 			check = "--" + iter->first;
 			if(std::strcmp(argv[i], check.c_str()) == 0){
