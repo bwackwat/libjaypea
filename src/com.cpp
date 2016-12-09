@@ -184,41 +184,21 @@ int main(int argc, char** argv){
 	std::string req_data;
 	std::string res_data;
 
-	int port = 3424;
 	std::string hostname = "localhost";
+	int port = 3424;
 	std::string keyfile = "etc/keyfile";
 	std::string file_path;
+
 	enum Routine routine = SHELL;
 
-	for(int i = 0; i < argc; i++){
-		if((std::strcmp(argv[i], "-p") == 0 ||
-		std::strcmp(argv[i], "--port") == 0) && argc > i){
-			port = static_cast<uint16_t>(std::stoi(argv[i + 1]));
-		}
-		if((std::strcmp(argv[i], "-h") == 0 ||
-		std::strcmp(argv[i], "--hostname") == 0) && argc > i){
-			hostname = argv[i + 1];
-		}
-		if((std::strcmp(argv[i], "-k") == 0 ||
-		std::strcmp(argv[i], "--keyfile") == 0) && argc > i){
-			keyfile = argv[i + 1];
-		}
-		if((std::strcmp(argv[i], "-sf") == 0 ||
-		std::strcmp(argv[i], "--send-file") == 0) && argc > i){
-			file_path = argv[i + 1];
-			routine = SEND_FILE;
-		}
-		if((std::strcmp(argv[i], "-rf") == 0 ||
-		std::strcmp(argv[i], "--recv-file") == 0) && argc > i){
-			file_path = argv[i + 1];
-			routine = RECV_FILE;
-		}
-		if((std::strcmp(argv[i], "-?") == 0 ||
-		std::strcmp(argv[i], "--help") == 0) && argc > i){
-			std::cout << "Usage: --port <port> --hostname <hostname> --keyfile <keyfile>\n" << std::endl;
-			return 0;
-		}
-	}
+	Util::define_argument("hostname", hostname, {"-hn"});
+	Util::define_argument("port", &port, {"-p"});
+	Util::define_argument("keyfile", keyfile, {"-k"});
+	Util::define_argument("send-file", file_path, {"-sf"}, [routine]()mutable{
+		routine = SEND_FILE;});
+	Util::define_argument("recv-file", file_path, {"-rf"}, [routine]()mutable{
+		routine = RECV_FILE;});
+	Util::parse_arguments(argc, argv, "This is a secure client for comd, supporting remote shell, send file, and receive file routines.");
 
 	if(init_crypto(keyfile)){
 		return 1;

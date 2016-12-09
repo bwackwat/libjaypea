@@ -7,24 +7,16 @@ int main(int argc, char** argv){
 	struct sockaddr_in client_addr;
 	uint addr_len = sizeof(client_addr);
 	bool exit = false, close_connection;
-	uint16_t port = 80;
+	int port = 80;
 
 	char packet[PACKET_LIMIT];
 	struct pollfd clients[CONNECTIONS_LIMIT];
 
-	for(int i = 0; i < argc; i++){
-		if((std::strcmp(argv[i], "-p") == 0 ||
-		std::strcmp(argv[i], "--port") == 0) && argc > i){
-			port = static_cast<uint16_t>(std::stoi(argv[i + 1]));
-		}else if((std::strcmp(argv[i], "-h") == 0 ||
-		std::strcmp(argv[i], "--help") == 0) && argc > i){
-			std::cout << "Usage: tcp_client --port <port> --hostname <hostname> --keyfile <keyfile>\n\n";
-			return 0;
-		}
-	}
+	Util::define_argument("port", &port, {"-p"});
+	Util::parse_arguments(argc, argv, "This server will (quickly) echo packets sent over TCP using poll.");
 
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(port);
+	server_addr.sin_port = htons(static_cast<uint16_t>(port));
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	if((serverfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0){

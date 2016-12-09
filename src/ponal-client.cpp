@@ -44,20 +44,15 @@ static int get_line(std::istream& is, std::string& result){
 }
 
 int main(int argc, char** argv){
-	std::string hostname = "localhost";
-	uint16_t port = 4767;
 	int terminal = isatty(fileno(stdin));
+	std::string hostname = "localhost";
+	int port = 4767;
 
-	for(int i = 0; i < argc; i++){
-		if(std::strcmp(argv[i], "--hostname") == 0 && argc > i){
-			hostname = argv[i + 1];
-		}
-		if(std::strcmp(argv[i], "--port") == 0 && argc > i){
-			port = static_cast<uint16_t>(std::stoi(argv[i + 1]));
-		}
-	}
+	Util::define_argument("hostname", hostname, {"-hn"});
+	Util::define_argument("port", &port, {"-p"});
+	Util::parse_arguments(argc, argv, "This is a simple client to ponald for command-line communication.");
 
-	SimpleTcpClient client(hostname, port);
+	SimpleTcpClient client(hostname, static_cast<uint16_t>(port));
 
 	std::string request;
 	char response[PACKET_LIMIT];

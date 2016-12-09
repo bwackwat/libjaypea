@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "util.hpp"
+
 #define STDIN_MAX 10
 
 static struct termios oldtermios;
@@ -74,12 +76,7 @@ int main(int argc, char** argv){
 	ssize_t len;
 	char chars[STDIN_MAX];
 
-	for(int i = 0; i < argc; ++i){
-		if(std::strcmp(argv[i], "-h") == 0 ||
-		std::strcmp(argv[i], "--help") == 0){
-			std::cout << "This program outputs raw TTY character bytes. Some characters are represented by multiple bytes (multiple stdin chars.)" << std::endl;
-		}
-	}
+	Util::parse_arguments(argc, argv, "This program outputs raw TTY character bytes. Some characters are represented by multiple bytes (multiple stdin chars.)");
 
 	std::signal(SIGINT, sigcatch);
 	std::signal(SIGQUIT, sigcatch);

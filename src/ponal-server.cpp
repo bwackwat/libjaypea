@@ -106,18 +106,12 @@ static void handle_connection(int fd, int hit){
 
 int main(int argc, char** argv){
 	int socketfd;
-	uint16_t port = 4767;
+	int port = 4767;
 
-	for(int i = 0; i < argc; i++){
-                if(std::strcmp(argv[i], "--port") == 0 && argc > i){
-                        port = static_cast<uint16_t>(std::stoi(argv[i + 1]));
-                }
-		if(std::strcmp(argv[i], "--quiet") == 0){
-                        loud = 0;
-                }
-        }
+	Util::define_argument("port", &port, {"-p"});
+	Util::parse_arguments(argc, argv, "This is a simple key-value server.");
 
-	SimpleTcpServer server(port);
+	SimpleTcpServer server(static_cast<uint16_t>(port));
 	
 	if(loud)
 		std::cout << "Ponal is running.\n";

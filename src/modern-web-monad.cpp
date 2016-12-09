@@ -17,6 +17,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#include "util.hpp"
 #include "json.hpp"
 #include "simple-tcp-server.hpp"
 
@@ -235,15 +236,10 @@ int main(int argc, char **argv){
                 (std::istreambuf_iterator<char>()));
         config_object.parse(config_data.c_str());
 
-        std::cout << "Loaded: configuration.json" << std::endl;
+        std::cout << "Loaded: etc/configuration.json" << std::endl;
         std::cout << config_object.stringify(true) << std::endl;
 
-	for(int i = 0; i < argc; ++i){
-		if(std::strcmp(argv[i], "-h") == 0 ||
-		std::strcmp(argv[i], "--help") == 0){
-			std::cout << "This is configured via etc/configuration.json." << std::endl;
-		}
-	}
+	Util::parse_arguments(argc, argv, "This is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
 
 	if((http_redirect_pid = http_redirect()) < 0){
 		std::cout << "Uh oh, http_redirect() error." << std::endl;

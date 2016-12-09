@@ -137,35 +137,18 @@ int main(int argc, char** argv){
 	std::string response;
 	std::string res_data;
 
-	std::string hostname = "localhost";
-	uint16_t port = 3424;
+	int port = 3424;
 	std::string keyfile = "etc/keyfile";
 
-	for(int i = 0; i < argc; i++){
-		if((std::strcmp(argv[i], "-p") == 0 ||
-		std::strcmp(argv[i], "--port") == 0) && argc > i){
-			port = static_cast<uint16_t>(std::stoi(argv[i + 1]));
-		}
-		if((std::strcmp(argv[i], "-h") == 0 ||
-		std::strcmp(argv[i], "--hostname") == 0) && argc > i){
-			hostname = argv[i + 1];
-		}
-		if((std::strcmp(argv[i], "-k") == 0 ||
-		std::strcmp(argv[i], "--keyfile") == 0) && argc > i){
-			keyfile = argv[i + 1];
-		}
-		if((std::strcmp(argv[i], "-?") == 0 ||
-		std::strcmp(argv[i], "--help") == 0) && argc > i){
-			std::cout << "Usage: --port <port> --hostname <hostname> --keyfile <keyfile>" << std::endl;
-			return 0;
-		}
-	}
+	Util::define_argument("port", &port, {"-p"});
+	Util::define_argument("keyfile", keyfile, {"-k"});
+	Util::parse_arguments(argc, argv, "This is a secure server application for com, supporting a remote shell, receive file, and send file routines.");
 
 	if(init_crypto(keyfile)){
 		return 1;
 	}
 
-	SimpleTcpServer server(port, 0);
+	SimpleTcpServer server(static_cast<uint16_t>(port), 0);
 
 	while(1){
 		// Easy DDOS protection. (This is not a multi-user tool.)
