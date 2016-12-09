@@ -1,2 +1,2 @@
 bin/*
-~bin/build.sh
+!bin/build.sh
