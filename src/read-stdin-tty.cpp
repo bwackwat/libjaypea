@@ -12,9 +12,9 @@
 
 #define STDIN_MAX 10
 
-struct termios oldtermios;
+static struct termios oldtermios;
 
-int ttyraw(int fd){
+static int ttyraw(int fd){
 	struct termios newtermios;
 	if(tcgetattr(fd, &oldtermios) < 0){
 		return -1;
@@ -36,7 +36,7 @@ int ttyraw(int fd){
 	return 0;
 }
 
-int ttyreset(int fd){
+static int ttyreset(int fd){
 	if(tcsetattr(fd, TCSAFLUSH, &oldtermios) < 0){
 		return -1;
 	}
@@ -44,12 +44,13 @@ int ttyreset(int fd){
 	return 0;
 }
 
-void sigcatch(int sig){
+static void sigcatch(int sig){
+	PRINT("caught " << sig << " signal!")
 	ttyreset(STDIN_FILENO);
 	exit(0);
 }
 
-bool stdin_available(){
+static bool stdin_available(){
 	struct timeval tv;
 	fd_set fds;
 	tv.tv_sec = 0;
@@ -60,7 +61,7 @@ bool stdin_available(){
 	return FD_ISSET(STDIN_FILENO, &fds);
 }
 
-void print(char* chars){
+static void print(char* chars){
 	char* next = chars;
 	while(*next){
 		std::cout << static_cast<int>(*next) << std::endl << '\r';

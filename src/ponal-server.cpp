@@ -20,10 +20,10 @@
 #include "util.hpp"
 #include "simple-tcp-server.hpp"
 
-std::unordered_map<std::string, std::string> values;
-int loud = 1;
+static std::unordered_map<std::string, std::string> values;
+static int loud = 1;
 
-int set_value(char* key_and_value){
+static int set_value(char* key_and_value){
 	int get_key = 1;
 	std::string key = "";
 	std::string value = "";
@@ -45,7 +45,7 @@ int set_value(char* key_and_value){
 	return 0;
 }
 
-std::string get_command_from_request(char* request){
+static std::string get_command_from_request(char* request){
 	std::string command = "";
 	for(const char* it = request; *it; ++it){
 		if(*it == ' '){
@@ -57,11 +57,11 @@ std::string get_command_from_request(char* request){
 	return command;
 }
 
-const char* get_command = "get ";
-const char* set_command = "set ";
-const char* exit_command = "exit";
+static const char* get_command = "get ";
+static const char* set_command = "set ";
+static const char* exit_command = "exit";
 
-void handle_connection(int fd, int hit){
+static void handle_connection(int fd, int hit){
 	int transaction;
 	ssize_t len;
 	char request[PACKET_LIMIT];

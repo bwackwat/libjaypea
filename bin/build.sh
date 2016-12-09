@@ -2,7 +2,7 @@
 
 compiler="clang++ -std=c++11 -g -O0 \
 -Weverything -Wpedantic \
--Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-padded \
+-Wno-c++98-compat -Wno-padded \
 -Wno-exit-time-destructors -Wno-global-constructors"
 
 function build {

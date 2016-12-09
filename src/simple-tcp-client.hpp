@@ -13,7 +13,7 @@ private:
 public:
 	SimpleTcpClient(std::string new_hostname, uint16_t new_port, bool new_verbose = false);
 	SimpleTcpClient(uint16_t new_port, struct in_addr addr, bool new_verbose = false);
-	void communicate(const char* request, size_t length, char* response);
+	bool communicate(const char* request, size_t length, char* response);
 	~SimpleTcpClient();
 
 	int fd;

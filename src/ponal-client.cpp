@@ -19,7 +19,7 @@
 #include "simple-tcp-client.hpp"
 #include "util.hpp"
 
-int get_line(std::istream& is, std::string& result){
+static int get_line(std::istream& is, std::string& result){
 	std::streambuf* sb = is.rdbuf();
 	result.clear();
 	

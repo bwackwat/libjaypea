@@ -33,7 +33,7 @@ void send_sigint(uint8_t s){
 }
 */
 
-bool stdin_available(){
+static bool stdin_available(){
 	struct timeval tv;
 	fd_set fds;
 	tv.tv_sec = 0;
@@ -78,7 +78,7 @@ int ttyreset(int fd){
 	return 0;
 }*/
 
-int ttyraw(int fd){
+static int ttyraw(int fd){
 	if(tcgetattr(fd, &old_term) < 0){
 		std::cout << "Uh oh, tcgetattr error!" << std::endl;
 		return -1;
@@ -93,20 +93,20 @@ int ttyraw(int fd){
 	return 0;
 }
 
-int ttyreset(int fd){
+static int ttyreset(int fd){
 	if(tcsetattr(fd, TCSANOW, &old_term) < 0){
 		return -1;
 	}
 	return 0;
 }
 
-void sigcatch(int sig){
+static void sigcatch(int sig){
 	PRINT("caught " << sig << " signal!")
 	ttyreset(STDIN_FILENO);
 	exit(0);
 }
 
-int shell_routine(std::string hostname, int socketfd){
+static int shell_routine(std::string hostname, int socketfd){
 	ssize_t res;
 	char packet[PACKET_LIMIT];
 	std::string res_data;
@@ -147,9 +147,9 @@ int shell_routine(std::string hostname, int socketfd){
 			std::cout << "\r" << hostname << " > " << std::flush;
 		}
 
-		//if(!stdin_available()){
-		//	continue;
-		//}
+		if(!stdin_available()){
+			continue;
+		}
 		packet[0] = 0;
 		if((res = read(STDIN_FILENO, packet, PACKET_LIMIT)) < 0){
 			DEBUG("Stdin read nonblocking.");
@@ -184,7 +184,7 @@ int main(int argc, char** argv){
 	std::string req_data;
 	std::string res_data;
 
-	uint16_t port = 3424;
+	int port = 3424;
 	std::string hostname = "localhost";
 	std::string keyfile = "etc/keyfile";
 	std::string file_path;
@@ -224,7 +224,7 @@ int main(int argc, char** argv){
 		return 1;
 	}
 
-	SimpleTcpClient client(hostname, port);
+	SimpleTcpClient client(hostname, static_cast<uint16_t>(port));
 
 	// Handshake step 1:
 	// Identify yourself!

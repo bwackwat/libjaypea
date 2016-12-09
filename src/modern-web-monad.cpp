@@ -23,10 +23,10 @@
 #define BUFFER_LIMIT 8192
 #define HTTP_404 "<h1>404 Not Found</h1>"
 
-JsonObject* request_object;
-JsonObject config_object;
+static JsonObject* request_object;
+static JsonObject config_object;
 
-bool parse_request(char* request){
+static bool parse_request(char* request){
 	std::string new_key;
 	std::string new_value;
 	//0 = No state
@@ -128,10 +128,10 @@ bool parse_request(char* request){
 	return false;
 }
 
-std::unordered_map<std::string, std::string(*)(JsonObject* json)> routemap;
-std::unordered_map<std::string, std::unordered_map<std::string, JsonType>> required_fields;
+static std::unordered_map<std::string, std::string(*)(JsonObject* json)> routemap;
+static std::unordered_map<std::string, std::unordered_map<std::string, JsonType>> required_fields;
 
-void route(std::string path, std::string(*func)(JsonObject* json), std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>()){
+static void route(std::string path, std::string(*func)(JsonObject* json), std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>()){
 	if(path[path.length() - 1] != '/'){
 		path += '/';
 	}
@@ -139,16 +139,16 @@ void route(std::string path, std::string(*func)(JsonObject* json), std::unordere
 	required_fields[path] = requires;
 }
 
-std::string root(JsonObject* json){
+static std::string root(JsonObject*){
 	return "{\"result\":\"Welcome to the API!\"}";
 }
 
-std::string routes_string;
-std::string routes(JsonObject* json){
+static std::string routes_string;
+static std::string routes(JsonObject*){
 	return routes_string;
 }
 
-pid_t http_redirect(){
+static pid_t http_redirect(){
 	int clientfd;
 	ssize_t len;
 	pid_t pid;
@@ -210,9 +210,9 @@ pid_t http_redirect(){
 	return pid;
 }		
 
-pid_t http_redirect_pid;
+static pid_t http_redirect_pid;
 
-int ssl_send(SSL* ssl, const char* buffer, int length){
+static int ssl_send(SSL* ssl, const char* buffer, int length){
 	int len = SSL_write(ssl, buffer, length);
 	switch(SSL_get_error(ssl, len)){
 	case SSL_ERROR_NONE:

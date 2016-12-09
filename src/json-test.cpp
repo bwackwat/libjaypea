@@ -3,7 +3,7 @@
 #include "json.hpp"
 #include "util.hpp"
 
-void test(std::string str){
+static void test(std::string str){
 	JsonObject object;
 	std::string objectString;
 	JsonObject verify;

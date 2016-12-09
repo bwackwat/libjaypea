@@ -20,7 +20,10 @@ static void handle_connection(SimpleTcpClient* client, int connection){
 	char response[PACKET_LIMIT];
 	for(int i = 0; i < requests; ++i){
 		try{
-			client->communicate(request, request_length, response);
+			if(!client->communicate(request, request_length, response)){
+				PRINT("Server kicked client!");
+				break;
+			}
 			if(verbose){
 				std::cout << "Response: " << response << std::endl;
 			}

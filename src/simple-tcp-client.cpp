@@ -69,7 +69,7 @@ verbose(new_verbose){
 	}
 }
 
-void SimpleTcpClient::communicate(const char* request, size_t length, char* response){
+bool SimpleTcpClient::communicate(const char* request, size_t length, char* response){
 	ssize_t len;
 	if(write(this->fd, request, length) < 0){
 		throw std::runtime_error(this->name + " write");
@@ -78,6 +78,7 @@ void SimpleTcpClient::communicate(const char* request, size_t length, char* resp
 		throw std::runtime_error(this->name + " read");
 	}
 	response[len] = 0;
+	return len > 0;
 }
 
 SimpleTcpClient::~SimpleTcpClient(){

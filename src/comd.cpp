@@ -23,7 +23,7 @@
 #include "comd-util.hpp"
 #include "simple-tcp-server.hpp"
 
-int shell_routine(int socketfd){
+static int shell_routine(int socketfd){
 	int pid;
 	ssize_t res;
 	char packet[PACKET_LIMIT];
