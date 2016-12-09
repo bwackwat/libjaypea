@@ -24,7 +24,7 @@ void test(std::string str){
 
 	//std::cout << "\n\n" << objectString << "\n\n" << verifyString << "\n\n";
 
-	if(strict_compare_inequal(objectString.c_str(), verifyString.c_str())){
+	if(Util::strict_compare_inequal(objectString.c_str(), verifyString.c_str())){
 		std::cout << "Verification Failure...\n";
 	}else{
 		std::cout << "Verification Success!\n";

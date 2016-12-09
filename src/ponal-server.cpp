@@ -77,17 +77,17 @@ void handle_connection(int fd, int hit){
 			std::cout << "Connection #" << hit << " transaction #" << transaction << ": " << request << std::endl;
 		
 		response = "success";
-		if(strict_compare_inequal(request, get_command, 4) == 0){
+		if(Util::strict_compare_inequal(request, get_command, 4) == 0){
 			if(values.count(request + 4) > 0){
 				response = values[request + 4];
 			}else{
 				response = "failure";
 			}
-		}else if(strict_compare_inequal(request, set_command, 4) == 0){
+		}else if(Util::strict_compare_inequal(request, set_command, 4) == 0){
 			if(set_value(request + 4) != 0){
 				response = "failure";
 			}
-		}else if(strict_compare_inequal(request, exit_command, 4) == 0){
+		}else if(Util::strict_compare_inequal(request, exit_command, 4) == 0){
 			break;
 		}else{
 			if(loud)
