@@ -17,4 +17,5 @@ public:
 	~SimpleTcpClient();
 
 	int fd;
+	int requests;
 };

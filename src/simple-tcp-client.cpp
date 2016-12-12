@@ -29,7 +29,8 @@ SimpleTcpClient::SimpleTcpClient(std::string new_hostname, uint16_t new_port, bo
 :hostname(new_hostname),
 port(new_port),
 name("SimpleTcpClient"),
-verbose(new_verbose){
+verbose(new_verbose),
+requests(0){
 	if((this->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		throw std::runtime_error(this->name + " socket");
 	}
@@ -52,7 +53,8 @@ verbose(new_verbose){
 
 SimpleTcpClient::SimpleTcpClient(uint16_t new_port, struct in_addr addr, bool new_verbose)
 :name("SimpleTcpClient"),
-verbose(new_verbose){
+verbose(new_verbose),
+requests(0){
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr = addr;
@@ -77,6 +79,7 @@ bool SimpleTcpClient::communicate(const char* request, size_t length, char* resp
 	if((len = read(this->fd, response, PACKET_LIMIT)) < 0){
 		throw std::runtime_error(this->name + " read");
 	}
+	requests++;
 	response[len] = 0;
 	return len > 0;
 }

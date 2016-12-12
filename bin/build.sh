@@ -19,6 +19,7 @@ function build {
 }
 
 build tcp-poll-server "./src/tcp-poll-server.cpp ./src/util.cpp"
+build tcp-poll-client "./src/tcp-poll-client.cpp ./src/util.cpp"
 build tcp-client "-lpthread ./src/tcp-client.cpp ./src/util.cpp ./src/simple-tcp-client.cpp"
 build json-test "./src/json.cpp ./src/json-test.cpp ./src/util.cpp"
 build modern-web-monad "-lssl -lcrypto ./src/modern-web-monad.cpp ./src/util.cpp ./src/simple-tcp-server.cpp ./src/json.cpp"

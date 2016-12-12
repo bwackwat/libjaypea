@@ -69,7 +69,6 @@ int main(int argc, char** argv){
 						}
 						break;
 					}
-					// TODO Use fds that have been set to -1;
 					int next = 0;
 					while(1){
 						if(next == CONNECTIONS_LIMIT){
@@ -84,6 +83,7 @@ int main(int argc, char** argv){
 						++next;
 					}
 					if(next != CONNECTIONS_LIMIT){
+						PRINT("Connection at " << next)
 						clients[next].fd = clientfd;
 						clients[next].events = POLLIN;
 					}
