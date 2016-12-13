@@ -3,15 +3,23 @@
 cd $(dirname "${BASH_SOURCE[0]}")/../src
 
 argc=$#
-argv=$*
+argv=($@)
+optimize="-O0"
 
-compiler="clang++ -std=c++11 -g -O0 \
+case "${argv[@]}" in *"OPT"*)
+	optimize="-O3"
+	echo "OPTIMIZING!"
+	((argc-=1))
+	argv=( "${argv[@]/"OPT"}" )
+esac
+
+compiler="clang++ -std=c++11 -g $optimize \
 -Weverything -Wpedantic \
 -Wno-c++98-compat -Wno-padded \
 -Wno-exit-time-destructors -Wno-global-constructors"
 
 function build {
-	if [ $argc -eq 0 ] || [[ $@ == *$argv* ]]; then
+	if [ $argc -eq 0 ] || [[ "$1" = *"$argv"* ]]; then
 		echo -e "\n-------------------------building $1-------------------------\n"
 		eval "$compiler $2 $3 $4 $5 $6 $7 $8 $9 -o ../bin/$1"
 	fi
