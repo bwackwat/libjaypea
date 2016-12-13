@@ -13,6 +13,10 @@ next_fds(new Node<size_t>()){
 	if((this->server_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0){
 		throw std::runtime_error(this->name + " socket");
 	}
+	int opt = 1;
+	if(setsockopt(this->server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt)) < 0){
+		throw std::runtime_error(this->name + " setsockopt");
+	}
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -20,7 +24,7 @@ next_fds(new Node<size_t>()){
 	if(bind(this->server_fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(server_addr)) < 0){
 		throw std::runtime_error(this->name + " bind");
 	}
-	if(listen(this->server_fd, 64) < 0){
+	if(listen(this->server_fd, 512) < 0){
 		throw std::runtime_error(this->name + " listen");
 	}
 	PRINT(this->name << " listening on " << port)
@@ -28,7 +32,7 @@ next_fds(new Node<size_t>()){
 
 // Should not return?
 void EventServer::run(){
-	int new_client_fd, available;
+	int new_client_fd;
 	bool running = true, close_connection;
 	ssize_t rlen;
 	long wlen;
