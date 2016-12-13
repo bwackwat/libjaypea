@@ -30,3 +30,4 @@ build comd "-lcryptopp ./src/comd.cpp ./src/comd-util.cpp ./src/simple-tcp-serve
 build com "-lcryptopp ./src/com.cpp ./src/comd-util.cpp ./src/simple-tcp-client.cpp ./src/util.cpp"
 build keyfile-gen "-lcryptopp ./src/keyfile-gen.cpp"
 build pgsql-model-test "-lpqxx ./src/pgsql-model.cpp ./src/json.cpp ./src/pgsql-model-test.cpp"
+build tcp-event-server "./src/tcp-event-server.cpp ./src/util.cpp"
