@@ -1,6 +1,7 @@
 #include <thread>
 #include <vector>
 #include <cstring>
+#include <stack>
 
 #include "util.hpp"
 
@@ -24,6 +25,10 @@ int main(int argc, char** argv){
 	bool close_connection;
 	char packet[PACKET_LIMIT];
 	struct pollfd clients[CONNECTIONS_LIMIT];
+	std::stack<size_t> next_client;
+	for(size_t i = 0; i < CONNECTIONS_LIMIT; ++i){
+		next_client.push(i);
+	}
 
 	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::define_argument("port", &port, {"-p"});
@@ -44,20 +49,7 @@ int main(int argc, char** argv){
 
 	while(1){
 		if(num_connected < connections){
-			int next = 0;
-			while(1){
-				if(next == CONNECTIONS_LIMIT){
-					PRINT("Max connections reached!")
-					break;
-				}else if(clients[next].fd == -1){
-					break;
-				}else if(next == num_clients){
-					num_clients++;
-					break;
-				}
-				++next;
-			}
-			if(next != CONNECTIONS_LIMIT){
+			if(next_client.size() > 0){
 				int next_fd;
 				struct sockaddr_in server_addr;
 				server_addr.sin_family = AF_INET;
@@ -70,8 +62,9 @@ int main(int argc, char** argv){
 				if(connect(next_fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(struct sockaddr_in)) < 0){
 					throw std::runtime_error("new connect");
 				}
-				clients[next].fd = next_fd;
-				clients[next].events = POLLIN;
+				clients[next_client.top()].fd = next_fd;
+				clients[next_client.top()].events = POLLIN;
+				next_client.pop();
 				if(write(next_fd, request, request_length) < 0){
 					throw std::runtime_error("Initial client request!");
 				}
@@ -84,8 +77,8 @@ int main(int argc, char** argv){
 			ERROR("poll")
 			break;
 		}else if(res > 0){
-			for(int i = 0; i < num_clients; ++i){
-				if(clients[i].revents == 0){
+			for(size_t i = 0; i < static_cast<size_t>(num_clients); ++i){
+				if(clients[i].fd == -1 || clients[i].revents == 0){
 					continue;
 				}
 				res--;
@@ -97,6 +90,7 @@ int main(int argc, char** argv){
 					ERROR("read 0 bytes, closed on server?")
 					close_connection = true;
 				}else if(request_count[clients[i].fd] < requests){
+					PRINT("got " << packet)
 					if(write(clients[i].fd, request, request_length) < 0){
 						throw std::runtime_error("Client request" + std::to_string(request_count[clients[i].fd]));
 					}
@@ -109,6 +103,7 @@ int main(int argc, char** argv){
 						ERROR("close")
 					}
 					clients[i].fd = -1;
+					next_client.push(i);
 					num_completed++;
 					PRINT("Connection #" << num_completed << " done.")
 				}

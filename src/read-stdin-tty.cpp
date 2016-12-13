@@ -46,7 +46,7 @@ static int ttyreset(int fd){
 	return 0;
 }
 
-static void sigcatch(int sig){
+[[noreturn]] static void sigcatch(int sig){
 	PRINT("caught " << sig << " signal!")
 	ttyreset(STDIN_FILENO);
 	exit(0);

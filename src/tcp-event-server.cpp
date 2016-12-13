@@ -33,8 +33,7 @@ void EventServer::run(){
 	char* packet[PACKET_LIMIT];
 
 	while(running){
-		PRINT("LOOP")
-		if(this->next_fd.size() < this->max_connections){
+		if(this->next_fd.size() > 0){
 			if((new_client_fd = accept(this->server_fd, 0, 0)) < 0){
 				if(errno != EWOULDBLOCK){
 					ERROR("accept")
