@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Allows listen backlog to be much larger.
+# sysctl -w net.core.somaxconn=65535
+
 cd $(dirname "${BASH_SOURCE[0]}")/../src
 
 argc=$#

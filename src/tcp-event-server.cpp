@@ -39,46 +39,52 @@ void EventServer::run(){
 	char* packet[PACKET_LIMIT];
 
 	while(running){
-		if(this->next_fds->value > 0){
-			if((new_client_fd = accept(this->server_fd, 0, 0)) < 0){
-				if(errno != EWOULDBLOCK){
-					ERROR("accept")
-					running = false;
+	//	while(1){
+			if(this->next_fds->value > 0){
+				if((new_client_fd = accept(this->server_fd, 0, 0)) < 0){
+					if(errno != EWOULDBLOCK){
+						ERROR("accept")
+						running = false;
+					}
+					// Nothing to accept = ^_^
+	//				break;
+				}else{
+					std::cout << this->next_fds->value << " -> ";
+					this->client_fds[this->next_fds->pop()] = new_client_fd;
+					PRINT(this->next_fds->value)
 				}
-				// Nothing to accept = ^_^
 			}else{
-				PRINT(this->next_fds->value)
-				this->client_fds[this->next_fds->pop()] = new_client_fd;
-				PRINT("GOT CONNECTION " << this->next_fds->value)
+	//			break;
 			}
-		}
+	//	}
 		for(size_t i = 0; i < this->max_connections; ++i){
 			if(this->client_fds[i] != -1){
 				close_connection = false;
-				//while(1){
+	//			while(1){
 					if((rlen = read(this->client_fds[i], packet, PACKET_LIMIT)) < 0){
 						if(errno != EWOULDBLOCK){
 							ERROR("read")
 							close_connection = true;
 						}
 						// Nothing to read = ^_^
-				//		break;
+	//					break;
 					}else if(rlen == 0){
 						// Closed connection?
 						close_connection = true;
-				//		break;
+	//					break;
 					}else{
 						if((wlen = write(this->client_fds[i], packet, static_cast<size_t>(rlen))) < 0){
 							ERROR("write")
 							close_connection = true;
-				//			break;
+	//						break;
 						}
 					}
-				//}
+	//			}
 				if(close_connection){
 					if(close(this->client_fds[i]) < 0){
 						ERROR("close")
 					}
+					PRINT(i << " done!")
 					this->client_fds[i] = -1;
 					this->next_fds->push(i);
 				}
