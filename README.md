@@ -17,6 +17,5 @@ Too many C++ projects became a library. Currently a set of similarly designed ne
 ## Notes
 
 * Developed and tested on CentOS 7. ```bin/build.sh``` just uses clang++...
-* This is NOT YET a header-only library, but soon all programs will compile only as examples.
 * ```etc/``` contains files for these programs that might be shared.
 * ```bin/build.sh``` builds all examples/programs.

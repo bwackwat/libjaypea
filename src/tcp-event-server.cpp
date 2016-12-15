@@ -2,10 +2,11 @@
 #include "node.hpp"
 #include "tcp-event-server.hpp"
 
-EventServer::EventServer(uint16_t port, size_t new_max_connections)
+EventServer::EventServer(uint16_t port, size_t new_max_connections, PacketReceivedFunction new_packet_received)
 :name("EventServer"),
 max_connections(new_max_connections),
-next_fds(new Node<size_t>()){
+next_fds(new Node<size_t>()),
+packet_received(new_packet_received){
 	for(size_t i = 0; i < this->max_connections; ++i){
 		this->client_fds.push_back(-1);
 		this->next_fds->push(i);
@@ -35,8 +36,7 @@ void EventServer::run(){
 	int new_client_fd;
 	bool running = true, close_connection;
 	ssize_t rlen;
-	long wlen;
-	char* packet[PACKET_LIMIT];
+	char packet[PACKET_LIMIT];
 
 	while(running){
 	//	while(1){
@@ -73,11 +73,7 @@ void EventServer::run(){
 						close_connection = true;
 	//					break;
 					}else{
-						if((wlen = write(this->client_fds[i], packet, static_cast<size_t>(rlen))) < 0){
-							ERROR("write")
-							close_connection = true;
-	//						break;
-						}
+						close_connection = this->packet_received(this->client_fds[i], packet, rlen);
 					}
 	//			}
 				if(close_connection){
@@ -102,14 +98,4 @@ void EventServer::run(){
 			}
 		}
 	}
-}
-
-int main(int argc, char** argv){
-	int max_connections = 1;
-
-	Util::define_argument("max_connections", &max_connections, {"-c"});
-	Util::parse_arguments(argc, argv, "This program opens a non-blocking TCP server and handles incoming connections via an event loop.");
-
-	EventServer server(80, static_cast<size_t>(max_connections));
-	server.run();
 }
