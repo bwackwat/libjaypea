@@ -72,6 +72,10 @@ int main(int argc, char** argv){
 	std::string response;
 	std::unordered_map<int, int> transaction;
 
+	server.on_connect = [&](int fd){
+		transaction[fd] = 0;
+	};
+
 	server.run([&](int fd, char* packet, size_t){
 		if(loud)
 			std::cout << "Connection #" << fd << " transaction #" << transaction[fd] << ": " << packet << std::endl;
@@ -94,6 +98,8 @@ int main(int argc, char** argv){
 				std::cout << "Unknown command: " << get_command_from_request(packet) << std::endl;
 			response = "failure";
 		}
+
+		transaction[fd]++;
 
 		if(write(fd, response.c_str(), response.length()) < 0){
 			ERROR("write")

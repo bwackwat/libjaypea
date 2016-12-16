@@ -25,6 +25,10 @@ int main(){
 	std::unordered_map<int, std::string> client_data;
 	EventServer server(10000, 1000);
 
+	server.on_connect = [&](int fd){
+		client_data[fd] = std::string();
+	};
+
 	server.on_disconnect = [&](int fd){
 		message = client_data[fd] + " has disconnected.";
 		server.broadcast(message.c_str(), message.length());

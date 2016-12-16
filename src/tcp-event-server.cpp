@@ -77,6 +77,9 @@ void EventServer::run(PacketReceivedFunction packet_received){
 					Util::set_non_blocking(new_client_fd);
 					this->client_fds[this->next_fds->pop()] = new_client_fd;
 					PRINT(this->next_fds->value)
+					if(this->on_connect != nullptr){
+						this->on_connect(new_client_fd);
+					}
 				}
 			}else{
 	//			break;

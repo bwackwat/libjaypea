@@ -24,5 +24,6 @@ public:
 	void broadcast(const char* packet, size_t length);
 	void run(PacketReceivedFunction new_packet_received);
 
+	std::function<void(int)> on_connect;
 	std::function<void(int)> on_disconnect;
 };
