@@ -38,38 +38,6 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		std::cout << argv[i] << ' ';
 	}
 	std::cout << '\n';
-	
-	std::ifstream config_file(CONFIG_PATH);
-	if(config_file.is_open()){
-		std::string config_data((std::istreambuf_iterator<char>(config_file)),
-			(std::istreambuf_iterator<char>()));
-		config_object.parse(config_data.c_str());
-		PRINT("Loaded " << CONFIG_PATH)
-		PRINT(config_object.stringify(true))
-		for(auto& arg : arguments){
-			if(config_object.objectValues.count(arg.name)){
-				switch(arg.type){
-				case ARG_STRING:
-					arg.string_value.get() = config_object[arg.name]->stringValue;
-					PRINT(arg.name << " = " << arg.string_value.get())
-					break;
-				case ARG_INTEGER:
-					*arg.integer_value = std::stoi(config_object[arg.name]->stringValue);
-					PRINT(arg.name << " = " << *arg.integer_value)
-					break;
-				case ARG_BOOLEAN:
-					*arg.boolean_value = true;
-					PRINT(arg.name << " = " << *arg.boolean_value)
-					break;
-				}
-				if(arg.callback != nullptr){
-					arg.callback();
-				}
-			}
-		}
-	}else{
-		PRINT("Could not open " << CONFIG_PATH << ", ignoring.")
-	}
 
 	for(int i = 0; i < argc; ++i){
 		if(std::strcmp(argv[i], "--help") == 0 ||
@@ -108,6 +76,41 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			PRINT(description)
 			exit(0);
 		}
+	}
+
+	std::ifstream config_file(CONFIG_PATH);
+	if(config_file.is_open()){
+		std::string config_data((std::istreambuf_iterator<char>(config_file)),
+			(std::istreambuf_iterator<char>()));
+		config_object.parse(config_data.c_str());
+		PRINT("Loaded " << CONFIG_PATH)
+		PRINT(config_object.stringify(true))
+		for(auto& arg : arguments){
+			if(config_object.objectValues.count(arg.name)){
+				switch(arg.type){
+				case ARG_STRING:
+					arg.string_value.get() = config_object[arg.name]->stringValue;
+					PRINT(arg.name << " = " << arg.string_value.get())
+					break;
+				case ARG_INTEGER:
+					*arg.integer_value = std::stoi(config_object[arg.name]->stringValue);
+					PRINT(arg.name << " = " << *arg.integer_value)
+					break;
+				case ARG_BOOLEAN:
+					*arg.boolean_value = true;
+					PRINT(arg.name << " = " << *arg.boolean_value)
+					break;
+				}
+				if(arg.callback != nullptr){
+					arg.callback();
+				}
+			}
+		}
+	}else{
+		PRINT("Could not open " << CONFIG_PATH << ", ignoring.")
+	}
+
+	for(int i = 0; i < argc; ++i){
 		for(auto& arg: arguments){
 			check = "--" + arg.name;
 			std::function<bool(const char*)> check_lambda;
