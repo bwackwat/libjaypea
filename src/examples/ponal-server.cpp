@@ -18,7 +18,7 @@
 #include <arpa/inet.h>
 
 #include "util.hpp"
-#include "simple-tcp-server.hpp"
+#include "tcp-event-server.hpp"
 
 static std::unordered_map<std::string, std::string> values;
 static int loud = 1;
@@ -61,66 +61,46 @@ static const char* get_command = "get ";
 static const char* set_command = "set ";
 static const char* exit_command = "exit";
 
-static void handle_connection(int fd, int hit){
-	int transaction;
-	ssize_t len;
-	char request[PACKET_LIMIT];
-	std::string response;
-
-	for(transaction = 1;; transaction++){
-		if((len = read(fd, request, PACKET_LIMIT)) <= 0){
-			break;
-		}
-		request[len] = 0;
-
-		if(loud)
-			std::cout << "Connection #" << hit << " transaction #" << transaction << ": " << request << std::endl;
-		
-		response = "success";
-		if(Util::strict_compare_inequal(request, get_command, 4) == 0){
-			if(values.count(request + 4) > 0){
-				response = values[request + 4];
-			}else{
-				response = "failure";
-			}
-		}else if(Util::strict_compare_inequal(request, set_command, 4) == 0){
-			if(set_value(request + 4) != 0){
-				response = "failure";
-			}
-		}else if(Util::strict_compare_inequal(request, exit_command, 4) == 0){
-			break;
-		}else{
-			if(loud)
-				std::cout << "Unknown command: " << get_command_from_request(request) << std::endl;
-			response = "failure";
-		}
-
-		if(write(fd, response.c_str(), response.length()) < 0){
-			break;
-		}
-	}
-	if(loud)
-		std::cout << "Connection #" << hit << " transaction #" << transaction << " is done!\n";
-	close(fd);
-}
-
 int main(int argc, char** argv){
-	int socketfd;
 	int port = 4767;
 
 	Util::define_argument("port", &port, {"-p"});
 	Util::parse_arguments(argc, argv, "This is a simple key-value server.");
 
-	SimpleTcpServer server(static_cast<uint16_t>(port));
-	
-	if(loud)
-		std::cout << "Ponal is running.\n";
+	EventServer server(static_cast<uint16_t>(port), 10);
 
-	while(1){
-		socketfd = server.accept_connection();
+	std::string response;
+	std::unordered_map<int, int> transaction;
 
-		auto thread = std::thread(handle_connection, socketfd, server.hit);
-		thread.detach();
-	}
-	// Should not end.
+	server.run([&](int fd, char* packet, size_t){
+		if(loud)
+			std::cout << "Connection #" << fd << " transaction #" << transaction[fd] << ": " << packet << std::endl;
+		
+		response = "success";
+		if(Util::strict_compare_inequal(packet, get_command, 4) == 0){
+			if(values.count(packet + 4) > 0){
+				response = values[packet + 4];
+			}else{
+				response = "failure";
+			}
+		}else if(Util::strict_compare_inequal(packet, set_command, 4) == 0){
+			if(set_value(packet + 4) != 0){
+				response = "failure";
+			}
+		}else if(Util::strict_compare_inequal(packet, exit_command, 4) == 0){
+			return true;
+		}else{
+			if(loud)
+				std::cout << "Unknown command: " << get_command_from_request(packet) << std::endl;
+			response = "failure";
+		}
+
+		if(write(fd, response.c_str(), response.length()) < 0){
+			ERROR("write")
+			return true;
+		}
+		return false;
+	});
+
+	return 0;
 }

@@ -41,4 +41,5 @@ public:
 	~JsonObject();
 
 	JsonObject* operator[](const char* index);
+	JsonObject* operator[](std::string index);
 };

@@ -64,9 +64,9 @@ static int shell_routine(int socketfd){
 		close(shell_pipe[1][1]);
 
 		// Reading from child shell doesn't block (no output).
-		set_non_blocking(shell_pipe[1][0]);
+		Util::set_non_blocking(shell_pipe[1][0]);
 		// Reading from client doesn't block (no input).
-		set_non_blocking(socketfd);
+		Util::set_non_blocking(socketfd);
 
 		DEBUG("BEGIN EXCHANGE")
 

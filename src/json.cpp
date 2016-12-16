@@ -260,3 +260,7 @@ JsonObject::~JsonObject(){
 JsonObject* JsonObject::operator[](const char* index){
 	return this->objectValues[index];
 }
+
+JsonObject* JsonObject::operator[](std::string index){
+	return this->objectValues[index];
+}

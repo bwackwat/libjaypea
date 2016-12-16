@@ -113,8 +113,8 @@ static int shell_routine(std::string hostname, int socketfd){
 	
 	std::cout << "\r" << hostname << " > " << std::flush;
 
-	set_non_blocking(socketfd);
-	set_non_blocking(STDIN_FILENO);
+	Util::set_non_blocking(socketfd);
+	Util::set_non_blocking(STDIN_FILENO);
 
 	std::signal(SIGINT, sigcatch);
 	std::signal(SIGQUIT, sigcatch);

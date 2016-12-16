@@ -47,7 +47,10 @@ int main(){
 		}else if(std::strcmp(packet_data["type"]->stringValue.c_str(), "message") == 0){
 			if(packet_data["message"]->stringValue.length() > 128){
 				message = "Messages longer than 128 characters are truncated, sorry.\n";
-				write(fd, message.c_str(), message.length());
+				if(write(fd, message.c_str(), message.length()) < 0){
+					ERROR("write")
+					return true;
+				}
 				packet_data["message"]->stringValue.resize(128);
 			}
 			message = client_data[fd] + " > " + clean(packet_data["message"]->stringValue.c_str());

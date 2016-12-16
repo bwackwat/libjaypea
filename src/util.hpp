@@ -20,6 +20,7 @@
 
 #include "json.hpp"
 
+#define CONFIG_PATH "etc/configuration.json"
 #define PACKET_LIMIT 2048
 #define CONNECTIONS_LIMIT 2048
 #define FILE_PART_LIMIT 1024
@@ -59,7 +60,7 @@ private:
 	static std::vector<struct Argument> arguments;
 
 public:
-	static JsonObject config;
+	static JsonObject config_object;
 
 	static void define_argument(std::string name, std::string& value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, int* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);

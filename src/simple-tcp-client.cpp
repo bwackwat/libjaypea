@@ -78,6 +78,8 @@ bool SimpleTcpClient::communicate(const char* request, size_t length, char* resp
 	}
 	if((len = read(this->fd, response, PACKET_LIMIT)) < 0){
 		throw std::runtime_error(this->name + " read");
+	}else if(len == 0){
+		throw std::runtime_error(this->name + " kicked from server");
 	}
 	requests++;
 	response[len] = 0;

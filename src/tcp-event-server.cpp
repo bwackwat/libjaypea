@@ -50,7 +50,9 @@ void EventServer::close_client(size_t index){
 	int old_fd = this->client_fds[index];
 	this->client_fds[index] = -1;
 	this->next_fds->push(index);
-	this->on_disconnect(old_fd);
+	if(this->on_disconnect != nullptr){
+		this->on_disconnect(old_fd);
+	}
 }
 
 // Should not return?

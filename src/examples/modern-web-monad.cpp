@@ -25,7 +25,7 @@
 #define HTTP_404 "<h1>404 Not Found</h1>"
 
 static JsonObject* request_object;
-static JsonObject config_object;
+static std::string hostname;
 
 static bool parse_request(char* request){
 	std::string new_key;
@@ -163,14 +163,14 @@ static pid_t http_redirect(){
 		"<body>\n"
 		"<h1>Moved</h1>\n"
 		"<p>This page has moved to <a href=\"https://" +
-		config_object.objectValues["server_hostname"]->stringValue +
+		hostname +
 		"/\">https://" +
-		config_object.objectValues["server_hostname"]->stringValue +
+		hostname +
 		"/</a>.</p>\n"
 		"</body>\n"
 		"</html>";
 	std::string response = "HTTP/1.1 301 Moved Permanently\n" 
-		"Location: https://" + config_object.objectValues["server_hostname"]->stringValue + "/\n"
+		"Location: https://" + hostname + "/\n"
 		"Content-Type: text/html\n"
 		"Content-Length: " + std::to_string(response_body.length()) + "\n"
 		"\n\n" +
@@ -231,14 +231,10 @@ static int ssl_send(SSL* ssl, const char* buffer, int length){
 }
 
 int main(int argc, char **argv){
-	std::ifstream config_file("etc/configuration.json");
-        std::string config_data((std::istreambuf_iterator<char>(config_file)),
-                (std::istreambuf_iterator<char>()));
-        config_object.parse(config_data.c_str());
+	std::string public_directory;
 
-        std::cout << "Loaded: etc/configuration.json" << std::endl;
-        std::cout << config_object.stringify(true) << std::endl;
-
+	Util::define_argument("public_directory", public_directory, {"-pd"});
+	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::parse_arguments(argc, argv, "This is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
 
 	if((http_redirect_pid = http_redirect()) < 0){
@@ -390,7 +386,7 @@ int main(int argc, char **argv){
 			}
 		}else{
 			// "Regular" HTTP request.
-			std::string clean_route = config_object.objectValues["public_directory"]->stringValue;
+			std::string clean_route = public_directory;
 			for(size_t i = 0; i < request_object->objectValues["route"]->stringValue.length(); ++i){
 				if(i < request_object->objectValues["route"]->stringValue.length() - 1 &&
 				request_object->objectValues["route"]->stringValue[i] == '.' &&
