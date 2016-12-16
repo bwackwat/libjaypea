@@ -44,3 +44,5 @@ build com "-lcryptopp examples/comd/com.cpp examples/comd/comd-util.cpp simple-t
 build keyfile-gen "-lcryptopp examples/keyfile-gen.cpp"
 build pgsql-model-test "-lpqxx pgsql-model.cpp json.cpp examples/pgsql-model-test.cpp"
 build echo-server "tcp-event-server.cpp util.cpp examples/echo-server.cpp"
+build chat-server "tcp-event-server.cpp json.cpp util.cpp examples/chat-server.cpp"
+build chat-client "simple-tcp-client.cpp json.cpp util.cpp examples/chat-client.cpp"

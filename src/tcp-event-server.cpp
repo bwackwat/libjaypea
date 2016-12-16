@@ -2,18 +2,18 @@
 #include "node.hpp"
 #include "tcp-event-server.hpp"
 
-EventServer::EventServer(uint16_t port, size_t new_max_connections, PacketReceivedFunction new_packet_received)
+EventServer::EventServer(uint16_t port, size_t new_max_connections)
 :name("EventServer"),
 max_connections(new_max_connections),
-next_fds(new Node<size_t>()),
-packet_received(new_packet_received){
+next_fds(new Node<size_t>()){
 	for(size_t i = 0; i < this->max_connections; ++i){
 		this->client_fds.push_back(-1);
 		this->next_fds->push(i);
 	}
-	if((this->server_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0){
+	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		throw std::runtime_error(this->name + " socket");
 	}
+	Util::set_non_blocking(this->server_fd);
 	int opt = 1;
 	if(setsockopt(this->server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt)) < 0){
 		throw std::runtime_error(this->name + " setsockopt");
@@ -31,11 +31,33 @@ packet_received(new_packet_received){
 	PRINT(this->name << " listening on " << port)
 }
 
+void EventServer::broadcast(const char* packet, size_t length){
+	for(size_t i = 0; i < this->max_connections; ++i){
+		if(this->client_fds[i] != -1){
+			if(write(this->client_fds[i], packet, length) < 0){
+				ERROR("broadcast write")
+				this->close_client(i);
+			}
+		}
+	}
+}
+
+void EventServer::close_client(size_t index){
+	if(close(this->client_fds[index]) < 0){
+		ERROR("close_client")
+	}
+	PRINT(index << " done!")
+	int old_fd = this->client_fds[index];
+	this->client_fds[index] = -1;
+	this->next_fds->push(index);
+	this->on_disconnect(old_fd);
+}
+
 // Should not return?
-void EventServer::run(){
+void EventServer::run(PacketReceivedFunction packet_received){
 	int new_client_fd;
 	bool running = true, close_connection;
-	ssize_t rlen;
+	ssize_t len;
 	char packet[PACKET_LIMIT];
 
 	while(running){
@@ -50,6 +72,7 @@ void EventServer::run(){
 	//				break;
 				}else{
 					std::cout << this->next_fds->value << " -> ";
+					Util::set_non_blocking(new_client_fd);
 					this->client_fds[this->next_fds->pop()] = new_client_fd;
 					PRINT(this->next_fds->value)
 				}
@@ -61,28 +84,25 @@ void EventServer::run(){
 			if(this->client_fds[i] != -1){
 				close_connection = false;
 	//			while(1){
-					if((rlen = read(this->client_fds[i], packet, PACKET_LIMIT)) < 0){
+					if((len = read(this->client_fds[i], packet, PACKET_LIMIT)) < 0){
 						if(errno != EWOULDBLOCK){
 							ERROR("read")
 							close_connection = true;
 						}
 						// Nothing to read = ^_^
 	//					break;
-					}else if(rlen == 0){
+					}else if(len == 0){
 						// Closed connection?
+						PRINT("read zero")
 						close_connection = true;
 	//					break;
 					}else{
-						close_connection = this->packet_received(this->client_fds[i], packet, rlen);
+						packet[len] = 0;
+						close_connection = packet_received(this->client_fds[i], packet, len);
 					}
 	//			}
 				if(close_connection){
-					if(close(this->client_fds[i]) < 0){
-						ERROR("close")
-					}
-					PRINT(i << " done!")
-					this->client_fds[i] = -1;
-					this->next_fds->push(i);
+					this->close_client(i);
 				}
 			}
 		}

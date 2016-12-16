@@ -151,3 +151,9 @@ bool Util::strict_compare_inequal(const char* first, const char* second, int cou
 	}
 	return false;
 }
+
+void Util::set_non_blocking(int fd){
+	int flags = fcntl(fd, F_GETFL, 0);
+	flags |= O_NONBLOCK;
+	fcntl(fd, F_SETFL, flags);
+}

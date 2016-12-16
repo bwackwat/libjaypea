@@ -13,12 +13,16 @@ private:
 	std::string name;
 	unsigned long max_connections;
 	Node<size_t>* next_fds;
-	PacketReceivedFunction packet_received;
 
 	int server_fd;
 	
 	std::vector<int> client_fds;
+
+	void close_client(size_t index);
 public:
-	EventServer(uint16_t port, size_t new_max_connections, PacketReceivedFunction new_packet_received);
-	void run();
+	EventServer(uint16_t port, size_t new_max_connections);
+	void broadcast(const char* packet, size_t length);
+	void run(PacketReceivedFunction new_packet_received);
+
+	std::function<void(int)> on_disconnect;
 };

@@ -239,6 +239,9 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 JsonObject::JsonObject(enum JsonType new_type)
 :type(new_type){}
 
+JsonObject::JsonObject(std::string new_stringValue)
+:type(STRING), stringValue(new_stringValue){}
+
 JsonObject::JsonObject()
 :type(NOTYPE){}
 
@@ -252,4 +255,8 @@ JsonObject::~JsonObject(){
 			delete item;
 		}
 	}
+}
+
+JsonObject* JsonObject::operator[](const char* index){
+	return this->objectValues[index];
 }

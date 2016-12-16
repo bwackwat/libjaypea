@@ -48,7 +48,6 @@ extern CryptoPP::AutoSeededRandomPool rand_tool;
 
 extern int send(int fd, std::string data);
 extern int init_crypto(std::string keyfile);
-extern void set_non_blocking(int fd);
 
 extern std::string encrypt(std::string data);
 extern std::string decrypt(std::string data);

@@ -36,6 +36,9 @@ public:
 	std::string stringify(bool pretty = false, size_t depth = 0);
 
 	JsonObject(enum JsonType new_type);
+	JsonObject(std::string new_stringValue);
 	JsonObject();
 	~JsonObject();
+
+	JsonObject* operator[](const char* index);
 };

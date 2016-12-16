@@ -64,12 +64,6 @@ int send(int fd, std::string data){
 	return 0;
 }
 
-void set_non_blocking(int fd){
-	int flags = fcntl(fd, F_GETFL, 0);
-	flags |= O_NONBLOCK;
-	fcntl(fd, F_SETFL, flags);
-}
-
 std::string encrypt(std::string data){
 	DEBUG("ENCRYPT:\n" << data << '|' << data.length())
 	rand_tool.GenerateBlock(SALT, CryptoPP::AES::MAX_KEYLENGTH);

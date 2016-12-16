@@ -68,5 +68,6 @@ public:
 	static void parse_arguments(int argc, char** argv, std::string description);
 
 	static bool strict_compare_inequal(const char* forst, const char* second, int count = -1);
+	static void set_non_blocking(int fd);
 };
 
