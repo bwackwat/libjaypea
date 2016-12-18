@@ -6,7 +6,7 @@
 
 #include "node.hpp"
 
-typedef std::function<bool(int, char*, ssize_t)> PacketReceivedFunction;
+typedef std::function<bool(int, const char*, ssize_t)> PacketReceivedFunction;
 
 class EventServer{
 protected:
@@ -28,7 +28,7 @@ public:
 	virtual void run(PacketReceivedFunction new_packet_received);
 
 	std::function<void(int)> on_connect;
-	std::function<void()> on_event_loop;
+	std::function<bool()> on_event_loop;
 	PacketReceivedFunction packet_received;
 	std::function<void(int)> on_disconnect;
 };

@@ -1,6 +1,10 @@
+#include <sys/types.h>
+#include <fcntl.h>
+
+#include "util.hpp"
 #include "symmetric-event-server.hpp"
 
-SymetricEventServer::SymmetricEventServer(std::string keyfile, uint16_t port, int new_max_connections) : EventServer("SymmetricEventServer", port, new_max_connections){
+SymmetricEventServer::SymmetricEventServer(std::string keyfile, uint16_t port, size_t new_max_connections) : EventServer("SymmetricEventServer", port, new_max_connections){
 	int fd;
 	if((fd = open(keyfile.c_str(), O_RDONLY)) < 0){
 		throw std::runtime_error(this->name + " open keyfile");
@@ -19,15 +23,15 @@ SymetricEventServer::SymmetricEventServer(std::string keyfile, uint16_t port, in
 
 std::string SymmetricEventServer::encrypt(std::string data){
 	DEBUG("ENCRYPT:\n" << data << '|' << data.length())
-	rand_tool.GenerateBlock(SALT, CryptoPP::AES::MAX_KEYLENGTH);
-	std::string salted(reinterpret_cast<const char*>(SALT), CryptoPP::AES::MAX_KEYLENGTH);
+	this->random_pool.GenerateBlock(this->salt, CryptoPP::AES::MAX_KEYLENGTH);
+	std::string salted(reinterpret_cast<const char*>(this->salt), CryptoPP::AES::MAX_KEYLENGTH);
 	DEBUG("SALT:\n" << salted << '|' << salted.length());
 	salted += data;
 	std::string new_data;
 
 	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
 	CryptoPP::Base64Encoder* base64_enc = new CryptoPP::Base64Encoder(sink, false);
-	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption enc(KEY, CryptoPP::AES::MAX_KEYLENGTH, IV);
+	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption enc(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 	CryptoPP::StreamTransformationFilter* aes_enc = new CryptoPP::StreamTransformationFilter(enc, base64_enc);
 	CryptoPP::StringSource enc_source(salted, true, aes_enc);
 
@@ -40,7 +44,7 @@ std::string SymmetricEventServer::decrypt(std::string data){
 	std::string new_data;
 
 	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
-	CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption dec(KEY, CryptoPP::AES::MAX_KEYLENGTH, IV);
+	CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption dec(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 	CryptoPP::StreamTransformationFilter* aes_dec = new CryptoPP::StreamTransformationFilter(dec, sink);
 	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
 	CryptoPP::StringSource dec_source(data, true, base64_dec);
@@ -51,7 +55,9 @@ std::string SymmetricEventServer::decrypt(std::string data){
 	return new_data;
 }
 
-bool SymmetricEventServer::send(int fd, char* data, size_t data_length){
+bool SymmetricEventServer::send(int fd, const char* data, size_t /*data_length*/){
+	// Might fix encryption buggies...
+	//std::string send_data = this->encrypt(data, data_length);
 	std::string send_data = this->encrypt(data);
 	if(write(fd, send_data.c_str(), send_data.length()) < 0){
 		return true;
@@ -61,7 +67,7 @@ bool SymmetricEventServer::send(int fd, char* data, size_t data_length){
 
 bool SymmetricEventServer::recv(int fd, char* data, size_t data_length){
 	ssize_t len;
-	std::string recv _data;
+	std::string recv_data;
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK){
 			ERROR(this->name << " read")
@@ -74,11 +80,13 @@ bool SymmetricEventServer::recv(int fd, char* data, size_t data_length){
 	}else{
 		data[len] = 0;
 		try{
-			recv_data = this->decrypt(std::string(data, len));
-		}catch(const CryptoPP:Exception& e){
+			// Might fix decryption buggies...
+			//recv_data = this->decrypt(std::string(data, len));
+			recv_data = this->decrypt(std::string(data));
+		}catch(const CryptoPP::Exception& e){
 			PRINT(e.what() << "\nImplied hacker, closing!")
 			return true;
 		}
-		return packet_received(fd, recv_data.c_str(), recv_data.length());
+		return packet_received(fd, recv_data.c_str(), static_cast<ssize_t>(recv_data.length()));
 	}
 }

@@ -45,3 +45,5 @@ build pgsql-model-test "-lpqxx pgsql-model.cpp examples/pgsql-model-test.cpp"
 build echo-server "tcp-event-server.cpp examples/echo-server.cpp"
 build chat-server "tcp-event-server.cpp examples/chat-server.cpp"
 build chat-client "simple-tcp-client.cpp examples/chat-client.cpp"
+
+build comd-new "-lcryptopp examples/comd/comd-new.cpp tcp-event-server.cpp symmetric-event-server.cpp"

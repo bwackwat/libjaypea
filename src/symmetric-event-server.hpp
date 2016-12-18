@@ -19,8 +19,8 @@ private:
 	std::string encrypt(std::string data);
 	std::string decrypt(std::string data);
 public:
-	SymmetricEventServer(std::string keyfile, uint16_t port, int new_max_connections);
+	SymmetricEventServer(std::string keyfile, uint16_t port, size_t new_max_connections);
 
-	bool send(int fd, char* data, size_t data_length);
+	bool send(int fd, const char* data, size_t data_length);
 	bool recv(int fd, char* data, size_t data_length);
 };

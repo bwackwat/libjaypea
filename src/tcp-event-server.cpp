@@ -2,8 +2,6 @@
 #include "node.hpp"
 #include "tcp-event-server.hpp"
 
-typedef std::function<bool(int, char*, ssize_t)> PacketReceivedFunction;
-
 EventServer::EventServer(std::string new_name, uint16_t port, size_t new_max_connections)
 :name(new_name),
 max_connections(new_max_connections),
@@ -86,8 +84,10 @@ void EventServer::run(PacketReceivedFunction new_packet_received){
 
 	while(running){
 		if(this->on_event_loop != nullptr){
-			this->on_event_loop();
-		{
+			if(this->on_event_loop()){
+				break;
+			}
+		}
 	//	while(1){
 			if(this->next_fds->value > 0){
 				if((new_client_fd = accept(this->server_fd, 0, 0)) < 0){
