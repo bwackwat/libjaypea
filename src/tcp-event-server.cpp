@@ -2,22 +2,27 @@
 #include "node.hpp"
 #include "tcp-event-server.hpp"
 
-EventServer::EventServer(uint16_t port, size_t new_max_connections)
-:name("EventServer"),
+typedef std::function<bool(int, char*, ssize_t)> PacketReceivedFunction;
+
+EventServer::EventServer(std::string new_name, uint16_t port, size_t new_max_connections)
+:name(new_name),
 max_connections(new_max_connections),
 next_fds(new Node<size_t>()){
 	for(size_t i = 0; i < this->max_connections; ++i){
 		this->client_fds.push_back(-1);
-		this->next_fds->push(i);
+	this->next_fds->push(i);
 	}
 	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		throw std::runtime_error(this->name + " socket");
 	}
 	Util::set_non_blocking(this->server_fd);
-	int opt = 1;
-	if(setsockopt(this->server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt)) < 0){
-		throw std::runtime_error(this->name + " setsockopt");
-	}
+//	For this class, I am unsure about what this is genuinely useful for...
+//	However, it has been useful in the past and I have read it as "good practice."
+//
+//	int opt = 1;
+//	if(setsockopt(this->server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt)) < 0){
+//		throw std::runtime_error(this->name + " setsockopt");
+//	}
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -55,14 +60,34 @@ void EventServer::close_client(size_t index){
 	}
 }
 
-// Should not return?
-void EventServer::run(PacketReceivedFunction packet_received){
-	int new_client_fd;
-	bool running = true, close_connection;
+bool EventServer::recv(int fd, char* data, size_t data_length){
 	ssize_t len;
+	if((len = read(fd, data, data_length)) < 0){
+		if(errno != EWOULDBLOCK){
+			ERROR(this->name << " read")
+			return true;
+		}
+		return false;
+	}else if(len == 0){
+		return true;
+	}else{
+		data[len] = 0;
+		return packet_received(fd, data, len);
+	}
+}	
+
+// Should not return?
+void EventServer::run(PacketReceivedFunction new_packet_received){
+	int new_client_fd;
+	bool running = true;
 	char packet[PACKET_LIMIT];
 
+	this->packet_received = new_packet_received;
+
 	while(running){
+		if(this->on_event_loop != nullptr){
+			this->on_event_loop();
+		{
 	//	while(1){
 			if(this->next_fds->value > 0){
 				if((new_client_fd = accept(this->server_fd, 0, 0)) < 0){
@@ -87,26 +112,7 @@ void EventServer::run(PacketReceivedFunction packet_received){
 	//	}
 		for(size_t i = 0; i < this->max_connections; ++i){
 			if(this->client_fds[i] != -1){
-				close_connection = false;
-	//			while(1){
-					if((len = read(this->client_fds[i], packet, PACKET_LIMIT)) < 0){
-						if(errno != EWOULDBLOCK){
-							ERROR("read")
-							close_connection = true;
-						}
-						// Nothing to read = ^_^
-	//					break;
-					}else if(len == 0){
-						// Closed connection?
-						PRINT("read zero")
-						close_connection = true;
-	//					break;
-					}else{
-						packet[len] = 0;
-						close_connection = packet_received(this->client_fds[i], packet, len);
-					}
-	//			}
-				if(close_connection){
+				if(this->recv(this->client_fds[i], packet, PACKET_LIMIT)){
 					this->close_client(i);
 				}
 			}

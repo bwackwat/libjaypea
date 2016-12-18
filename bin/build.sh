@@ -12,7 +12,6 @@ optimize="-O0"
 
 case "${argv[@]}" in *"OPT"*)
 	optimize="-O3"
-	echo "OPTIMIZING!"
 	((argc-=1))
 	argv=( "${argv[@]/"OPT"}" )
 esac
