@@ -72,11 +72,30 @@ bool EventServer::recv(int fd, char* data, size_t data_length){
 		data[len] = 0;
 		return packet_received(fd, data, len);
 	}
-}	
+}
+
+bool EventServer::nonblocking_accept(){
+	int new_client_fd;
+	if((new_client_fd = accept(this->server_fd, 0, 0)) < 0){
+		if(errno != EWOULDBLOCK){
+			ERROR("accept")
+			return false;
+		}
+		// Nothing to accept = ^_^
+	}else{
+		std::cout << this->next_fds->value << " -> ";
+		Util::set_non_blocking(new_client_fd);
+		this->client_fds[this->next_fds->pop()] = new_client_fd;
+		PRINT(this->next_fds->value)
+		if(this->on_connect != nullptr){
+			this->on_connect(new_client_fd);
+		}
+	}
+	return true;
+}
 
 // Should not return?
 void EventServer::run(PacketReceivedFunction new_packet_received){
-	int new_client_fd;
 	bool running = true;
 	char packet[PACKET_LIMIT];
 
@@ -90,22 +109,7 @@ void EventServer::run(PacketReceivedFunction new_packet_received){
 		}
 	//	while(1){
 			if(this->next_fds->value > 0){
-				if((new_client_fd = accept(this->server_fd, 0, 0)) < 0){
-					if(errno != EWOULDBLOCK){
-						ERROR("accept")
-						running = false;
-					}
-					// Nothing to accept = ^_^
-	//				break;
-				}else{
-					std::cout << this->next_fds->value << " -> ";
-					Util::set_non_blocking(new_client_fd);
-					this->client_fds[this->next_fds->pop()] = new_client_fd;
-					PRINT(this->next_fds->value)
-					if(this->on_connect != nullptr){
-						this->on_connect(new_client_fd);
-					}
-				}
+				running = this->nonblocking_accept();
 			}else{
 	//			break;
 			}

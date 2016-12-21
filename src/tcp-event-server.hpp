@@ -18,6 +18,7 @@ protected:
 	
 	std::vector<int> client_fds;
 
+	virtual bool nonblocking_accept();
 	virtual void close_client(size_t index);
 public:
 	EventServer(std::string new_name, uint16_t port, size_t new_max_connections);

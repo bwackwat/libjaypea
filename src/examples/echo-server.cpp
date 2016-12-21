@@ -10,7 +10,7 @@ int main(int argc, char** argv){
 
 	EventServer server("EchoServer", static_cast<uint16_t>(port), static_cast<size_t>(max_connections));
 
-	server.run([](int fd, char* packet, ssize_t length){
+	server.run([](int fd, const char* packet, ssize_t length){
 		PRINT(packet)
 		if(write(fd, packet, static_cast<size_t>(length)) < 0){
 			ERROR("write")

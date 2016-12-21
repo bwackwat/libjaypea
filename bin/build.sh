@@ -47,3 +47,4 @@ build chat-server "tcp-event-server.cpp examples/chat-server.cpp"
 build chat-client "simple-tcp-client.cpp examples/chat-client.cpp"
 
 build comd-new "-lcryptopp examples/comd/comd-new.cpp tcp-event-server.cpp symmetric-event-server.cpp"
+build tcp-event-client "examples/tcp-event-client.cpp tcp-event-client.cpp"

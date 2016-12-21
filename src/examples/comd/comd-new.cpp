@@ -96,7 +96,6 @@ int main(int argc, char** argv){
 	enum ComdState state = GET_IDENTITY;
 	enum Routine routine = SHELL;
 	struct Shell* shell = new struct Shell();
-	int shell_client_fd;
 	char packet[PACKET_LIMIT];
 	ssize_t len;
 	int port = 3424;
@@ -153,7 +152,7 @@ int main(int argc, char** argv){
 						return true;
 					}else{
 						// TODO: The whole server shouldn't really exit, only this client's connection...
-						if(server.send(shell_client_fd, packet, static_cast<size_t>(len))){
+						if(server.send(fd, packet, static_cast<size_t>(len))){
 							kill(shell->pid, SIGTERM);
 							return true;
 						}
