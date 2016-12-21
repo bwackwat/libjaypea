@@ -26,9 +26,14 @@
 #include "tcp-event-client.hpp"
 
 void EventClient::add(std::string hostname, uint16_t port){
-	struct Connection* new_conn = nullptr;
-	*new_conn = {-1, hostname, port, DISCONNECTED, new struct sockaddr_in()};
-	this->connections.push_back(new_conn);
+	this->connections.push_back(new Connection(hostname, port));
+}
+
+void EventClient::close_client(Connection* conn){
+	if(close(conn->fd) < 0){
+		ERROR("close")
+	}
+	conn->state = DEAD;
 }
 
 void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read){
@@ -44,7 +49,7 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 		case DISCONNECTED:
 			if((connection->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 				ERROR("socket")
-				connection->state = DEAD;
+				this->close_client(connection);
 				break;
 			}
 			Util::set_non_blocking(connection->fd);
@@ -52,7 +57,7 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 				struct hostent* host;
 				if((host = gethostbyname(connection->hostname.c_str())) == 0){
 					ERROR("gethostbyname")
-					connection->state = DEAD;
+					this->close_client(connection);
 					break;
 				}
 				this->host_addresses[connection->hostname] = *reinterpret_cast<struct in_addr*>(host->h_addr);
@@ -60,23 +65,23 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 			connection->server_address->sin_family = AF_INET;
 			connection->server_address->sin_addr = this->host_addresses[connection->hostname];
 			connection->server_address->sin_port = htons(connection->port);
+			connection->state = CONNECTING;
 			running = true;
 			break;
 		case CONNECTING:
 			bzero(&(connection->server_address->sin_zero), 8);
 			if(connect(connection->fd, reinterpret_cast<struct sockaddr*>(connection->server_address), sizeof(struct sockaddr_in)) < 0){
-				if(!(errno == EALREADY || errno == EINPROGRESS)){
+				if(errno !=  EINPROGRESS && errno != EALREADY){
 					ERROR("connect")
-					connection->state = DEAD;
+					this->close_client(connection);
 					break;
 				}
 				// Still connecting, cooooool.
 			}else{
 				connection->state = CONNECTED;
-				PRINT(connection->fd << " connected!")
 				if(this->on_connect != nullptr){
 					if(this->on_connect(connection->fd)){
-						connection->state = DEAD;
+						this->close_client(connection);
 					}
 				}
 			}
@@ -87,18 +92,18 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 			if((len = read(connection->fd, packet, PACKET_LIMIT)) < 0){
 				if(errno != EWOULDBLOCK){
 					ERROR("read")
-					connection->state = DEAD;
+					this->close_client(connection);
 					break;
 				}
 				// Nothing to read, coooooool.
 			}else if(len == 0){
 				ERROR("server read zero")
-				connection->state = DEAD;
+				this->close_client(connection);
 				break;
 			}else{
 				packet[len] = 0;
 				if(this->on_read(connection->fd, packet, len)){
-					connection->state = DEAD;
+					this->close_client(connection);
 				}
 			}
 			running = true;
