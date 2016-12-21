@@ -67,6 +67,7 @@ bool EventServer::recv(int fd, char* data, size_t data_length){
 		}
 		return false;
 	}else if(len == 0){
+		ERROR("server read zero")
 		return true;
 	}else{
 		data[len] = 0;

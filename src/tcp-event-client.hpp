@@ -33,9 +33,11 @@ private:
 	std::function<bool(int, const char*, ssize_t)> on_read;
 
 	void close_client(Connection* conn);
+	virtual bool recv(int fd, char* data, size_t data_length);
 public:
 	void add(std::string hostname, uint16_t port);
 	void run(std::function<bool(int, const char*, ssize_t)> new_on_read);
 
 	std::function<bool(int)> on_connect;
+	std::function<void()> on_event_loop;
 };

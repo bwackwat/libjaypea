@@ -176,7 +176,14 @@ static int shell_routine(std::string hostname, int socketfd){
 	return 0;
 }
 
+enum ComState{
+	SENT_IDENTITY,
+	SENT_ROUTINE,
+	SENDING_PACKETS
+};
+
 int main(int argc, char** argv){
+	ComState state = SENT_IDENTITY;
 	ssize_t len;
 	char packet[PACKET_LIMIT];
 
@@ -200,32 +207,58 @@ int main(int argc, char** argv){
 		routine = RECV_FILE;});
 	Util::parse_arguments(argc, argv, "This is a secure client for comd, supporting remote shell, send file, and receive file routines.");
 
-	if(init_crypto(keyfile)){
-		return 1;
-	}
+	SymmetricEventClient client(keyfile);
+	client.add(hostname, static_cast<uint16_t>(port));
 
-	SimpleTcpClient client(hostname, static_cast<uint16_t>(port));
+	client.on_connect = [&](int fd){
+		if(client.send(fd, IDENTITY.c_str(), IDENTITY.length())){
+			ERROR("client send identity")
+			return true;
+		}
+		return false;
+	};
 
-	// Handshake step 1:
-	// Identify yourself!
-	// No password protection; basically verifying the cypher.
+	client.run([&](int fd, const char* data, ssize_t data_length){
+		switch(state){
+		case SENT_IDENTITY:
+			PRINT(data)
+			if(client.send(fd, ROUTINES[routine].c_str(), ROUTINES[routine].length())){
+				return true;
+			}
+			state = SENT_ROUTINE;
+			break;
+		case SENT_ROUTINE:
+			switch(routine){
+			case SHELL:
+				client.on_event_loop = [&](){
+					if(!stdin_available()){
+						return false;
+					}
+					if((len = read(STDIN_FILENO, packet, PACKET_LIMIT)) < 0){
+						if(errno != EWOULDBLOCK){
+							ERROR("stdin read")
+							return true;
+						}
+					}else if(len == 0){
+						ERROR("stdin read zero");
+						return true;
+					}else{
+						if(client.send(fd, packet, static_cast<size_t>(len))){
+							return true;
+						}
+					}
+					return false;
+			case SEND_FILE:
+				//TODO send file name
+				return false;
+			case RECV_FILE:
+				//TODO write ok packet???
+				return false;
+			}
+		}
+		case SENDING_PACKETS:
+			PRINT(data)
 
-	if(send(client.fd, IDENTITY)){
-		std::cout << "Uh oh, send identity error." << std::endl;
-		return 1;
-	}
-
-	packet[0] = 0;
-	if((len = read(client.fd, packet, PACKET_LIMIT)) < 0){
-		std::cout << "Uh oh, read verification error." << std::endl;
-		return 1;
-	}
-	packet[len] = 0;
-	res_data = decrypt(packet);
-	std::cout << res_data << std::endl;
-
-	// Handshake step 2:
-	// Select a method!
 	// Default method, shell usage.
 
 	if(send(client.fd, ROUTINES[routine])){

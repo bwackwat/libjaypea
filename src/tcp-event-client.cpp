@@ -43,6 +43,9 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 	this->on_read = new_on_read;
 
 	while(running){
+	if(this->on_event_loop != nullptr){
+		this->on_event_loop();
+	}
 	running = false;
 	for(auto& connection : this->connections){
 		switch(connection->state){
@@ -88,23 +91,8 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 			running = true;
 			break;
 		case CONNECTED:
-			ssize_t len;
-			if((len = read(connection->fd, packet, PACKET_LIMIT)) < 0){
-				if(errno != EWOULDBLOCK){
-					ERROR("read")
-					this->close_client(connection);
-					break;
-				}
-				// Nothing to read, coooooool.
-			}else if(len == 0){
-				ERROR("server read zero")
+			if(this->recv(connection->fd, packet, PACKET_LIMIT)){
 				this->close_client(connection);
-				break;
-			}else{
-				packet[len] = 0;
-				if(this->on_read(connection->fd, packet, len)){
-					this->close_client(connection);
-				}
 			}
 			running = true;
 			break;
@@ -112,5 +100,23 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 			break;
 		}
 	}
+	}
+}
+
+bool EventClient::recv(int fd, char* data, size_t data_length){
+	ssize_t len;
+	if((len = read(connection->fd, data, data_length)) < 0){
+		if(errno != EWOULDBLOCK){
+			ERROR("read")
+			return true;
+		}
+		// Nothing to read, coooooool.
+		return false;
+	}else if(len == 0){
+		ERROR("client read zero")
+		return true;
+	}else{
+		packet[len] = 0;
+		return this->on_read(connection->fd, packet, len);
 	}
 }

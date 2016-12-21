@@ -8,16 +8,11 @@
 #include "cryptopp/cryptlib.h"
 
 #include "tcp-event-server.hpp"
+#include "symmetric-encryptor.hpp"
 
 class SymmetricEventServer : public EventServer {
 private:
-	CryptoPP::AutoSeededRandomPool random_pool;
-	byte key[CryptoPP::AES::MAX_KEYLENGTH];
-	byte iv[CryptoPP::AES::BLOCKSIZE];
-	byte salt[CryptoPP::AES::MAX_KEYLENGTH];
-
-	std::string encrypt(std::string data);
-	std::string decrypt(std::string data);
+	SymmetricEncryptor encryptor;
 public:
 	SymmetricEventServer(std::string keyfile, uint16_t port, size_t new_max_connections);
 
