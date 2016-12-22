@@ -23,7 +23,7 @@
 static std::unordered_map<std::string, std::string> values;
 static int loud = 1;
 
-static int set_value(char* key_and_value){
+static int set_value(const char* key_and_value){
 	int get_key = 1;
 	std::string key = "";
 	std::string value = "";
@@ -45,7 +45,7 @@ static int set_value(char* key_and_value){
 	return 0;
 }
 
-static std::string get_command_from_request(char* request){
+static std::string get_command_from_request(const char* request){
 	std::string command = "";
 	for(const char* it = request; *it; ++it){
 		if(*it == ' '){

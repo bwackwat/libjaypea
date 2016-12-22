@@ -19,8 +19,7 @@
 
 #include "util.hpp"
 #include "json.hpp"
-#include "tcp-event-server.hpp"
-#include "private-event-server.hpp"
+#include "simple-tcp-server.hpp"
 
 #define BUFFER_LIMIT 8192
 #define HTTP_404 "<h1>404 Not Found</h1>"
@@ -151,7 +150,10 @@ static std::string routes(JsonObject*){
 }
 
 static pid_t http_redirect(){
+	int clientfd;
+	ssize_t len;
 	pid_t pid;
+	char buffer[BUFFER_LIMIT];
 	
 	// Trivial 301 Redirect.	
 	std::string response_body = "<html>\n"
@@ -179,11 +181,24 @@ static pid_t http_redirect(){
 		return -1;
 	}else if(pid > 0){
 		try{
-			EventServer server("HttpRedirecter", 80, 10);
-			server.run([&](int fd, const char*, size_t){
-				write(fd, response.c_str(), response.length());
-				return true;
-			});
+			SimpleTcpServer server(80);
+		        while(1){
+				clientfd = server.accept_connection();
+				if((len = read(clientfd, buffer, BUFFER_LIMIT)) < 0){
+					std::cout << "Uh oh, redirect read error!" << std::endl;
+					continue;
+				}
+				buffer[len] = 0;
+				std::cout << "REDI:" << buffer << '|' << len << std::endl;
+				if((len = write(clientfd, response.c_str(), response.length())) < 0){
+					std::cout << "Uh oh, redirect write error!" << std::endl;
+					continue;
+				}
+				if(close(clientfd) < 0){
+					std::cout << "Uh oh, redirect close error!" << std::endl;
+					continue;
+				}
+			}
 		}catch(std::exception& e){
 			std::cout << e.what() << std::endl;
 			if(kill(pid, SIGTERM) < 0){
@@ -198,10 +213,25 @@ static pid_t http_redirect(){
 
 static pid_t http_redirect_pid;
 
+static int ssl_send(SSL* ssl, const char* buffer, int length){
+	int len = SSL_write(ssl, buffer, length);
+	switch(SSL_get_error(ssl, len)){
+	case SSL_ERROR_NONE:
+		break;
+	default:
+		std::cout << "SSL write issue..." << std::endl;
+		SSL_free(ssl);
+		return -1;
+	}
+	if(len != length){
+		std::cout << "SSL wrote odd number of bytes:" << len << '|' << length << std::endl;
+		return -1;
+	}
+	return len;
+}
+
 int main(int argc, char **argv){
 	std::string public_directory;
-	std::string ssl_certificate = "etc/ssl/ssl.crt";
-	std::string ssl_private_key = "etc/ssl/ssl.key";
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("hostname", hostname, {"-hn"});
@@ -227,6 +257,38 @@ int main(int argc, char **argv){
 	route("/", root);
 	route("/routes", routes);
 
+	SSL_load_error_strings();
+	SSL_library_init();
+
+        if((ctx = SSL_CTX_new(SSLv23_server_method())) == 0){
+                std::cout << "Uh oh, unable to create SSL context." << std::endl;
+                ERR_print_errors_fp(stdout);
+                return -1;
+        }
+
+        if(SSL_CTX_set_ecdh_auto(ctx, 1) == 0){
+		std::cout << "Uh oh, SSL_CTX_set_ecdh_auto(ctx, 1) error." << std::endl;
+		return -1;
+	}
+
+        if(SSL_CTX_use_certificate_file(ctx, "etc/ssl/ssl.crt", SSL_FILETYPE_PEM) != 1){
+                std::cout << "Certificate file 'ssl.crt' error." << std::endl;
+                return -1;
+        }
+
+        if(SSL_CTX_use_PrivateKey_file(ctx, "etc/ssl/ssl.key", SSL_FILETYPE_PEM) != 1){
+                std::cout << "Private key file 'ssl.key' error." << std::endl;
+                return -1;
+        }
+
+	/*
+	 *
+	 * NOTE: I could not refactor the SSL init code above into another function...
+	 * There was an undetermined issue with this, causing SSL_new to fail.
+	 * I believe it has to do with SSL_library_init() creating scoped variables.
+	 *
+	 */
+
 	JsonObject* routes_object = new JsonObject();
 	routes_object->type = OBJECT;
 	routes_object->objectValues["result"] = new JsonObject();
@@ -249,16 +311,55 @@ int main(int argc, char **argv){
 	delete routes_object;
 
 	try{
-		PrivateEventServer server(ssl_certificate, ssl_private_key, 443, 10);
-		server.run([&](int fd, const char* data, size_t data_length)
-	{
-		if(server.send(fd, response_header.c_str(), static_cast<int>(response_header.length()))){
-			return true;
-		}
-		PRINT("DELI:" << response_header)
-		std::string response_body = "";
+		SimpleTcpServer server(443);
+	while(1){
+		clientfd = server.accept_connection();
 
-		if(parse_request(data)){
+		if((ssl = SSL_new(ctx)) == 0){
+			std::cout << "SSL_new error!" << std::endl;
+			ERR_print_errors_fp(stdout);
+			SSL_free(ssl);
+			close(clientfd);
+			break;
+		}
+
+		SSL_set_fd(ssl, clientfd);
+
+		if(SSL_accept(ssl) <= 0){
+			std::cout << "SSL_accept error!" << std::endl;
+			ERR_print_errors_fp(stdout);
+			SSL_free(ssl);
+			close(clientfd);
+			continue;
+		}
+
+		// If this can't fit the entire request then forget it.
+		// I don't want to be accepting requests larger than this.
+		res = SSL_read(ssl, buffer, BUFFER_LIMIT);
+		switch(SSL_get_error(ssl, res)){
+		case SSL_ERROR_NONE:
+			break;
+		case SSL_ERROR_ZERO_RETURN:
+			std::cout << "Nothing read? End connection?" << std::endl;
+			break;
+		default:
+			std::cout << "SSL read issue?" << std::endl;
+			SSL_free(ssl);
+			close(clientfd);
+			continue;
+		}
+		buffer[res] = 0;
+		std::cout << "RECV:" << buffer << '|' << res << std::endl;
+		response_body = "";
+
+		if((res = ssl_send(ssl, response_header.c_str(), static_cast<int>(response_header.length()))) < 0){
+			std::cout << "SSL send header error." << std::endl;
+			close(clientfd);
+			continue;
+		}
+		std::cout << "DELI:" << response_header << '|' << res << std::endl;
+
+		if(parse_request(buffer)){
 			// JSON API request.
 			std::string api_route = request_object->objectValues["route"]->stringValue.substr(4);
 			if(api_route[api_route.length() - 1] != '/'){
@@ -296,68 +397,82 @@ int main(int argc, char **argv){
 			}
 
 			if(lstat(clean_route.c_str(), &route_stat) < 0){
-				ERROR("lstat")
+				std::cout << "Uh oh, lstat error!" << std::endl;
 				response_body = HTTP_404;
 			}else if(S_ISDIR(route_stat.st_mode)){
 				clean_route += "/index.html";
 				if(lstat(clean_route.c_str(), &route_stat) < 0){
-					ERROR("lstat index.html")
+					std::cout << "Uh oh, lstat index.html error!" << std::endl;
 					response_body = HTTP_404;
 				}
 			}
 			if(response_body.empty() && S_ISREG(route_stat.st_mode)){
-				PRINT("SEND FILE:" << clean_route)
+				std::cout << "SEND FILE:" << clean_route << std::endl;
+
 				response_length = "Content-Length: " + std::to_string(route_stat.st_size) + "\n\n";
-				if(server.send(fd, response_length.c_str(), static_cast<int>(response_length.length()))){
-					return true;
+				if((res = ssl_send(ssl, response_length.c_str(), static_cast<int>(response_length.length()))) < 0){
+					std::cout << "SSL send length error." << std::endl;
+					close(clientfd);
+					continue;
 				}
-				PRINT("DELI:" << response_length)
+				std::cout << "DELI:" << response_length << '|' << res << std::endl;
 
 				int fd;
 				if((fd = open(clean_route.c_str(), O_RDONLY)) < 0){
-					ERROR("open file")
-					return false;
+					std::cout << "Uh oh, open file error!" << std::endl;
+					return 1;
 				}
 				while(1){
 					if((len = read(fd, buffer, BUFFER_LIMIT)) < 0){
-						ERROR("read file")
-						return false;
+						std::cout << "Uh oh, read file error!" << std::endl;
+						return 1;
 					}
 					buffer[len] = 0;
-					if(server.send(fd, buffer, static_cast<int>(len))){
-						return true;
+					if((res = ssl_send(ssl, buffer, static_cast<int>(len))) < 0){
+						std::cout << "SSL send buffer of data." << std::endl;
+						close(clientfd);
+						break;
 					}
 					if(len < BUFFER_LIMIT){
 						break;
 					}
 				}
 				if(close(fd) < 0){
-					ERROR("close file")
-					return false;
+					std::cout << "Uh oh, close file error!" << std::endl;
+					return 1;
 				}
 			}else{
-				PRINT("Something other than a regular file was requested...")
+				std::cout << "Something other than a regular file was requested..." << std::endl;
 				response_body = HTTP_404;
 			}
 		}
 		if(!response_body.empty()){
 			response_length = "Content-Length: " + std::to_string(response_body.length()) + "\n\n";
-			if(server.send(fd, response_length.c_str(), static_cast<int>(response_length.length()))){
-				return true;
+			if((res = ssl_send(ssl, response_length.c_str(), static_cast<int>(response_length.length()))) < 0){
+				std::cout << "SSL send length error." << std::endl;
+				close(clientfd);
+				continue;
 			}
-			PRINT("DELI:" << response_length)
-			if(server.send(fd, response_body.c_str(), static_cast<int>(response_body.length()))){
-				return true;
+			std::cout << "DELI:" << response_length << '|' << res << std::endl;
+			if((res = SSL_write(ssl, response_body.c_str(), static_cast<int>(response_body.length()))) < 0){
+				std::cout << "SSL send body error." << std::endl;
+				close(clientfd);
+				continue;
 			}
-			PRINT("DELI:" << response_body)
+			std::cout << "DELI:" << response_body << '|' << res << std::endl;
 		}
 
-		PRINT("JSON:" << request_object->stringify(true))
+		std::cout << "JSON:" << request_object->stringify(true) << std::endl;
+		
+		SSL_free(ssl);
+		close(clientfd);
 	}
 	}catch(std::exception& e){
-		PRINT(e.what())
+		std::cout << e.what() << std::endl;
 		if(kill(http_redirect_pid, SIGTERM) < 0){
-			ERROR("kill redirecter")
+			std::cout << "Kill redirect fork error." << std::endl;
 		}
 	}
+	SSL_CTX_free(ctx);
+	EVP_cleanup();
 }

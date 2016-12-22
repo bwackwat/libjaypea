@@ -84,10 +84,8 @@ bool EventServer::nonblocking_accept(){
 		}
 		// Nothing to accept = ^_^
 	}else{
-		std::cout << this->next_fds->value << " -> ";
 		Util::set_non_blocking(new_client_fd);
 		this->client_fds[this->next_fds->pop()] = new_client_fd;
-		PRINT(this->next_fds->value)
 		if(this->on_connect != nullptr){
 			this->on_connect(new_client_fd);
 		}
