@@ -20,7 +20,7 @@
 #include <arpa/inet.h>
 
 #include "util.hpp"
-#include "comd-util-new.hpp"
+#include "comd-new-util.hpp"
 #include "symmetric-event-server.hpp"
 
 struct Shell{
@@ -75,26 +75,9 @@ static struct Shell* shell_routine(){
 	}
 }
 
-static std::string IDENTITY = "This is my example identification string.";
-static std::string VERIFIED = "Your identity has been verified.";
-static std::string START_ROUTINE = "You are welcome to start the requested routine.";
-static std::string BAD_ROUTINE = "You have requested an invalid routine!";
-
-static std::map<enum Routine, std::string> ROUTINES = {
-	{ SHELL, "I would like to use the shell please." },
-	{ SEND_FILE, "I would like to send a file please." },
-	{ RECV_FILE, "I would like to receive a file please." }
-};
-
-enum ComdState{
-	GET_IDENTITY,
-	GET_ROUTINE,
-	GET_PACKET
-};
-
 int main(int argc, char** argv){
-	enum ComdState state = GET_IDENTITY;
-	enum Routine routine = SHELL;
+	enum ComdState state = VERIFY_IDENTITY;
+	enum ComdRoutine routine = SHELL;
 	struct Shell* shell = new struct Shell();
 	char packet[PACKET_LIMIT];
 	ssize_t len;
@@ -109,7 +92,7 @@ int main(int argc, char** argv){
 
 	// This "state" is not per-client, because comd is designed for a single connection.
 	server.on_connect = [&](int){
-		state = GET_IDENTITY;
+		state = VERIFY_IDENTITY;
 	};
 
 	// Easy DDOS protection. (This is not a multi-user tool.)
@@ -120,7 +103,7 @@ int main(int argc, char** argv){
 	
 	server.run([&](int fd, const char* data, size_t data_length){
 		switch(state){
-		case GET_IDENTITY:
+		case VERIFY_IDENTITY:
 			if(std::strcmp(data, IDENTITY.c_str()) != 0){
 				PRINT("Client provided bad identity.")
 				return true;
@@ -128,9 +111,9 @@ int main(int argc, char** argv){
 			if(server.send(fd, VERIFIED.c_str(), VERIFIED.length())){
 				return true;
 			}
-			state = GET_ROUTINE;
+			state = SELECT_ROUTINE;
 			break;
-		case GET_ROUTINE:
+		case SELECT_ROUTINE:
 			if(std::strcmp(data, ROUTINES[SHELL].c_str()) == 0){
 				if(server.send(fd, START_ROUTINE.c_str(), START_ROUTINE.length())){
 					return true;
@@ -152,6 +135,7 @@ int main(int argc, char** argv){
 						return true;
 					}else{
 						// TODO: The whole server shouldn't really exit, only this client's connection...
+						packet[len] = 0;
 						if(server.send(fd, packet, static_cast<size_t>(len))){
 							kill(shell->pid, SIGTERM);
 							return true;
@@ -170,9 +154,9 @@ int main(int argc, char** argv){
 				server.send(fd, BAD_ROUTINE.c_str(), BAD_ROUTINE.length());
 				return true;
 			}
-			state = GET_PACKET;
+			state = EXCHANGE_PACKETS;
 			break;
-		case GET_PACKET:
+		case EXCHANGE_PACKETS:
 			switch(routine){
 			case SHELL:
 				if((len = write(shell->input, data, data_length)) < 0){

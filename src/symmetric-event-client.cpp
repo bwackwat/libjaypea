@@ -8,6 +8,7 @@ bool SymmetricEventClient::send(int fd, const char* data, size_t /*data_length*/
 	//std::string send_data = this->encrypt(data, data_length);
 	std::string send_data = this->encryptor.encrypt(data);
 	if(write(fd, send_data.c_str(), send_data.length()) < 0){
+		ERROR("encrypted write")
 		return true;
 	}
 	return false;
@@ -18,7 +19,7 @@ bool SymmetricEventClient::recv(int fd, char* data, size_t data_length){
 	std::string recv_data;
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK){
-			ERROR("read")
+			ERROR("encrypted read")
 			return true;
 		}
 		return false;

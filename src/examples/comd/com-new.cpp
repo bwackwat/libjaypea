@@ -20,8 +20,8 @@
 #include <arpa/inet.h>
 
 #include "util.hpp"
-#include "comd-util.hpp"
-#include "simple-tcp-client.hpp"
+#include "comd-new-util.hpp"
+#include "symmetric-event-client.hpp"
 
 /*
 void send_sigint(uint8_t s){
@@ -48,7 +48,7 @@ static struct termios old_term, new_term;
 
 /*int ttyraw(int fd){
 	if(tcgetattr(fd, &old_term) < 0){
-		std::cout << "Uh oh, tcsetattr error!" << std::endl;
+		ERROR("tcsetattr")
 		return -1;
 	}
 	new_term = old_term;
@@ -62,7 +62,7 @@ static struct termios old_term, new_term;
 	new_term.c_cc[VTIME] = 0;
 
 	if(tcsetattr(fd, TCSAFLUSH, &new_term) < 0){
-		std::cout << "Uh oh, tcsetattr error!" << std::endl;
+		ERROR("tcsetattr")
 		return -1;
 	}
 
@@ -71,7 +71,7 @@ static struct termios old_term, new_term;
 
 int ttyreset(int fd){
 	if(tcsetattr(fd, TCSAFLUSH, &old_term) < 0){
-		std::cout << "Uh oh, tcsetattr error!" << std::endl;
+		ERROR("tcsetattr")
 		return -1;
 	}
 
@@ -80,13 +80,13 @@ int ttyreset(int fd){
 
 static int ttyraw(int fd){
 	if(tcgetattr(fd, &old_term) < 0){
-		std::cout << "Uh oh, tcgetattr error!" << std::endl;
+		ERROR("tcgetattr")
 		return -1;
 	}
 	new_term = old_term;
 	new_term.c_lflag &= ~(ICANON);
 	if(tcsetattr(fd, TCSANOW, &new_term) < 0){
-		std::cout << "Uh oh, tcsetattr error!" << std::endl;
+		ERROR("tcsetattr")
 		return -1;
 	}
 
@@ -106,97 +106,17 @@ static int ttyreset(int fd){
 	exit(0);
 }
 
-static int shell_routine(std::string hostname, int socketfd){
-	ssize_t res;
-	char packet[PACKET_LIMIT];
-	std::string res_data;
-	
-	std::cout << "\r" << hostname << " > " << std::flush;
-
-	Util::set_non_blocking(socketfd);
-	Util::set_non_blocking(STDIN_FILENO);
-
-	std::signal(SIGINT, sigcatch);
-	std::signal(SIGQUIT, sigcatch);
-	std::signal(SIGTERM, sigcatch);
-
-	if(ttyraw(STDIN_FILENO) < 0){
-		ttyreset(STDIN_FILENO);
-		std::cout << "Uh oh, ttyraw error!" << std::endl;
-		return 1;
-	}
-
-	while(1){
-		packet[0] = 0;
-		if((res = read(socketfd, packet, PACKET_LIMIT)) < 0){
-			DEBUG("Socket read nonblocking.");
-			DEBUG_SLEEP(1)
-		}else if(res == 0){
-			DEBUG("Socket no read. Done.");
-			break;
-		}else{
-			packet[res] = 0;
-			try{
-				res_data = decrypt(std::string(packet));
-			}
-			catch(const CryptoPP::Exception& e){
-				std::cout << "Implied hacker! " << e.what() <<std::endl;
-			}
-
-			std::cout << res_data;
-			std::cout << "\r" << hostname << " > " << std::flush;
-		}
-
-		if(!stdin_available()){
-			continue;
-		}
-		packet[0] = 0;
-		if((res = read(STDIN_FILENO, packet, PACKET_LIMIT)) < 0){
-			DEBUG("Stdin read nonblocking.");
-			sleep(1);
-		}else if(res == 0){
-			DEBUG("Stdin no read. Done.");
-			break;
-		}else{
-			packet[res] = 0;
-			res_data = encrypt(std::string(packet));
-			if((res = write(socketfd, res_data.c_str(), static_cast<size_t>(res_data.length()))) < 0){
-				std::cout << "Uh oh, write error." << std::endl;
-				break;
-			}
-			DEBUG("Socket write:" << packet << "|" << res)
-		}
-	}
-
-	if(ttyreset(STDIN_FILENO) < 0){
-		std::cout << "Uh oh, ttyreset error!" << std::endl;
-		return 1;
-	}
-
-	return 0;
-}
-
-enum ComState{
-	SENT_IDENTITY,
-	SENT_ROUTINE,
-	SENDING_PACKETS
-};
-
 int main(int argc, char** argv){
-	ComState state = SENT_IDENTITY;
+	enum ComdState state = VERIFY_IDENTITY;
+	enum ComdRoutine routine = SHELL;
+	int shell_client_fd;
 	ssize_t len;
 	char packet[PACKET_LIMIT];
-
-	std::string line;
-	std::string req_data;
-	std::string res_data;
 
 	std::string hostname = "localhost";
 	int port = 3424;
 	std::string keyfile = "etc/keyfile";
 	std::string file_path;
-
-	enum Routine routine = SHELL;
 
 	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::define_argument("port", &port, {"-p"});
@@ -208,6 +128,7 @@ int main(int argc, char** argv){
 	Util::parse_arguments(argc, argv, "This is a secure client for comd, supporting remote shell, send file, and receive file routines.");
 
 	SymmetricEventClient client(keyfile);
+
 	client.add(hostname, static_cast<uint16_t>(port));
 
 	client.on_connect = [&](int fd){
@@ -218,18 +139,48 @@ int main(int argc, char** argv){
 		return false;
 	};
 
-	client.run([&](int fd, const char* data, ssize_t data_length){
+	client.run([&](int fd, const char* data, ssize_t /*data_length*/){
 		switch(state){
-		case SENT_IDENTITY:
+		case VERIFY_IDENTITY:
 			PRINT(data)
 			if(client.send(fd, ROUTINES[routine].c_str(), ROUTINES[routine].length())){
 				return true;
 			}
-			state = SENT_ROUTINE;
+			state = SELECT_ROUTINE;
 			break;
-		case SENT_ROUTINE:
+		case SELECT_ROUTINE:
+			PRINT(data)
 			switch(routine){
 			case SHELL:
+				std::cout << "\n\r" << hostname << " > " << std::flush;
+
+				Util::set_non_blocking(STDIN_FILENO);
+
+				std::signal(SIGINT, sigcatch);
+				std::signal(SIGQUIT, sigcatch);
+				std::signal(SIGTERM, sigcatch);
+
+				if(ttyraw(STDIN_FILENO) < 0){
+					ttyreset(STDIN_FILENO);
+					ERROR("ttyraw")
+					return true;
+				}
+
+				/*
+				 * Major bug note:
+				 * When using "fd" within the lambda, the int "fd" inside would corrupt to an
+				 * apparently random number like 32767 (near the fd limit). This is some form
+				 * of a complex overflow bug, due to the fact that the "fd" originally
+				 * passed into the on_read std::function within tcp-event-client is coming
+				 * from a class pointer!
+				 *
+				 * Compare that to comd where "fd" does get directly passed into the lambda,
+				 * but no issues arise because it is coming from an int member data (not a
+				 * contrived class pointer). The exact reason for why a class pointer's variable
+				 * caused such unsung havoc is unknown, yet likely has to do with a shifting
+				 * underlyign stack of pointers, and the int is accesses by referece here...
+				 */
+				shell_client_fd = fd;
 				client.on_event_loop = [&](){
 					if(!stdin_available()){
 						return false;
@@ -243,49 +194,33 @@ int main(int argc, char** argv){
 						ERROR("stdin read zero");
 						return true;
 					}else{
-						if(client.send(fd, packet, static_cast<size_t>(len))){
+						if(client.send(shell_client_fd, packet, static_cast<size_t>(len))){
 							return true;
 						}
 					}
 					return false;
+				};
+				break;
 			case SEND_FILE:
 				//TODO send file name
-				return false;
+				break;
 			case RECV_FILE:
 				//TODO write ok packet???
-				return false;
+				break;
 			}
+			state = EXCHANGE_PACKETS;
+			break;
+		case EXCHANGE_PACKETS:
+			std::cout << data;
+			std::cout << '\r' << hostname << " > " << std::flush;
+			break;
 		}
-		case SENDING_PACKETS:
-			PRINT(data)
+		return false;
+	});
 
-	// Default method, shell usage.
-
-	if(send(client.fd, ROUTINES[routine])){
-		std::cout << "Uh oh, send routine error." << std::endl;
-		return 1;
-	}
-
-	packet[0] = 0;
-	if((len = read(client.fd, packet, PACKET_LIMIT)) < 0){
-		std::cout << "Uh oh, read method error." << std::endl;
-		return 1;
-	}
-	packet[len] = 0;
-	res_data = decrypt(packet);
-	std::cout << res_data << std::endl;
-
-	// Handshake complete !
-
-	if(routine == SEND_FILE){
-		if(send_file_routine(client.fd, file_path)){
-			std::cout << "Uh oh, send file routine error!" << std::endl;
-			return 1;
-		}
-	}else{
-		if(shell_routine(hostname, client.fd)){
-			std::cout << "Uh oh, shell routine error!" << std::endl;
-			return 1;
+	if(routine == SHELL){
+		if(ttyreset(STDIN_FILENO) < 0){
+			ERROR("ttyreset")
 		}
 	}
 

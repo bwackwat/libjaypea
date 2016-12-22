@@ -1,3 +1,6 @@
+#include <fcntl.h>
+
+#include "util.hpp"
 #include "symmetric-encryptor.hpp"
 
 SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){

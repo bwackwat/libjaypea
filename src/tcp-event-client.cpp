@@ -44,10 +44,12 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 
 	while(running){
 	if(this->on_event_loop != nullptr){
-		this->on_event_loop();
+		if(this->on_event_loop()){
+			break;
+		}
 	}
 	running = false;
-	for(auto& connection : this->connections){
+	for(Connection* connection : this->connections){
 		switch(connection->state){
 		case DISCONNECTED:
 			if((connection->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
@@ -105,7 +107,7 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 
 bool EventClient::recv(int fd, char* data, size_t data_length){
 	ssize_t len;
-	if((len = read(connection->fd, data, data_length)) < 0){
+	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK){
 			ERROR("read")
 			return true;
@@ -116,7 +118,7 @@ bool EventClient::recv(int fd, char* data, size_t data_length){
 		ERROR("client read zero")
 		return true;
 	}else{
-		packet[len] = 0;
-		return this->on_read(connection->fd, packet, len);
+		data[len] = 0;
+		return this->on_read(fd, data, len);
 	}
 }

@@ -26,7 +26,7 @@ public:
 };
 
 class EventClient{
-private:
+protected:
 	std::unordered_map<std::string, struct in_addr> host_addresses;
 	std::vector<Connection*> connections;
 
@@ -35,9 +35,11 @@ private:
 	void close_client(Connection* conn);
 	virtual bool recv(int fd, char* data, size_t data_length);
 public:
+	virtual ~EventClient(){}
+
 	void add(std::string hostname, uint16_t port);
 	void run(std::function<bool(int, const char*, ssize_t)> new_on_read);
 
 	std::function<bool(int)> on_connect;
-	std::function<void()> on_event_loop;
+	std::function<bool()> on_event_loop;
 };

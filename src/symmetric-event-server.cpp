@@ -4,8 +4,9 @@
 #include "util.hpp"
 #include "symmetric-event-server.hpp"
 
-SymmetricEventServer::SymmetricEventServer(std::string keyfile, uint16_t port, size_t new_max_connections) : EventServer("SymmetricEventServer", port, new_max_connections),
-encryptor(keyfile){{}
+SymmetricEventServer::SymmetricEventServer(std::string keyfile, uint16_t port, size_t new_max_connections)
+:EventServer("SymmetricEventServer", port, new_max_connections),
+encryptor(keyfile){}
 
 bool SymmetricEventServer::send(int fd, const char* data, size_t /*data_length*/){
 	// Might fix encryption buggies...

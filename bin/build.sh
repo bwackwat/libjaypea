@@ -46,5 +46,6 @@ build echo-server "tcp-event-server.cpp examples/echo-server.cpp"
 build chat-server "tcp-event-server.cpp examples/chat-server.cpp"
 build chat-client "simple-tcp-client.cpp examples/chat-client.cpp"
 
-build comd-new "-lcryptopp examples/comd/comd-new.cpp tcp-event-server.cpp symmetric-event-server.cpp"
+build comd-new "-lcryptopp symmetric-encryptor.cpp examples/comd/comd-new-util.cpp examples/comd/comd-new.cpp tcp-event-server.cpp symmetric-event-server.cpp"
+build com-new "-lcryptopp symmetric-encryptor.cpp examples/comd/comd-new-util.cpp examples/comd/com-new.cpp tcp-event-client.cpp symmetric-event-client.cpp"
 build tcp-event-client "examples/tcp-event-client.cpp tcp-event-client.cpp"
