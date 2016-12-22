@@ -23,7 +23,7 @@ int main(){
 	std::string message;
 
 	std::unordered_map<int, std::string> client_data;
-	EventServer server(10000, 1000);
+	EventServer server("ChatServer", 10000, 1000);
 
 	server.on_connect = [&](int fd){
 		client_data[fd] = std::string();
@@ -34,7 +34,7 @@ int main(){
 		server.broadcast(message.c_str(), message.length());
 	};
 
-	server.run([&](int fd, char* packet, size_t){
+	server.run([&](int fd, const char* packet, size_t){
 		packet_data["type"]->stringValue = std::string();
 		packet_data["message"]->stringValue = std::string();
 		packet_data["handle"]->stringValue = std::string();

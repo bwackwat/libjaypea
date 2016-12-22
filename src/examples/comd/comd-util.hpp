@@ -31,26 +31,18 @@ extern std::string IDENTITY, VERIFIED;
 // File transfer is new.
 //extern std::string SHELL, SEND_FILE, RECV_FILE;
 
-enum Routine {
+enum ComdRoutine {
 	SHELL,
 	SEND_FILE,
 	RECV_FILE
 };
 
-extern std::map<enum Routine, std::string> ROUTINES;
+enum ComdState {
+	VERIFY_IDENTITY,
+	SELECT_ROUTINE,
+	EXCHANGE_PACKETS
+};
+
+extern std::map<enum ComdRoutine, std::string> ROUTINES;
 
 extern std::string START_ROUTINE, BAD_ROUTINE;
-
-extern byte* KEY;
-extern byte* IV;
-extern byte* SALT;
-extern CryptoPP::AutoSeededRandomPool rand_tool;
-
-extern int send(int fd, std::string data);
-extern int init_crypto(std::string keyfile);
-
-extern std::string encrypt(std::string data);
-extern std::string decrypt(std::string data);
-
-extern int send_file_routine(int socketfd, std::string file_path);
-extern int recv_file_routine(int socketfd);
