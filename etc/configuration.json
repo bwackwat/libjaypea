@@ -1,5 +1,5 @@
 {
 	"hostname": "localhost",
-	"public_directory": "/usr/share/nginx/html",
+	"public_directory": "/www",
 	"port": "10000"
 }

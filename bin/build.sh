@@ -4,6 +4,8 @@
 # sysctl -w net.core.somaxconn=65535
 # echo -e "\nnet.core.somaxconn=65535" >> /etc/sysctl.conf
 
+echo -e "$#: $@"
+
 cd $(dirname "${BASH_SOURCE[0]}")/../src
 srcdir=$(pwd)
 argc=$#
@@ -35,7 +37,7 @@ build tcp-poll-client "examples/tcp-poll-client.cpp"
 build tcp-client "-lpthread examples/tcp-client.cpp simple-tcp-client.cpp"
 build tcp-event-client "examples/tcp-event-client.cpp tcp-event-client.cpp"
 build json-test "examples/json-test.cpp"
-build modern-web-monad "-lssl -lcrypto examples/modern-web-monad.cpp simple-tcp-server.cpp"
+build modern-web-monad "-lssl -lcrypto examples/modern-web-monad.cpp tcp-event-server.cpp private-event-server.cpp"
 build ponal "examples/ponal-client.cpp simple-tcp-client.cpp"
 build ponald "examples/ponal-server.cpp tcp-event-server.cpp"
 build read-stdin-tty "examples/read-stdin-tty.cpp"

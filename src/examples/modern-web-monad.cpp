@@ -14,9 +14,6 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-
 #include "util.hpp"
 #include "json.hpp"
 #include "tcp-event-server.hpp"
@@ -28,7 +25,7 @@
 static JsonObject* request_object;
 static std::string hostname;
 
-static bool parse_request(char* request){
+static bool parse_request(const char* request){
 	std::string new_key;
 	std::string new_value;
 	//0 = No state
@@ -39,7 +36,7 @@ static bool parse_request(char* request){
 	//4+ = Finding newline or carriage return
 	//8 = Found \r\n\r\n, thus the HTTP data
 	int state = 0;
-	char* it;
+	const char* it;
 
 	delete request_object;
 	request_object = new JsonObject();
@@ -175,7 +172,7 @@ static pid_t http_redirect(){
 		response_body;
 	
 	if((pid = fork()) < 0){
-		std::cout << "Uh oh, fork error!" << std::endl;
+		ERROR("fork")
 		return -1;
 	}else if(pid > 0){
 		try{
@@ -185,9 +182,9 @@ static pid_t http_redirect(){
 				return true;
 			});
 		}catch(std::exception& e){
-			std::cout << e.what() << std::endl;
+			PRINT(e.what())
 			if(kill(pid, SIGTERM) < 0){
-				std::cout << "Kill redirect fork error." << std::endl;
+				ERROR("kill redirecter")
 			}
 			return 1;
 		}
@@ -205,6 +202,9 @@ int main(int argc, char **argv){
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("hostname", hostname, {"-hn"});
+	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
+	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
+	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::parse_arguments(argc, argv, "This is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
 
 	if((http_redirect_pid = http_redirect()) < 0){
@@ -212,11 +212,8 @@ int main(int argc, char **argv){
 		return 1;
 	}
 
-	int clientfd, res;
 	ssize_t len;
 	struct stat route_stat;
-	SSL_CTX* ctx = 0;
-	SSL* ssl = 0;
 	char buffer[BUFFER_LIMIT];
 	std::string response_header = "HTTP/1.1 200 OK\n"
 		"Accept-Ranges: bytes\n"
@@ -250,13 +247,14 @@ int main(int argc, char **argv){
 
 	try{
 		PrivateEventServer server(ssl_certificate, ssl_private_key, 443, 10);
-		server.run([&](int fd, const char* data, size_t data_length)
+		server.run([&](int fd, const char* data, size_t /*data_length*/)
 	{
+		PRINT(data)
 		if(server.send(fd, response_header.c_str(), static_cast<int>(response_header.length()))){
 			return true;
 		}
 		PRINT("DELI:" << response_header)
-		std::string response_body = "";
+		response_body = std::string();
 
 		if(parse_request(data)){
 			// JSON API request.
@@ -296,15 +294,18 @@ int main(int argc, char **argv){
 			}
 
 			if(lstat(clean_route.c_str(), &route_stat) < 0){
+				perror("lstat");
 				ERROR("lstat")
 				response_body = HTTP_404;
 			}else if(S_ISDIR(route_stat.st_mode)){
 				clean_route += "/index.html";
 				if(lstat(clean_route.c_str(), &route_stat) < 0){
+					perror("lstat index.html");
 					ERROR("lstat index.html")
 					response_body = HTTP_404;
 				}
 			}
+			PRINT(route_stat.st_mode)
 			if(response_body.empty() && S_ISREG(route_stat.st_mode)){
 				PRINT("SEND FILE:" << clean_route)
 				response_length = "Content-Length: " + std::to_string(route_stat.st_size) + "\n\n";
@@ -313,13 +314,13 @@ int main(int argc, char **argv){
 				}
 				PRINT("DELI:" << response_length)
 
-				int fd;
-				if((fd = open(clean_route.c_str(), O_RDONLY)) < 0){
+				int file_fd;
+				if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
 					ERROR("open file")
 					return false;
 				}
 				while(1){
-					if((len = read(fd, buffer, BUFFER_LIMIT)) < 0){
+					if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
 						ERROR("read file")
 						return false;
 					}
@@ -331,10 +332,11 @@ int main(int argc, char **argv){
 						break;
 					}
 				}
-				if(close(fd) < 0){
+				if(close(file_fd) < 0){
 					ERROR("close file")
 					return false;
 				}
+				PRINT("FILE DONE")
 			}else{
 				PRINT("Something other than a regular file was requested...")
 				response_body = HTTP_404;
@@ -353,7 +355,8 @@ int main(int argc, char **argv){
 		}
 
 		PRINT("JSON:" << request_object->stringify(true))
-	}
+		return false;
+	});
 	}catch(std::exception& e){
 		PRINT(e.what())
 		if(kill(http_redirect_pid, SIGTERM) < 0){

@@ -8,7 +8,7 @@ max_connections(new_max_connections),
 next_fds(new Node<size_t>()){
 	for(size_t i = 0; i < this->max_connections; ++i){
 		this->client_fds.push_back(-1);
-	this->next_fds->push(i);
+		this->next_fds->push(i);
 	}
 	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		throw std::runtime_error(this->name + " socket");
@@ -65,7 +65,7 @@ bool EventServer::recv(int fd, char* data, size_t data_length){
 			ERROR(this->name << " read")
 			return true;
 		}
-		return false;
+	return false;
 	}else if(len == 0){
 		ERROR("server read zero")
 		return true;
