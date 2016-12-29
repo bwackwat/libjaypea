@@ -6,10 +6,6 @@ EventServer::EventServer(std::string new_name, uint16_t port, size_t new_max_con
 :name(new_name),
 max_connections(new_max_connections),
 next_fds(new Node<size_t>()){
-	for(size_t i = 0; i < this->max_connections; ++i){
-		this->client_fds.push_back(-1);
-		this->next_fds->push(i);
-	}
 	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		throw std::runtime_error(this->name + " socket");
 	}
@@ -75,16 +71,15 @@ bool EventServer::recv(int fd, char* data, size_t data_length){
 	}
 }
 
-bool EventServer::nonblocking_accept(){
-	int new_client_fd;
-	if((new_client_fd = accept(this->server_fd, 0, 0)) < 0){
+bool EventServer::non_blocking_accept(int* new_client_fd){
+	if((*new_client_fd = accept(this->server_fd, 0, 0)) < 0){
 		if(errno != EWOULDBLOCK){
 			ERROR("accept")
 			return false;
 		}
 		// Nothing to accept = ^_^
 	}else{
-		Util::set_non_blocking(new_client_fd);
+		Util::set_non_blocking(*new_client_fd);
 		this->client_fds[this->next_fds->pop()] = new_client_fd;
 		if(this->on_connect != nullptr){
 			this->on_connect(new_client_fd);
@@ -93,34 +88,61 @@ bool EventServer::nonblocking_accept(){
 	return true;
 }
 
-// Should not return?
-void EventServer::run(PacketReceivedFunction new_packet_received){
-	bool running = true;
+void EventServer::run_thread(int id, StackNode<){
+	Node<size_t>* next_fd_indexes;
+	std::vector<int> client_fds;
+	int new_fd;
 	char packet[PACKET_LIMIT];
 
-	this->packet_received = new_packet_received;
+	for(size_t i = 0; i < this->max_connections; ++i){
+		client_fds.push_back(-1);
+		next_fd_indexes->push(i);
+	}
+	
+	PRINT(this->name << " thread " << id << " is starting!")
 
-	while(running){
-		if(this->on_event_loop != nullptr){
-			if(this->on_event_loop()){
-				break;
+	while(this->running){
+		if(this->accepting_id == id){
+			if(this->num_connections < this->max_connections){
+				this->running = this->nonblocking_accept(&new_fd);
+				if(new_fd >= 0){
+					client_fds[this->next_fds->pop()] = new_fd;
+				}
 			}
 		}
-	//	while(1){
-			if(this->next_fds->value > 0){
-				running = this->nonblocking_accept();
-			}else{
-	//			break;
-			}
-	//	}
 		for(size_t i = 0; i < this->max_connections; ++i){
-			if(this->client_fds[i] != -1){
-				if(this->recv(this->client_fds[i], packet, PACKET_LIMIT)){
+			if(client_fds[i] != -1){
+				if(this->recv(client_fds[i], packet, PACKET_LIMIT)){
 					this->close_client(i);
 				}
 			}
 		}
 	}
+
+	PRINT(this->name << " thread " << id << " is done!")
+}
+
+// Should not return?
+void EventServer::run(bool returning){
+	unsigned int threads = std::thread::hardware_concurrency();
+	if(threads == 0){
+		threads = 1;
+	}
+
+	if(returning){
+		threads--;
+	}
+
+	for(unsigned int i = 0; i < threads; ++i){
+			std::thread next(&EventServer::run_thread, this, i);
+			next.detach();
+	}
+
+	if(returning){
+		return;
+	}
+
+	this->run_thread(threads);
 
 	if(close(this->server_fd) < 0){
 		ERROR("close server_fd")
