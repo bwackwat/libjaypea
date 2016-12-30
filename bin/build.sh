@@ -46,6 +46,6 @@ build com-new "-lcryptopp symmetric-encryptor.cpp examples/comd/comd-util.cpp ex
 build keyfile-gen "-lcryptopp examples/keyfile-gen.cpp"
 build pgsql-model-test "-lpqxx pgsql-model.cpp examples/pgsql-model-test.cpp"
 build echo-server "tcp-event-server.cpp examples/echo-server.cpp"
-build chat-server "tcp-event-server.cpp examples/chat-server.cpp"
+build chat-server "-lpthread tcp-event-server.cpp examples/chat-server.cpp"
 build chat-client "simple-tcp-client.cpp examples/chat-client.cpp"
 build queue-test "examples/queue-test.cpp"

@@ -29,12 +29,7 @@ int main(){
 		client_data[fd] = std::string();
 	};
 
-	server.on_disconnect = [&](int fd){
-		message = client_data[fd] + " has disconnected.";
-		server.broadcast(message.c_str(), message.length());
-	};
-
-	server.run([&](int fd, const char* packet, size_t){
+	server.on_read = [&](int fd, const char* packet, size_t){
 		packet_data["type"]->stringValue = std::string();
 		packet_data["message"]->stringValue = std::string();
 		packet_data["handle"]->stringValue = std::string();
@@ -64,9 +59,16 @@ int main(){
 			return true;
 		}
 
-		server.broadcast(message.c_str(), message.length());
+		server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
 		return false;
-	});
+	};
+
+	server.on_disconnect = [&](int fd){
+		message = client_data[fd] + " has disconnected.";
+		server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
+	};
+
+	server.run(false);
 
 	return 0;
 }

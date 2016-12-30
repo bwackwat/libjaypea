@@ -33,8 +33,8 @@ void PrivateEventServer::close_client(size_t index){
 	EventServer::close_client(index);
 }
 
-bool PrivateEventServer::send(int fd, const char* data, int data_length){
-	int len = SSL_write(this->client_ssl[fd], data, data_length);
+bool PrivateEventServer::send(int fd, const char* data, size_t data_length){
+	int len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
 	switch(SSL_get_error(this->client_ssl[fd], len)){
 	case SSL_ERROR_NONE:
 		break;
@@ -69,7 +69,7 @@ bool PrivateEventServer::recv(int fd, char* data, size_t data_length){
 	return packet_received(fd, data, len);
 }
 
-bool PrivateEventServer::nonblocking_accept(){
+bool PrivateEventServer::non_blocking_accept(){
 	int new_client_fd;
 	size_t new_fd_index;
 	if((new_client_fd = accept(this->server_fd, 0, 0)) < 0){

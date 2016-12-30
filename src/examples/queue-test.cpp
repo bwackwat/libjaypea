@@ -4,15 +4,15 @@
 #include "util.hpp"
 
 int main(){
-	Queue<int> one;
+	enqueue<int> one;
 	PRINT(one)
 
-	one.queue(11);
-	one.queue(12);
-	one.queue(13);
+	one.enqueue(11);
+	one.enqueue(12);
+	one.enqueue(13);
 
 	PRINT(one)
-	one.queue(100);
+	one.enqueue(100);
 	PRINT(one.dequeue())
 	PRINT(one)
 	PRINT(one.dequeue())
@@ -22,7 +22,7 @@ int main(){
 	PRINT(one.dequeue())
 	PRINT(one)
 
-	one.queue(10000);
+	one.enqueue(10000);
 	PRINT(one)
 	PRINT(one.dequeue())
 	PRINT(one)

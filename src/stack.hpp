@@ -2,18 +2,27 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <atomic>
+
+template <class T>
+class StackNode{
+public:
+	StackNode(T new_value):value(new_value), next(0){}
+	T value;
+	StackNode<T>* next;
+};
 
 template <class T>
 class Stack{
 private:
 	StackNode<T>* head;
 public:
-	int size;
+	std::atomic<int> size;
 
 	Stack():head(0), size(0){}
 
 	void push(T new_value){
-		StackNode<T>* new_node = new StackNode(new_value);
+		StackNode<T>* new_node = new StackNode<T>(new_value);
 		new_node->next = this->head;
 		this->head = new_node;
 		this->size++;
@@ -32,20 +41,12 @@ public:
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Stack& stack){
-		os << '(' << node.value << ") ";
-		StackNode* next_node = stack.head;
+		os << '(' << stack.size << ") ";
+		StackNode<T>* next_node = stack.head;
 		while(next_node != 0){
 			os << next_node->value << ", ";
 			next_node = next_node->next;
 		}
 		return os;
 	}
-}
-
-
-template <class T>
-class StackNode{
-public:
-	StackNode(T new_value):value(new_value), next(0){}
-	T value;
 };

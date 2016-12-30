@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <atomic>
 
 template <class T>
 class QueueNode{
@@ -18,11 +19,11 @@ private:
 	QueueNode<T>* head;
 	QueueNode<T>* tail;
 public:
-	int size;
+	std::atomic<int> size;
 
 	Queue():head(0), tail(0), size(0){}
 
-	void queue(T new_value){
+	void enqueue(T new_value){
 		QueueNode<T>* new_node = new QueueNode<T>(new_value);
 		new_node->next = this->head;
 		this->head = new_node;
@@ -37,7 +38,7 @@ public:
 
 	T dequeue(){
 		if(this->tail == 0){
-			throw std::runtime_error("Queue::deque");
+			throw std::runtime_error("Queue::dequeue");
 		}
 		QueueNode<T>* result_node = this->tail;
 		if(this->tail->prev == 0){
