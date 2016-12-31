@@ -8,15 +8,16 @@ class Stack{
 private:
 	StackNode<T>* head;
 public:
-	readonly int size;
+	int size;
 
-	Stack():size(0),head(0){}
+	Stack():head(0), size(0){}
 
 	void push(T new_value){
 		StackNode<T>* new_node = new StackNode(new_value);
 		new_node->next = this->head;
 		this->head = new_node;
 		this->size++;
+	}
 
 	T pop(){
 		if(this->head == 0){
