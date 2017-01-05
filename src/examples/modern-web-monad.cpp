@@ -147,54 +147,6 @@ static std::string routes(JsonObject*){
 	return routes_string;
 }
 
-static pid_t http_redirect(){
-	pid_t pid;
-	
-	// Trivial 301 Redirect.	
-	std::string response_body = "<html>\n"
-		"<head>\n"
-		"<title>Moved</title>\n"
-		"</head>\n"
-		"<body>\n"
-		"<h1>Moved</h1>\n"
-		"<p>This page has moved to <a href=\"https://" +
-		hostname +
-		"/\">https://" +
-		hostname +
-		"/</a>.</p>\n"
-		"</body>\n"
-		"</html>";
-	std::string response = "HTTP/1.1 301 Moved Permanently\n" 
-		"Location: https://" + hostname + "/\n"
-		"Content-Type: text/html\n"
-		"Content-Length: " + std::to_string(response_body.length()) + "\n"
-		"\n\n" +
-		response_body;
-	
-	if((pid = fork()) < 0){
-		ERROR("fork")
-		return -1;
-	}else if(pid > 0){
-		try{
-			EventServer server("HttpRedirecter", 80, 10);
-			server.run([&](int fd, const char*, size_t){
-				write(fd, response.c_str(), response.length());
-				return true;
-			});
-		}catch(std::exception& e){
-			PRINT(e.what())
-			if(kill(pid, SIGTERM) < 0){
-				ERROR("kill redirecter")
-			}
-			return 1;
-		}
-	}
-
-	return pid;
-}		
-
-static pid_t http_redirect_pid;
-
 int main(int argc, char **argv){
 	std::string public_directory;
 	std::string ssl_certificate = "etc/ssl/ssl.crt";
@@ -207,10 +159,32 @@ int main(int argc, char **argv){
 	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::parse_arguments(argc, argv, "This is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
 
-	if((http_redirect_pid = http_redirect()) < 0){
-		std::cout << "Uh oh, http_redirect() error." << std::endl;
-		return 1;
-	}
+	std::string http_response_body = "<html>\n"
+		"<head>\n"
+		"<title>Moved</title>\n"
+		"</head>\n"
+		"<body>\n"
+		"<h1>Moved</h1>\n"
+		"<p>This page has moved to <a href=\"https://" +
+		hostname +
+		"/\">https://" +
+		hostname +
+		"/</a>.</p>\n"
+		"</body>\n"
+		"</html>";
+	std::string http_response = "HTTP/1.1 301 Moved Permanently\n" 
+		"Location: https://" + hostname + "/\n"
+		"Content-Type: text/html\n"
+		"Content-Length: " + std::to_string(http_response_body.length()) + "\n"
+		"\n\n" +
+		http_response_body;
+	
+	EventServer redirecter("HttpRedirecter", 80, 10);
+	redirecter.on_read = [&](int fd, const char*, size_t){
+		redirecter.send(fd, http_response.c_str(), http_response.length());
+		return true;
+	};
+	redirecter.run(true);
 
 	ssize_t len;
 	struct stat route_stat;
@@ -247,10 +221,10 @@ int main(int argc, char **argv){
 
 	try{
 		PrivateEventServer server(ssl_certificate, ssl_private_key, 443, 10);
-		server.run([&](int fd, const char* data, size_t /*data_length*/)
+		server.on_read = [&](int fd, const char* data, size_t /*data_length*/)
 	{
 		PRINT(data)
-		if(server.send(fd, response_header.c_str(), static_cast<int>(response_header.length()))){
+		if(server.send(fd, response_header.c_str(), response_header.length())){
 			return true;
 		}
 		PRINT("DELI:" << response_header)
@@ -295,13 +269,13 @@ int main(int argc, char **argv){
 
 			if(lstat(clean_route.c_str(), &route_stat) < 0){
 				perror("lstat");
-				ERROR("lstat")
+				ERROR("lstat " << clean_route)
 				response_body = HTTP_404;
 			}else if(S_ISDIR(route_stat.st_mode)){
 				clean_route += "/index.html";
 				if(lstat(clean_route.c_str(), &route_stat) < 0){
 					perror("lstat index.html");
-					ERROR("lstat index.html")
+					ERROR("lstat index.html " << clean_route)
 					response_body = HTTP_404;
 				}
 			}
@@ -309,7 +283,7 @@ int main(int argc, char **argv){
 			if(response_body.empty() && S_ISREG(route_stat.st_mode)){
 				PRINT("SEND FILE:" << clean_route)
 				response_length = "Content-Length: " + std::to_string(route_stat.st_size) + "\n\n";
-				if(server.send(fd, response_length.c_str(), static_cast<int>(response_length.length()))){
+				if(server.send(fd, response_length.c_str(), response_length.length())){
 					return true;
 				}
 				PRINT("DELI:" << response_length)
@@ -325,7 +299,7 @@ int main(int argc, char **argv){
 						return false;
 					}
 					buffer[len] = 0;
-					if(server.send(fd, buffer, static_cast<int>(len))){
+					if(server.send(fd, buffer, static_cast<size_t>(len))){
 						return true;
 					}
 					if(len < BUFFER_LIMIT){
@@ -344,11 +318,11 @@ int main(int argc, char **argv){
 		}
 		if(!response_body.empty()){
 			response_length = "Content-Length: " + std::to_string(response_body.length()) + "\n\n";
-			if(server.send(fd, response_length.c_str(), static_cast<int>(response_length.length()))){
+			if(server.send(fd, response_length.c_str(), response_length.length())){
 				return true;
 			}
 			PRINT("DELI:" << response_length)
-			if(server.send(fd, response_body.c_str(), static_cast<int>(response_body.length()))){
+			if(server.send(fd, response_body.c_str(), response_body.length())){
 				return true;
 			}
 			PRINT("DELI:" << response_body)
@@ -356,11 +330,9 @@ int main(int argc, char **argv){
 
 		PRINT("JSON:" << request_object->stringify(true))
 		return false;
-	});
+	};
+		server.run();
 	}catch(std::exception& e){
 		PRINT(e.what())
-		if(kill(http_redirect_pid, SIGTERM) < 0){
-			ERROR("kill redirecter")
-		}
 	}
 }

@@ -5,14 +5,7 @@
 EventServer::EventServer(std::string new_name, uint16_t port, size_t new_max_connections)
 :name(new_name),
 max_connections(new_max_connections),
-num_threads(std::thread::hardware_concurrency()),
 running(true){
-	if(this->num_threads == 0){
-		this->num_threads = 1;
-	}
-	thread_event_queues = new Queue<Event*>[this->num_threads];
-	thread_event_queue_mutexes = new std::mutex[this->num_threads];
-
 	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		throw std::runtime_error(this->name + " socket");
 	}
@@ -47,8 +40,8 @@ void EventServer::start_event(Event* event){
 	}
 }
 
-void EventServer::close_client(size_t index, std::function<void(size_t)> callback){
-	callback(index);
+void EventServer::close_client(size_t index, int fd, std::function<void(size_t, int)> callback){
+	callback(index, fd);
 }
 
 bool EventServer::send(int fd, const char* data, size_t data_length){
@@ -66,7 +59,7 @@ bool EventServer::recv(int fd, char* data, size_t data_length){
 			ERROR(this->name << " read")
 			return true;
 		}
-	return false;
+		return false;
 	}else if(len == 0){
 		ERROR("server read zero")
 		return true;
@@ -82,6 +75,7 @@ bool EventServer::non_blocking_accept(int* new_client_fd){
 			ERROR("accept")
 			return false;
 		}
+		*new_client_fd = 0;
 		// Nothing to accept = ^_^
 	}else{
 		Util::set_non_blocking(*new_client_fd);
@@ -95,21 +89,22 @@ bool EventServer::non_blocking_accept(int* new_client_fd){
 void EventServer::run_thread(unsigned int id){
 	Stack<size_t> next_fd_indexes;
 	std::vector<int> client_fds;
-	int new_fd;
+	size_t new_fd_index;
+	int new_fd, num_connections = 0, connections_done;
 	char packet[PACKET_LIMIT];
 	Event* next_event;
 
-	std::function<void(size_t)> close_client_callback = [&](size_t index){
-		if(close(client_fds[index]) < 0){
+	std::function<void(size_t, int)> close_client_callback = [&](size_t index, int fd){
+		if(close(fd) < 0){
 			ERROR("close_client")
 		}
-		PRINT(index << " done!")
-		int old_fd = client_fds[index];
+		PRINT(fd << " done!")
 		client_fds[index] = -1;
 		next_fd_indexes.push(index);
 		if(this->on_disconnect != nullptr){
-			this->on_disconnect(old_fd);
+			this->on_disconnect(fd);
 		}
+		num_connections--;
 	};
 
 	for(size_t i = 0; i < this->max_connections; ++i){
@@ -130,7 +125,7 @@ void EventServer::run_thread(unsigned int id){
 						if(client_fds[i] != -1){
 							if(this->send(client_fds[i], next_event->data, next_event->data_length)){
 								ERROR("broadcast send")
-								this->close_client(i, close_client_callback);
+								this->close_client(i, client_fds[i], close_client_callback);
 							}
 						}
 					}
@@ -141,21 +136,37 @@ void EventServer::run_thread(unsigned int id){
 		if(this->accepting_id == id){
 			if(next_fd_indexes.size > 0){
 				this->running = this->non_blocking_accept(&new_fd);
-				if(new_fd >= 0){
-					client_fds[next_fd_indexes.pop()] = new_fd;
-					PRINT("accepted " << new_fd << " from " << id)
-					if(this->accepting_id >= this->num_threads){
+				if(new_fd > 0){
+					new_fd_index = next_fd_indexes.pop();
+					client_fds[new_fd_index] = new_fd;
+					PRINT("accepted " << new_fd_index << " from " << new_fd)
+					if(++this->accepting_id >= this->num_threads){
 						this->accepting_id = 0;
-					}else{
-						this->accepting_id++;
 					}
+					num_connections++;
+				}else if(new_fd == -1){
+					new_fd_index = next_fd_indexes.pop();
+					client_fds[new_fd_index] = new_fd;
+					PRINT("-1 closing: accepted " << new_fd_index << " from " << new_fd)
+					num_connections++;
+					this->close_client(new_fd_index, new_fd, close_client_callback);
+				}else if(new_fd == 0){
+					//Nothing to accept
+				}else{
+					ERROR("GOT STRANGE NEW FD" << new_fd)
 				}
 			}
 		}
-		for(size_t i = 0; i < this->max_connections; ++i){
-			if(client_fds[i] != -1){
-				if(this->recv(client_fds[i], packet, PACKET_LIMIT)){
-					this->close_client(i, close_client_callback);
+		if(num_connections > 0){
+			connections_done = 0;
+			for(size_t i = 0; i < this->max_connections; ++i){
+				if(client_fds[i] != -1){
+					if(this->recv(client_fds[i], packet, PACKET_LIMIT)){
+						this->close_client(i, client_fds[i], close_client_callback);
+					}
+					if(++connections_done >= num_connections){
+						break;
+					}
 				}
 			}
 		}
@@ -165,13 +176,20 @@ void EventServer::run_thread(unsigned int id){
 }
 
 // Should not return?
-void EventServer::run(bool returning){
-	unsigned int i = 0;
-	if(returning){
-		i++;
+void EventServer::run(bool returning, unsigned int new_num_threads){
+	this->num_threads = new_num_threads;
+	if(this->num_threads <= 0){
+		this->num_threads = 1;
+	}
+	thread_event_queues = new Queue<Event*>[this->num_threads];
+	thread_event_queue_mutexes = new std::mutex[this->num_threads];
+
+	unsigned int total = this->num_threads;
+	if(!returning){
+		total--;
 	}
 
-	for(; i < this->num_threads; ++i){
+	for(unsigned int i = 0; i < total; ++i){
 			std::thread next(&EventServer::run_thread, this, i);
 			next.detach();
 	}
@@ -180,7 +198,7 @@ void EventServer::run(bool returning){
 		return;
 	}
 
-	this->run_thread(this->num_threads);
+	this->run_thread(total);
 
 /*
 	if(close(this->server_fd) < 0){
@@ -192,5 +210,6 @@ void EventServer::run(bool returning){
 				ERROR("close")
 			}
 		}
-	}*/
+	}
+*/
 }

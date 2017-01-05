@@ -4,6 +4,7 @@
 #include <vector>
 #include <mutex>
 #include <functional>
+#include <thread>
 
 #include "queue.hpp"
 
@@ -34,7 +35,8 @@ protected:
 	std::atomic<unsigned int> accepting_id;
 	
 	virtual bool non_blocking_accept(int* new_client_fd);
-	virtual void close_client(size_t index, std::function<void(size_t)> callback);
+	virtual void close_client(size_t index, int fd, std::function<void(size_t, int)> callback);
+	void run_thread(unsigned int id);
 public:
 	EventServer(std::string new_name, uint16_t port, size_t new_max_connections);
 	virtual ~EventServer(){}
@@ -42,8 +44,7 @@ public:
 	virtual bool send(int fd, const char* data, size_t data_length);
 	virtual bool recv(int fd, char* data, size_t data_length);
 
-	virtual void run(bool returning);
-	void run_thread(unsigned int id);
+	virtual void run(bool returning = false, unsigned int new_num_threads = std::thread::hardware_concurrency());
 
 	void start_event(Event* event);
 

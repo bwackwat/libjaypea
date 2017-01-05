@@ -54,3 +54,41 @@ std::string SymmetricEncryptor::decrypt(std::string data){
 	DEBUG("SALTFREE:\n" << new_data << '|'  << new_data.length());
 	return new_data;
 }
+
+bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/){
+	// Might fix encryption buggies...
+	//std::string send_data = this->encrypt(data, data_length);
+	std::string send_data = this->encrypt(data);
+	if(write(fd, send_data.c_str(), send_data.length()) < 0){
+		ERROR("encryptor write")
+		return true;
+	}
+	return false;
+}
+
+bool SymmetricEncryptor::recv(int fd, char* data, size_t data_length,
+std::function<bool(int, const char*, size_t)> callback){
+	ssize_t len;
+	std::string recv_data;
+	if((len = read(fd, data, data_length)) < 0){
+		if(errno != EWOULDBLOCK){
+			ERROR("encryptor read")
+			return true;
+		}
+		return false;
+	}else if(len == 0){
+		ERROR("encryptor read zero")
+		return true;
+	}else{
+		data[len] = 0;
+		try{
+			// Might fix decryption buggies...
+			//recv_data = this->decrypt(std::string(data, len));
+			recv_data = this->decrypt(std::string(data));
+		}catch(const CryptoPP::Exception& e){
+			ERROR(e.what() << "\nImplied hacker, closing!")
+			return true;
+		}
+		return callback(fd, recv_data.c_str(), recv_data.length());
+	}
+}

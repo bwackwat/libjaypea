@@ -194,6 +194,7 @@ int main(int argc, char** argv){
 						ERROR("stdin read zero");
 						return true;
 					}else{
+						packet[len] = 0;
 						if(client.send(shell_client_fd, packet, static_cast<size_t>(len))){
 							return true;
 						}

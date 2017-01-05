@@ -78,7 +78,11 @@ static struct Shell* shell_routine(){
 int main(int argc, char** argv){
 	enum ComdState state = VERIFY_IDENTITY;
 	enum ComdRoutine routine = SHELL;
-	struct Shell* shell = new struct Shell();
+	struct Shell* shell = shell_routine();
+	if(shell == 0){
+		ERROR("shell_routine")
+	}
+	int shell_client_fd;
 	char packet[PACKET_LIMIT];
 	ssize_t len;
 	int port = 3424;
@@ -95,13 +99,8 @@ int main(int argc, char** argv){
 		state = VERIFY_IDENTITY;
 	};
 
-	// Easy DDOS protection. (This is not a multi-user tool.)
-	server.on_disconnect = [&](int){
-		server.on_event_loop = nullptr;
-		sleep(10);
-	};
-	
-	server.run([&](int fd, const char* data, size_t data_length){
+	server.on_read = [&](int fd, const char* data, size_t data_length){
+		PRINT("GOT: " << data)
 		switch(state){
 		case VERIFY_IDENTITY:
 			if(std::strcmp(data, IDENTITY.c_str()) != 0){
@@ -118,31 +117,7 @@ int main(int argc, char** argv){
 				if(server.send(fd, START_ROUTINE.c_str(), START_ROUTINE.length())){
 					return true;
 				}
-				delete shell;
-				if((shell = shell_routine()) == 0){
-					return true;
-				}
-				server.on_event_loop = [&](){
-					if((len = read(shell->output, packet, PACKET_LIMIT)) < 0){
-						if(errno != EWOULDBLOCK){
-							ERROR("shell output read")
-							kill(shell->pid, SIGTERM);
-							return true;
-						}
-					}else if(len == 0){
-						PRINT("shell output read zero")
-						kill(shell->pid, SIGTERM);
-						return true;
-					}else{
-						// TODO: The whole server shouldn't really exit, only this client's connection...
-						packet[len] = 0;
-						if(server.send(fd, packet, static_cast<size_t>(len))){
-							kill(shell->pid, SIGTERM);
-							return true;
-						}
-					}
-					return false;
-				};
+				shell_client_fd = fd;
 				routine = SHELL;
 			}else if(std::strcmp(data, ROUTINES[SEND_FILE].c_str()) == 0){
 				server.send(fd, BAD_ROUTINE.c_str(), BAD_ROUTINE.length());
@@ -161,7 +136,6 @@ int main(int argc, char** argv){
 			case SHELL:
 				if((len = write(shell->input, data, data_length)) < 0){
 					ERROR("shell input write")
-					kill(shell->pid, SIGTERM);
 					return true;
 				}
 				break;
@@ -171,5 +145,43 @@ int main(int argc, char** argv){
 			}
 		}
 		return false;
-	});
+	};
+
+	// Easy DDOS protection. (This is not a multi-user tool.)
+	server.on_disconnect = [&](int){
+		sleep(10);
+	};
+
+	// Returns and is single threaded.
+	server.run(true, 1);
+
+	while(true){
+		if(shell == 0){
+			shell = shell_routine();
+			if(shell == 0){
+				ERROR("shell_routine recall")
+				break;
+			}
+		}
+		if((len = read(shell->output, packet, PACKET_LIMIT)) < 0){
+			if(errno != EWOULDBLOCK){
+				ERROR("shell output read")
+				kill(shell->pid, SIGTERM);
+				delete shell;
+				shell = 0;
+			}
+		}else if(len == 0){
+			PRINT("shell output read zero")
+			kill(shell->pid, SIGTERM);
+			delete shell;
+			shell = 0;
+		}else{
+			packet[len] = 0;
+			if(server.send(shell_client_fd, packet, static_cast<size_t>(len))){
+				kill(shell->pid, SIGTERM);
+				delete shell;
+				shell = 0;
+			}
+		}
+	};
 }
