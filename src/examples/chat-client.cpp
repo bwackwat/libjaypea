@@ -6,11 +6,13 @@
 
 #define ANONYMOUS "Anonymous"
 
+/*
 static struct termios saved_attributes;
 
 static void reset_input_mode(){
 	tcsetattr(0, TCSANOW, &saved_attributes);
 }
+*/
 
 int main(int argc, char** argv){
 	int port = 10000;
@@ -40,7 +42,7 @@ int main(int argc, char** argv){
 
 	Util::set_non_blocking(0);
 	Util::set_non_blocking(client.fd);
-
+/*
 	struct termios tattr;
 
 	if(!isatty(0)){
@@ -56,7 +58,7 @@ int main(int argc, char** argv){
 	tattr.c_cc[VMIN] = 1;
 	tattr.c_cc[VTIME] = 0;
 	tcsetattr (0, TCSAFLUSH, &tattr);
-
+*/
 	packet_data.objectValues["type"] = new JsonObject("enter");
 	packet_data.objectValues["handle"] = new JsonObject(handle);
 	packet_data.objectValues["message"] = new JsonObject(STRING);

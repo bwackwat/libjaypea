@@ -76,7 +76,7 @@ int main(int argc, char** argv){
 		transaction[fd] = 0;
 	};
 
-	server.run([&](int fd, const char* packet, size_t){
+	server.on_read = [&](int fd, const char* packet, size_t){
 		if(loud)
 			std::cout << "Connection #" << fd << " transaction #" << transaction[fd] << ": " << packet << std::endl;
 		
@@ -106,7 +106,9 @@ int main(int argc, char** argv){
 			return true;
 		}
 		return false;
-	});
+	};
+
+	server.run();
 
 	return 0;
 }

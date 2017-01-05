@@ -4,7 +4,7 @@
 #include "util.hpp"
 
 int main(){
-	enqueue<int> one;
+	Queue<int> one;
 	PRINT(one)
 
 	one.enqueue(11);

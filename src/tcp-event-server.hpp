@@ -28,6 +28,7 @@ protected:
 	unsigned int num_threads;
 	bool running;
 
+//	Queue<Event*>* thread_event_starting_queues;
 	Queue<Event*>* thread_event_queues;
 	std::mutex* thread_event_queue_mutexes;
 

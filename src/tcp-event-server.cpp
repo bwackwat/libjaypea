@@ -33,11 +33,27 @@ running(true){
 }
 
 void EventServer::start_event(Event* event){
+/*
+	for(unsigned int i = 0; i < this->num_threads; ++i){
+		this->thread_event_starting_queues[i].enqueue(event);
+	}
+	for(unsigned int i = 0; i < this->num_threads; ++i){
+		if(this->thread_event_queue_mutexes[i].try_lock()){
+			while(this->thread_event_starting_queues[i].size > 0){
+				this->thread_event_queues[i].enqueue(this->thread_event_starting_queues[i].dequeue());
+			}
+			this->thread_event_queue_mutexes[i].unlock();
+		}
+	}
+*/
+
 	for(unsigned int i = 0; i < this->num_threads; ++i){
 		this->thread_event_queue_mutexes[i].lock();
 		this->thread_event_queues[i].enqueue(event);
 		this->thread_event_queue_mutexes[i].unlock();
 	}
+
+
 }
 
 void EventServer::close_client(size_t index, int fd, std::function<void(size_t, int)> callback){
