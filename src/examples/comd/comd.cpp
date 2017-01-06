@@ -99,20 +99,21 @@ int main(int argc, char** argv){
 		state = VERIFY_IDENTITY;
 	};
 
-	server.on_read = [&](int fd, const char* data, size_t data_length){
-		PRINT("GOT: " << data)
+	server.on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		switch(state){
 		case VERIFY_IDENTITY:
+			PRINT(data)
 			if(std::strcmp(data, IDENTITY.c_str()) != 0){
 				PRINT("Client provided bad identity.")
-				return true;
+				return -1;
 			}
 			if(server.send(fd, VERIFIED.c_str(), VERIFIED.length())){
-				return true;
+				return -1;
 			}
 			state = SELECT_ROUTINE;
 			break;
 		case SELECT_ROUTINE:
+			PRINT(data)
 			if(std::strcmp(data, ROUTINES[SHELL].c_str()) == 0){
 				if(server.send(fd, START_ROUTINE.c_str(), START_ROUTINE.length())){
 					return true;
@@ -121,30 +122,30 @@ int main(int argc, char** argv){
 				routine = SHELL;
 			}else if(std::strcmp(data, ROUTINES[SEND_FILE].c_str()) == 0){
 				server.send(fd, BAD_ROUTINE.c_str(), BAD_ROUTINE.length());
-				return true;
+				return -1;
 			}else if(std::strcmp(data, ROUTINES[RECV_FILE].c_str()) == 0){
 				server.send(fd, BAD_ROUTINE.c_str(), BAD_ROUTINE.length());
-				return true;
+				return -1;
 			}else{
 				server.send(fd, BAD_ROUTINE.c_str(), BAD_ROUTINE.length());
-				return true;
+				return -1;
 			}
 			state = EXCHANGE_PACKETS;
 			break;
 		case EXCHANGE_PACKETS:
 			switch(routine){
 			case SHELL:
-				if((len = write(shell->input, data, data_length)) < 0){
+				if((len = write(shell->input, data, static_cast<size_t>(data_length))) < 0){
 					ERROR("shell input write")
-					return true;
+					return -1;
 				}
 				break;
 			case SEND_FILE:
 			case RECV_FILE:
-				return true;
+				return -1;
 			}
 		}
-		return false;
+		return data_length;
 	};
 
 	// Easy DDOS protection. (This is not a multi-user tool.)

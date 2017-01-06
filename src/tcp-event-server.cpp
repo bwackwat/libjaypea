@@ -65,23 +65,24 @@ bool EventServer::send(int fd, const char* data, size_t data_length){
 		ERROR("send")
 		return true;
 	}
+	this->write_counter[fd]++;
 	return false;
 }
 
-bool EventServer::recv(int fd, char* data, size_t data_length){
+ssize_t EventServer::recv(int fd, char* data, size_t data_length){
 	ssize_t len;
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK){
 			ERROR(this->name << " read")
-			return true;
+			return -1;
 		}
-		return false;
+		return 0;
 	}else if(len == 0){
 		ERROR("server read zero")
-		return true;
+		return -2;
 	}else{
 		data[len] = 0;
-		return this->on_read(fd, data, len);
+		return this->on_read(fd, data, static_cast<size_t>(len));
 	}
 }
 
@@ -91,13 +92,19 @@ bool EventServer::non_blocking_accept(int* new_client_fd){
 			ERROR("accept")
 			return false;
 		}
-		*new_client_fd = 0;
 		// Nothing to accept = ^_^
-	}else{
-		Util::set_non_blocking(*new_client_fd);
-		if(this->on_connect != nullptr){
-			this->on_connect(*new_client_fd);
-		}
+		*new_client_fd = 0;
+		return true;
+	}
+	this->read_counter[*new_client_fd] = 0;
+	this->write_counter[*new_client_fd] = 0;
+	return this->accept_continuation(new_client_fd);
+}
+
+bool EventServer::accept_continuation(int* new_client_fd){
+	Util::set_non_blocking(*new_client_fd);
+	if(this->on_connect != nullptr){
+		this->on_connect(*new_client_fd);
 	}
 	return true;
 }
@@ -106,6 +113,7 @@ void EventServer::run_thread(unsigned int id){
 	Stack<size_t> next_fd_indexes;
 	std::vector<int> client_fds;
 	size_t new_fd_index;
+	ssize_t len;
 	int new_fd, num_connections = 0, connections_done;
 	char packet[PACKET_LIMIT];
 	Event* next_event;
@@ -177,8 +185,10 @@ void EventServer::run_thread(unsigned int id){
 			connections_done = 0;
 			for(size_t i = 0; i < this->max_connections; ++i){
 				if(client_fds[i] != -1){
-					if(this->recv(client_fds[i], packet, PACKET_LIMIT)){
+					if((len = this->recv(client_fds[i], packet, PACKET_LIMIT)) < 0){
 						this->close_client(i, client_fds[i], close_client_callback);
+					}else if(len > 0){
+						this->read_counter[client_fds[i]]++;
 					}
 					if(++connections_done >= num_connections){
 						break;

@@ -139,12 +139,12 @@ int main(int argc, char** argv){
 		return false;
 	};
 
-	client.run([&](int fd, const char* data, ssize_t /*data_length*/){
+	client.run([&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		switch(state){
 		case VERIFY_IDENTITY:
 			PRINT(data)
 			if(client.send(fd, ROUTINES[routine].c_str(), ROUTINES[routine].length())){
-				return true;
+				return -1;
 			}
 			state = SELECT_ROUTINE;
 			break;
@@ -163,7 +163,7 @@ int main(int argc, char** argv){
 				if(ttyraw(STDIN_FILENO) < 0){
 					ttyreset(STDIN_FILENO);
 					ERROR("ttyraw")
-					return true;
+					return -1;
 				}
 
 				/*
@@ -216,7 +216,7 @@ int main(int argc, char** argv){
 			std::cout << '\r' << hostname << " > " << std::flush;
 			break;
 		}
-		return false;
+		return data_length;
 	});
 
 	if(routine == SHELL){

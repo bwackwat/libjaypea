@@ -21,11 +21,10 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 	//srand(static_cast<unsigned int>(time(0)));
 }
 
-std::string SymmetricEncryptor::encrypt(std::string data){
-	DEBUG("ENCRYPT:\n" << data << '|' << data.length())
+std::string SymmetricEncryptor::encrypt(std::string data, int transaction){
 	this->random_pool.GenerateBlock(this->salt, CryptoPP::AES::MAX_KEYLENGTH);
 	std::string salted(reinterpret_cast<const char*>(this->salt), CryptoPP::AES::MAX_KEYLENGTH);
-	DEBUG("SALT:\n" << salted << '|' << salted.length());
+	salted += static_cast<char>(transaction % 255);
 	salted += data;
 	std::string new_data;
 
@@ -35,12 +34,10 @@ std::string SymmetricEncryptor::encrypt(std::string data){
 	CryptoPP::StreamTransformationFilter* aes_enc = new CryptoPP::StreamTransformationFilter(enc, base64_enc);
 	CryptoPP::StringSource enc_source(salted, true, aes_enc);
 
-	DEBUG("ENCRYPTED:\n" << new_data << '|' << new_data.length());
 	return new_data;
 }
 
-std::string SymmetricEncryptor::decrypt(std::string data){
-	DEBUG("DECRYPT:\n" << data << '|' << data.length())
+std::string SymmetricEncryptor::decrypt(std::string data, int transaction){
 	std::string new_data;
 
 	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
@@ -49,16 +46,17 @@ std::string SymmetricEncryptor::decrypt(std::string data){
 	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
 	CryptoPP::StringSource dec_source(data, true, base64_dec);
 
-	DEBUG("DECRYPTED:\n" << new_data << '|'  << new_data.length());
-	new_data.erase(0, CryptoPP::AES::MAX_KEYLENGTH);
-	DEBUG("SALTFREE:\n" << new_data << '|'  << new_data.length());
+	if(static_cast<unsigned char>(new_data[32]) != static_cast<unsigned char>(transaction % 255)){
+		throw CryptoPP::Exception(CryptoPP::BERDecodeErr::INVALID_DATA_FORMAT, "Bad transaction number.");
+	}
+	new_data.erase(0, CryptoPP::AES::MAX_KEYLENGTH + 1);
 	return new_data;
 }
 
-bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/){
+bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/, int transaction){
 	// Might fix encryption buggies...
 	//std::string send_data = this->encrypt(data, data_length);
-	std::string send_data = this->encrypt(data);
+	std::string send_data = this->encrypt(data, transaction);
 	if(write(fd, send_data.c_str(), send_data.length()) < 0){
 		ERROR("encryptor write")
 		return true;
@@ -66,28 +64,28 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/){
 	return false;
 }
 
-bool SymmetricEncryptor::recv(int fd, char* data, size_t data_length,
-std::function<bool(int, const char*, size_t)> callback){
+ssize_t SymmetricEncryptor::recv(int fd, char* data, size_t data_length,
+std::function<ssize_t(int, const char*, size_t)> callback, int transaction){
 	ssize_t len;
 	std::string recv_data;
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK){
 			ERROR("encryptor read")
-			return true;
+			return -1;
 		}
-		return false;
+		return 0;
 	}else if(len == 0){
 		ERROR("encryptor read zero")
-		return true;
+		return -2;
 	}else{
 		data[len] = 0;
 		try{
 			// Might fix decryption buggies...
 			//recv_data = this->decrypt(std::string(data, len));
-			recv_data = this->decrypt(std::string(data));
-		}catch(const CryptoPP::Exception& e){
+			recv_data = this->decrypt(std::string(data), transaction);
+		}catch(const std::exception& e){
 			ERROR(e.what() << "\nImplied hacker, closing!")
-			return true;
+			return -3;
 		}
 		return callback(fd, recv_data.c_str(), recv_data.length());
 	}

@@ -180,9 +180,9 @@ int main(int argc, char **argv){
 		http_response_body;
 	
 	EventServer redirecter("HttpRedirecter", 80, 10);
-	redirecter.on_read = [&](int fd, const char*, size_t){
+	redirecter.on_read = [&](int fd, const char*, ssize_t)->ssize_t{
 		redirecter.send(fd, http_response.c_str(), http_response.length());
-		return true;
+		return -1;
 	};
 	redirecter.run(true);
 
@@ -221,11 +221,11 @@ int main(int argc, char **argv){
 
 	try{
 		PrivateEventServer server(ssl_certificate, ssl_private_key, 443, 10);
-		server.on_read = [&](int fd, const char* data, size_t /*data_length*/)
+		server.on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t
 	{
 		PRINT(data)
 		if(server.send(fd, response_header.c_str(), response_header.length())){
-			return true;
+			return -1;
 		}
 		PRINT("DELI:" << response_header)
 		response_body = std::string();
@@ -284,23 +284,23 @@ int main(int argc, char **argv){
 				PRINT("SEND FILE:" << clean_route)
 				response_length = "Content-Length: " + std::to_string(route_stat.st_size) + "\n\n";
 				if(server.send(fd, response_length.c_str(), response_length.length())){
-					return true;
+					return -1;
 				}
 				PRINT("DELI:" << response_length)
 
 				int file_fd;
 				if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
 					ERROR("open file")
-					return false;
+					return 0;
 				}
 				while(1){
 					if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
 						ERROR("read file")
-						return false;
+						return 0;
 					}
 					buffer[len] = 0;
 					if(server.send(fd, buffer, static_cast<size_t>(len))){
-						return true;
+						return -1;
 					}
 					if(len < BUFFER_LIMIT){
 						break;
@@ -308,7 +308,7 @@ int main(int argc, char **argv){
 				}
 				if(close(file_fd) < 0){
 					ERROR("close file")
-					return false;
+					return 0;
 				}
 				PRINT("FILE DONE")
 			}else{
@@ -319,17 +319,17 @@ int main(int argc, char **argv){
 		if(!response_body.empty()){
 			response_length = "Content-Length: " + std::to_string(response_body.length()) + "\n\n";
 			if(server.send(fd, response_length.c_str(), response_length.length())){
-				return true;
+				return -1;
 			}
 			PRINT("DELI:" << response_length)
 			if(server.send(fd, response_body.c_str(), response_body.length())){
-				return true;
+				return -1;
 			}
 			PRINT("DELI:" << response_body)
 		}
 
 		PRINT("JSON:" << request_object->stringify(true))
-		return false;
+		return data_length;
 	};
 		server.run();
 	}catch(std::exception& e){

@@ -36,9 +36,10 @@ void EventClient::close_client(Connection* conn){
 	conn->state = DEAD;
 }
 
-void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read){
+void EventClient::run(std::function<ssize_t(int, const char*, size_t)> new_on_read){
 	char packet[PACKET_LIMIT];
 	bool running = true;
+	ssize_t len;
 
 	this->on_read = new_on_read;
 
@@ -84,6 +85,8 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 				// Still connecting, cooooool.
 			}else{
 				connection->state = CONNECTED;
+				this->read_counter[connection->fd] = 0;
+				this->write_counter[connection->fd] = 0;
 				if(this->on_connect != nullptr){
 					if(this->on_connect(connection->fd)){
 						this->close_client(connection);
@@ -93,8 +96,10 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 			running = true;
 			break;
 		case CONNECTED:
-			if(this->recv(connection->fd, packet, PACKET_LIMIT)){
+			if((len = this->recv(connection->fd, packet, PACKET_LIMIT)) < 0){
 				this->close_client(connection);
+			}else if(len > 0){
+				this->read_counter[connection->fd]++;
 			}
 			running = true;
 			break;
@@ -105,7 +110,16 @@ void EventClient::run(std::function<bool(int, const char*, ssize_t)> new_on_read
 	}
 }
 
-bool EventClient::recv(int fd, char* data, size_t data_length){
+bool EventClient::send(int fd, const char* data, size_t data_length){
+	if(write(fd, data, data_length) < 0){
+		ERROR("send")
+		return true;
+	}
+	this->write_counter[fd]++;
+	return false;
+}
+
+ssize_t EventClient::recv(int fd, char* data, size_t data_length){
 	ssize_t len;
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK){

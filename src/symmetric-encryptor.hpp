@@ -17,9 +17,9 @@ private:
 public:
 	SymmetricEncryptor(std::string keyfile);
 
-	std::string encrypt(std::string data);
-	std::string decrypt(std::string data);
+	std::string encrypt(std::string data, int transaction);
+	std::string decrypt(std::string data, int transaction);
 
-	bool send(int fd, const char* data, size_t data_length);
-	bool recv(int fd, char* data, size_t data_length, std::function<bool(int, const char*, size_t)> callback);
+	bool send(int fd, const char* data, size_t data_length, int transaction);
+	ssize_t recv(int fd, char* data, size_t data_length, std::function<ssize_t(int, const char*, size_t)> callback, int transaction);
 };

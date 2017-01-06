@@ -46,10 +46,11 @@ bool PrivateEventServer::send(int fd, const char* data, size_t data_length){
 		ERROR("Invalid number of bytes written...")
 		return true;
 	}
+	this->write_counter[fd]++;
 	return false;
 }
 
-bool PrivateEventServer::recv(int fd, char* data, size_t data_length){
+ssize_t PrivateEventServer::recv(int fd, char* data, size_t data_length){
 	int len;
 	len = SSL_read(this->client_ssl[fd], data, static_cast<int>(data_length));
 	switch(SSL_get_error(this->client_ssl[fd], len)){
@@ -66,20 +67,10 @@ bool PrivateEventServer::recv(int fd, char* data, size_t data_length){
 		return true;
 	}
 	data[len] = 0;
-	return this->on_read(fd, data, len);
+	return this->on_read(fd, data, static_cast<size_t>(len));
 }
 
-bool PrivateEventServer::non_blocking_accept(int* new_client_fd){
-	if((*new_client_fd = accept(this->server_fd, 0, 0)) < 0){
-		if(errno != EWOULDBLOCK){
-			ERROR("accept")
-			return false;
-		}
-		// Nothing to accept = ^_^
-		*new_client_fd = 0;
-		return true;
-	}
-
+bool PrivateEventServer::accept_continuation(int* new_client_fd){
 	if((this->client_ssl[*new_client_fd] = SSL_new(this->ctx)) == 0){
 		ERROR("SSL_new")
 		ERR_print_errors_fp(stdout);
@@ -97,11 +88,7 @@ bool PrivateEventServer::non_blocking_accept(int* new_client_fd){
 		return true;
 	}
 
-	Util::set_non_blocking(*new_client_fd);
-	if(this->on_connect != nullptr){
-		this->on_connect(*new_client_fd);
-	}
-	return true;
+	return EventServer::accept_continuation(new_client_fd);
 }
 
 PrivateEventServer::~PrivateEventServer(){
