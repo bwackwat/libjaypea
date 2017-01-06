@@ -1,6 +1,6 @@
 # libjaypea
 
-Too many C++ projects became a library. Currently a set of similarly designed networking programs.
+A bunch of C++ projects transformed into a library with a set of examples.
 
 ## Projects and Programs (with docs)
 
@@ -19,8 +19,3 @@ Too many C++ projects became a library. Currently a set of similarly designed ne
 * Developed and tested on CentOS 7. ```bin/build.sh``` just uses clang++...
 * ```etc/``` contains files for these programs that might be shared.
 * ```bin/build.sh``` builds all examples/programs.
-
-## TODO
-
-* Create encrypted subclasses of the tcp-event-server, using the symmetric key encryption from comd and the public-private key encryption from SSL.
-* Implement the encrypted subclasses into modern-web-monad and comd.
