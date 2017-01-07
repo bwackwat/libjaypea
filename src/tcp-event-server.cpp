@@ -2,7 +2,7 @@
 #include "stack.hpp"
 #include "tcp-event-server.hpp"
 
-EventServer::EventServer(std::string new_name, uint16_t port, size_t new_max_connections)
+EventServer::EventServer(uint16_t port, size_t new_max_connections, std::string new_name)
 :name(new_name),
 max_connections(new_max_connections),
 running(true){

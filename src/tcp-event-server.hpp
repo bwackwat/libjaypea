@@ -44,7 +44,7 @@ protected:
 	virtual bool accept_continuation(int* new_client_fd);
 	virtual void close_client(size_t index, int fd, std::function<void(size_t, int)> callback);
 public:
-	EventServer(std::string new_name, uint16_t port, size_t new_max_connections);
+	EventServer(uint16_t port, size_t new_max_connections, std::string new_name = "EventServer");
 	virtual ~EventServer(){}
 
 	virtual bool send(int fd, const char* data, size_t data_length);
