@@ -7,6 +7,7 @@ EventServer::EventServer(uint16_t port, size_t new_max_connections, std::string 
 max_connections(new_max_connections),
 running(true){
 	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+		perror("socket");
 		throw std::runtime_error(this->name + " socket");
 	}
 	Util::set_non_blocking(this->server_fd);
@@ -16,6 +17,7 @@ running(true){
 */
 	int opt = 1;
 	if(setsockopt(this->server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt)) < 0){
+		perror("setsockopt");
 		throw std::runtime_error(this->name + " setsockopt");
 	}
 
@@ -24,9 +26,11 @@ running(true){
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_addr.sin_port = htons(port);
 	if(bind(this->server_fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(server_addr)) < 0){
+		perror("bind");
 		throw std::runtime_error(this->name + " bind");
 	}
-	if(listen(this->server_fd, 512) < 0){
+	if(listen(this->server_fd, 1024) < 0){
+		perror("listen");
 		throw std::runtime_error(this->name + " listen");
 	}
 	PRINT(this->name << " listening on " << port)
@@ -52,18 +56,21 @@ void EventServer::start_event(Event* event){
 		this->thread_event_queues[i].enqueue(event);
 		this->thread_event_queue_mutexes[i].unlock();
 	}
-
-
 }
 
-void EventServer::close_client(size_t index, int fd, std::function<void(size_t, int)> callback){
+void EventServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
 	callback(index, fd);
 }
 
 bool EventServer::send(int fd, const char* data, size_t data_length){
-	if(write(fd, data, data_length) < 0){
+	ssize_t len;
+	if((len = write(fd, data, data_length)) < 0){
+		perror("write");
 		ERROR("send")
 		return true;
+	}
+	if(static_cast<size_t>(len) != data_length){
+		ERROR("NOT ALL THE DATA WAS SENT TO " << fd)
 	}
 	this->write_counter[fd]++;
 	return false;
@@ -72,17 +79,18 @@ bool EventServer::send(int fd, const char* data, size_t data_length){
 ssize_t EventServer::recv(int fd, char* data, size_t data_length){
 	ssize_t len;
 	if((len = read(fd, data, data_length)) < 0){
-		if(errno != EWOULDBLOCK){
+		if(errno != EWOULDBLOCK && errno != EAGAIN){
+			perror("read");
 			ERROR(this->name << " read")
 			return -1;
 		}
 		return 0;
 	}else if(len == 0){
-		ERROR("server read zero")
+		ERROR("server read zero" << fd)
 		return -2;
 	}else{
 		data[len] = 0;
-		return this->on_read(fd, data, static_cast<size_t>(len));
+		return this->on_read(fd, data, len);
 	}
 }
 
@@ -118,16 +126,16 @@ void EventServer::run_thread(unsigned int id){
 	char packet[PACKET_LIMIT];
 	Event* next_event;
 
-	std::function<void(size_t, int)> close_client_callback = [&](size_t index, int fd){
-		if(close(fd) < 0){
+	std::function<void(size_t, int*)> close_client_callback = [&](size_t index, int* fd){
+		if(close(*fd) < 0){
 			ERROR("close_client")
 		}
-		PRINT(fd << " done!")
-		client_fds[index] = -1;
-		next_fd_indexes.push(index);
+		PRINT(*fd << " done!")
 		if(this->on_disconnect != nullptr){
-			this->on_disconnect(fd);
+			this->on_disconnect(*fd);
 		}
+		*fd = -1;
+		next_fd_indexes.push(index);
 		num_connections--;
 	};
 
@@ -147,9 +155,10 @@ void EventServer::run_thread(unsigned int id){
 				case BROADCAST:
 					for(size_t i = 0; i < this->max_connections; ++i){
 						if(client_fds[i] != -1){
+							PRINT("bcast " << client_fds[i])
 							if(this->send(client_fds[i], next_event->data, next_event->data_length)){
 								ERROR("broadcast send")
-								this->close_client(i, client_fds[i], close_client_callback);
+								this->close_client(i, &client_fds[i], close_client_callback);
 							}
 						}
 					}
@@ -163,7 +172,7 @@ void EventServer::run_thread(unsigned int id){
 				if(new_fd > 0){
 					new_fd_index = next_fd_indexes.pop();
 					client_fds[new_fd_index] = new_fd;
-					PRINT("accepted " << new_fd_index << " from " << new_fd)
+					PRINT("accepted " << new_fd_index << " from " << new_fd << " on " << id)
 					if(++this->accepting_id >= this->num_threads){
 						this->accepting_id = 0;
 					}
@@ -173,7 +182,7 @@ void EventServer::run_thread(unsigned int id){
 					client_fds[new_fd_index] = new_fd;
 					PRINT("-1 closing: accepted " << new_fd_index << " from " << new_fd)
 					num_connections++;
-					this->close_client(new_fd_index, new_fd, close_client_callback);
+					this->close_client(new_fd_index, &client_fds[new_fd_index], close_client_callback);
 				}else if(new_fd == 0){
 					//Nothing to accept
 				}else{
@@ -186,7 +195,7 @@ void EventServer::run_thread(unsigned int id){
 			for(size_t i = 0; i < this->max_connections; ++i){
 				if(client_fds[i] != -1){
 					if((len = this->recv(client_fds[i], packet, PACKET_LIMIT)) < 0){
-						this->close_client(i, client_fds[i], close_client_callback);
+						this->close_client(i, &client_fds[i], close_client_callback);
 					}else if(len > 0){
 						this->read_counter[client_fds[i]]++;
 					}
@@ -201,7 +210,6 @@ void EventServer::run_thread(unsigned int id){
 	PRINT(this->name << " thread " << id << " is done!")
 }
 
-// Should not return?
 void EventServer::run(bool returning, unsigned int new_num_threads){
 	this->num_threads = new_num_threads;
 	if(this->num_threads <= 0){

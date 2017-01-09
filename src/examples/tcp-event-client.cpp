@@ -42,19 +42,19 @@ int main(int argc, char** argv){
 		return false;
 	};
 
-	client.run([&](int fd, const char* data, ssize_t /*data_length*/){
+	client.run([&](int fd, const char* data, size_t data_length)->ssize_t{
 		if(verbose){
 			PRINT("Response: " << data)
 		}
 		if(client_data[fd] >= requests){
-			return true;
+			return -1;
 		}
 		if(write(fd, request, request_length) < 0){
 			ERROR("write")
-			return true;
+			return -1;
 		}
 		client_data[fd]++;
-		return false;
+		return static_cast<ssize_t>(data_length);
 	});		
 
 	PRINT("DONE!")

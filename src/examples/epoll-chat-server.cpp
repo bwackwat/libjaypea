@@ -58,15 +58,13 @@ int main(){
 			return true;
 		}
 
-		server.start_event();
-		//server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
+		server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
 		return false;
 	};
 
 	server.on_disconnect = [&](int fd){
 		message = client_data[fd] + " has disconnected.";
-		server.start_event();
-		//server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
+		server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
 	};
 
 	server.run(false, 1);

@@ -124,13 +124,13 @@ ssize_t EventClient::recv(int fd, char* data, size_t data_length){
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK){
 			ERROR("read")
-			return true;
+			return -1;
 		}
 		// Nothing to read, coooooool.
-		return false;
+		return 0;
 	}else if(len == 0){
 		ERROR("client read zero")
-		return true;
+		return -2;
 	}else{
 		data[len] = 0;
 		return this->on_read(fd, data, len);

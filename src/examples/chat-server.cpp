@@ -23,13 +23,13 @@ int main(){
 	std::string message;
 
 	std::unordered_map<int, std::string> client_data;
-	EventServer server("ChatServer", 10000, 1000);
+	EventServer server(10000, 1000);
 
 	server.on_connect = [&](int fd){
 		client_data[fd] = std::string();
 	};
 
-	server.on_read = [&](int fd, const char* packet, size_t){
+	server.on_read = [&](int fd, const char* packet, size_t data_length)->ssize_t{
 		packet_data["type"]->stringValue = std::string();
 		packet_data["message"]->stringValue = std::string();
 		packet_data["handle"]->stringValue = std::string();
@@ -40,7 +40,7 @@ int main(){
 			if(client_data[fd].length() < 5){
 				message = "Your handle is less than 5 characters... bye!";
 				write(fd, message.c_str(), message.length());
-				return true;
+				return -1;
 			}
 			message = client_data[fd] + " has connected.";
 		}else if(std::strcmp(packet_data["type"]->stringValue.c_str(), "message") == 0){
@@ -48,7 +48,7 @@ int main(){
 				message = "Messages longer than 128 characters are truncated, sorry.\n";
 				if(write(fd, message.c_str(), message.length()) < 0){
 					ERROR("write")
-					return true;
+					return -1;
 				}
 				packet_data["message"]->stringValue.resize(128);
 			}
@@ -56,11 +56,11 @@ int main(){
 		}else{
 			message = "You provided an invalid packet type... bye!";
 			write(fd, message.c_str(), message.length());
-			return true;
+			return -1;
 		}
 
 		server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
-		return false;
+		return static_cast<ssize_t>(data_length);
 	};
 
 	server.on_disconnect = [&](int fd){
@@ -68,7 +68,7 @@ int main(){
 		server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
 	};
 
-	server.run(false);
+	server.run(false, 2);
 
 	return 0;
 }

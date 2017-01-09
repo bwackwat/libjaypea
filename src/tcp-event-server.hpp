@@ -38,11 +38,11 @@ protected:
 	int server_fd;
 	std::atomic<unsigned int> accepting_id;
 	
-	void run_thread(unsigned int id);
+	virtual void run_thread(unsigned int id);
 	bool non_blocking_accept(int* new_client_fd);
 
 	virtual bool accept_continuation(int* new_client_fd);
-	virtual void close_client(size_t index, int fd, std::function<void(size_t, int)> callback);
+	virtual void close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback);
 public:
 	EventServer(uint16_t port, size_t new_max_connections, std::string new_name = "EventServer");
 	virtual ~EventServer(){}
@@ -52,9 +52,9 @@ public:
 
 	virtual void run(bool returning = false, unsigned int new_num_threads = std::thread::hardware_concurrency());
 
-	void start_event(Event* event);
+	virtual void start_event(Event* event);
 
 	std::function<void(int)> on_connect;
-	std::function<ssize_t(int, const char*, size_t)> on_read;
+	std::function<ssize_t(int, const char*, ssize_t)> on_read;
 	std::function<void(int)> on_disconnect;
 };

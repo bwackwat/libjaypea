@@ -3,36 +3,8 @@
 #include "tcp-epoll-server.hpp"
 
 EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
-:max_connections(new_max_connections),
-name(new_name),
+:EventServer(port, new_max_connections, new_name),
 client_events(new struct epoll_event[this->max_connections]){
-	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-		perror("socket");
-		throw std::runtime_error(this->name + " socket");
-	}
-	Util::set_non_blocking(this->server_fd);
-/*
-	For this class, I am unsure about what this is genuinely useful for...
-	However, it has been useful in the past and I have read it as "good practice."
-*/
-	int opt = 1;
-	if(setsockopt(this->server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt)) < 0){
-		perror("setsockopt");
-		throw std::runtime_error(this->name + " setsockopt");
-	}
-
-	struct sockaddr_in server_addr;
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_addr.sin_port = htons(port);
-	if(bind(this->server_fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(server_addr)) < 0){
-		perror("bind");
-		throw std::runtime_error(this->name + " bind");
-	}
-	if(listen(this->server_fd, 1024) < 0){
-		perror("listen");
-		throw std::runtime_error(this->name + " listen");
-	}
 	if((this->epoll_fd = epoll_create1(0)) < 0){
 		perror("epoll_create1");
 		throw std::runtime_error(this->name + " epoll_create1");
@@ -43,7 +15,6 @@ client_events(new struct epoll_event[this->max_connections]){
 		perror("epoll_ctl");
 		throw std::runtime_error(this->name + " epoll_ctl");
 	}
-	PRINT(this->name << " listening on " << port)
 }
 
 void EpollServer::run_thread(unsigned int){
@@ -101,68 +72,4 @@ void EpollServer::run_thread(unsigned int){
 			}
 		}
 	}
-}
-
-bool EpollServer::send(int fd, const char* data, size_t data_length){
-	if(write(fd, data, data_length) < 0){
-		ERROR("send")
-		return true;
-	}
-	return false;
-}
-
-ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
-	ssize_t len;
-	if((len = read(fd, data, data_length)) < 0){
-		if(errno != EWOULDBLOCK){
-			ERROR(this->name << " read")
-			return -1;
-		}
-		return 0;
-	}else if(len == 0){
-		ERROR("server read zero")
-		return -2;
-	}else{
-		data[len] = 0;
-		return this->on_read(fd, data, static_cast<size_t>(len));
-	}
-}
-
-void EpollServer::run(bool returning, unsigned int new_num_threads){
-	this->num_threads = new_num_threads;
-	if(this->num_threads <= 0){
-		this->num_threads = 1;
-	}
-
-	unsigned int total = this->num_threads;
-	if(!returning){
-		total--;
-	}
-
-	for(unsigned int i = 0; i < total; ++i){
-			std::thread next(&EpollServer::run_thread, this, i);
-			next.detach();
-	}
-
-	if(returning){
-		return;
-	}
-
-	this->run_thread(total);
-
-/*
-	if(close(this->server_fd) < 0){
-		ERROR("close server_fd")
-	}
-	for(size_t i = 0; i < this->max_connections; ++i){
-		if(this->client_fds[i] != -1){
-			if(close(this->client_fds[i]) < 0){
-				ERROR("close")
-			}
-		}
-	}
-*/
-}
-
-void EpollServer::start_event(){
 }

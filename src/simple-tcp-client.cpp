@@ -32,10 +32,12 @@ name("SimpleTcpClient"),
 verbose(new_verbose),
 requests(0){
 	if((this->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+		perror("socket");
 		throw std::runtime_error(this->name + " socket");
 	}
 	struct hostent* host;
 	if((host = gethostbyname(hostname.c_str())) == 0){
+		perror("gethostbyname");
 		throw std::runtime_error(this->name + " gethostbyname");
 	}
 	struct sockaddr_in server_addr;
@@ -44,6 +46,7 @@ requests(0){
 	server_addr.sin_port = htons(this->port);
 	bzero(&(server_addr.sin_zero), 8);
 	if(connect(this->fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(server_addr)) < 0){
+		perror("connect");
 		throw std::runtime_error(this->name + " connect");
 	}
 	if(this->verbose){
@@ -74,12 +77,14 @@ requests(0){
 bool SimpleTcpClient::communicate(const char* request, size_t length, char* response){
 	ssize_t len;
 	if(write(this->fd, request, length) < 0){
+		perror("write");
 		throw std::runtime_error(this->name + " write");
 	}
 	if((len = read(this->fd, response, PACKET_LIMIT)) < 0){
+		perror("read");
 		throw std::runtime_error(this->name + " read");
 	}else if(len == 0){
-		throw std::runtime_error(this->name + " kicked from server");
+		PRINT(this->name << ' ' << fd << " kicked from server after " << requests)
 	}
 	requests++;
 	response[len] = 0;

@@ -19,7 +19,7 @@ case "${argv[@]}" in *"OPT"*)
 esac
 
 compiler="clang++ -std=c++11 -g $optimize -I$srcdir \
--Weverything -Wpedantic \
+-Weverything -Wpedantic -Wconversion \
 -Wno-c++98-compat -Wno-padded \
 -Wno-exit-time-destructors -Wno-global-constructors"
 
@@ -49,4 +49,4 @@ build echo-server "tcp-event-server.cpp examples/echo-server.cpp"
 build chat-server "-lpthread tcp-event-server.cpp examples/chat-server.cpp"
 build chat-client "simple-tcp-client.cpp examples/chat-client.cpp"
 build queue-test "examples/queue-test.cpp"
-build epoll-chat-server "-lpthread tcp-epoll-server.cpp examples/epoll-chat-server.cpp"
+build epoll-chat-server "-lpthread tcp-event-server.cpp tcp-epoll-server.cpp examples/epoll-chat-server.cpp"

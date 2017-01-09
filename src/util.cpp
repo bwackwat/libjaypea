@@ -38,6 +38,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		std::cout << argv[i] << ' ';
 	}
 	std::cout << '\n';
+	PRINT("\nstd::thread::hardware_concurrency = " << std::thread::hardware_concurrency())
 
 	for(int i = 0; i < argc; ++i){
 		if(std::strcmp(argv[i], "--help") == 0 ||
