@@ -1,6 +1,6 @@
 #include <unordered_map>
 
-#include "tcp-event-server.hpp"
+#include "tcp-epoll-server.hpp"
 #include "json.hpp"
 #include "util.hpp"
 
@@ -23,7 +23,7 @@ int main(){
 	std::string message;
 
 	std::unordered_map<int, std::string> client_data;
-	EventServer server(10000, 1000);
+	EpollServer server(10000, 10);
 
 	server.on_connect = [&](int fd){
 		client_data[fd] = std::string();
@@ -39,15 +39,14 @@ int main(){
 			client_data[fd] = packet_data["handle"]->stringValue;
 			if(client_data[fd].length() < 5){
 				message = "Your handle is less than 5 characters... bye!";
-				write(fd, message.c_str(), message.length());
+				server.send(fd, message.c_str(), message.length());
 				return -1;
 			}
 			message = client_data[fd] + " has connected.";
 		}else if(std::strcmp(packet_data["type"]->stringValue.c_str(), "message") == 0){
 			if(packet_data["message"]->stringValue.length() > 128){
 				message = "Messages longer than 128 characters are truncated, sorry.\n";
-				if(write(fd, message.c_str(), message.length()) < 0){
-					ERROR("write")
+				if(server.send(fd, message.c_str(), message.length())){
 					return -1;
 				}
 				packet_data["message"]->stringValue.resize(128);
@@ -55,7 +54,7 @@ int main(){
 			message = client_data[fd] + " > " + clean(packet_data["message"]->stringValue.c_str());
 		}else{
 			message = "You provided an invalid packet type... bye!";
-			write(fd, message.c_str(), message.length());
+			server.send(fd, message.c_str(), message.length());
 			return -1;
 		}
 
@@ -68,7 +67,7 @@ int main(){
 		server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
 	};
 
-	server.run(false, 2);
+	server.run(false, 1);
 
 	return 0;
 }

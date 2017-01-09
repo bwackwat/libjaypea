@@ -20,25 +20,32 @@ std::vector<struct Argument> Util::arguments;
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
+	PRINT("DEFAULT SET " << name << " = " << value)
 	arguments.push_back({name, alts, callback, required, ARG_STRING, std::ref(value), 0, 0});
 }
 
 void Util::define_argument(std::string name, int* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
+	PRINT("DEFAULT SET " << name << " = " << *value)
 	arguments.push_back({name, alts, callback, required, ARG_INTEGER, std::ref(name), value, 0});
 }
 
 void Util::define_argument(std::string name, bool* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
+	PRINT("DEFAULT SET " << name << " = " << *value)
 	arguments.push_back({name, alts, callback, required, ARG_BOOLEAN, std::ref(name), 0, value});
 }
 
 void Util::parse_arguments(int argc, char** argv, std::string description){
+	PRINT("------------------------------------------------------")
+
 	std::string check;
 	std::cout << "Arguments: ";
 	for(int i = 0; i < argc; ++i){
 		std::cout << argv[i] << ' ';
 	}
 	std::cout << '\n';
-	PRINT("\nstd::thread::hardware_concurrency = " << std::thread::hardware_concurrency())
+	PRINT("std::thread::hardware_concurrency = " << std::thread::hardware_concurrency())
+
+	PRINT("------------------------------------------------------")
 
 	for(int i = 0; i < argc; ++i){
 		if(std::strcmp(argv[i], "--help") == 0 ||
@@ -85,21 +92,21 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			(std::istreambuf_iterator<char>()));
 		config_object.parse(config_data.c_str());
 		PRINT("Loaded " << CONFIG_PATH)
-		PRINT(config_object.stringify(true))
+		// PRINT(config_object.stringify(true))
 		for(auto& arg : arguments){
 			if(config_object.objectValues.count(arg.name)){
 				switch(arg.type){
 				case ARG_STRING:
 					arg.string_value.get() = config_object[arg.name]->stringValue;
-					PRINT(arg.name << " = " << arg.string_value.get())
+					PRINT("CONFIG SET " << arg.name << " = " << arg.string_value.get())
 					break;
 				case ARG_INTEGER:
 					*arg.integer_value = std::stoi(config_object[arg.name]->stringValue);
-					PRINT(arg.name << " = " << *arg.integer_value)
+					PRINT("CONFIG SET " << arg.name << " = " << *arg.integer_value)
 					break;
 				case ARG_BOOLEAN:
 					*arg.boolean_value = true;
-					PRINT(arg.name << " = " << *arg.boolean_value)
+					PRINT("CONFIG SET " << arg.name << " = " << *arg.boolean_value)
 					break;
 				}
 				if(arg.callback != nullptr){
@@ -110,6 +117,8 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 	}else{
 		PRINT("Could not open " << CONFIG_PATH << ", ignoring.")
 	}
+	
+	PRINT("------------------------------------------------------")
 
 	for(int i = 0; i < argc; ++i){
 		for(auto& arg: arguments){
@@ -119,9 +128,9 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			case ARG_STRING:
 				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
-						if(argc > i){
+						if(argc > i + 1){
 							arg.string_value.get() = std::string(argv[i + 1]);
-							PRINT(arg.name << " = " << arg.string_value.get())
+							PRINT("ARG SET " << arg.name << " = " << arg.string_value.get())
 							if(arg.callback != nullptr){
 								arg.callback();
 							}
@@ -136,9 +145,9 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			case ARG_INTEGER:
 				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
-						if(argc > i){
+						if(argc > i + 1){
 							*arg.integer_value = std::stoi(argv[i + 1]);
-							PRINT(arg.name << " = " << *arg.integer_value)
+							PRINT("ARG SET " << arg.name << " = " << *arg.integer_value)
 							if(arg.callback != nullptr){
 								arg.callback();
 							}
@@ -154,7 +163,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
 						*arg.boolean_value = true;
-						PRINT(arg.name << " = " << *arg.boolean_value)
+						PRINT("ARG SET " << arg.name << " = " << *arg.boolean_value)
 						if(arg.callback != nullptr){
 							arg.callback();
 						}
@@ -170,6 +179,8 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			}
 		}	
 	}
+
+	PRINT("------------------------------------------------------")
 }
 
 /*

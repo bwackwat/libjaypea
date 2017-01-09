@@ -10,7 +10,6 @@ running(true){
 		perror("socket");
 		throw std::runtime_error(this->name + " socket");
 	}
-	Util::set_non_blocking(this->server_fd);
 /*
 	For this class, I am unsure about what this is genuinely useful for...
 	However, it has been useful in the past and I have read it as "good practice."
@@ -81,14 +80,15 @@ ssize_t EventServer::recv(int fd, char* data, size_t data_length){
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK && errno != EAGAIN){
 			perror("read");
-			ERROR(this->name << " read")
+			ERROR(this->name << " on " << fd)
 			return -1;
 		}
 		return 0;
 	}else if(len == 0){
-		ERROR("server read zero" << fd)
+		ERROR("server read zero on " << fd)
 		return -2;
 	}else{
+		//PRINT("server read " << len << " on " << fd)
 		data[len] = 0;
 		return this->on_read(fd, data, len);
 	}
@@ -130,7 +130,7 @@ void EventServer::run_thread(unsigned int id){
 		if(close(*fd) < 0){
 			ERROR("close_client")
 		}
-		PRINT(*fd << " done!")
+		PRINT(*fd << " done " << " on T " << id)
 		if(this->on_disconnect != nullptr){
 			this->on_disconnect(*fd);
 		}
