@@ -29,7 +29,7 @@ running(true){
 		perror("bind");
 		throw std::runtime_error(this->name + " bind");
 	}
-	if(listen(this->server_fd, 1024) < 0){
+	if(listen(this->server_fd, static_cast<int>(this->max_connections)) < 0){
 		perror("listen");
 		throw std::runtime_error(this->name + " listen");
 	}

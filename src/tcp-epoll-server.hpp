@@ -14,12 +14,7 @@
 
 class EpollServer : public EventServer{
 protected:
-	int epoll_fd;
-	struct epoll_event new_event;
-	struct epoll_event* client_events;
-
-	std::atomic<unsigned long> num_connections;
-	std::unordered_map<int /* fd */, std::mutex> fd_mutexes;
+	std::mutex accept_mutex;
 	
 	virtual void run_thread(unsigned int thread_id);
 public:
