@@ -10,6 +10,7 @@ running(true){
 		perror("socket");
 		throw std::runtime_error(this->name + " socket");
 	}
+	Util::set_non_blocking(this->server_fd);
 /*
 	For this class, I am unsure about what this is genuinely useful for...
 	However, it has been useful in the past and I have read it as "good practice."

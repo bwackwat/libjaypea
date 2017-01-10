@@ -22,8 +22,10 @@ num_connections(0){
 ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
 	ssize_t len;
 	if((len = read(fd, data, data_length)) <= 0){
-		PRINT("read error, " << fd << " done")
-		return -1;
+		if(errno != EWOULDBLOCK && errno != EAGAIN){
+			return -1;
+		}
+		return 0;
 	}else{
 		data[len] = 0;
 		return this->on_read(fd, data, len);
@@ -44,71 +46,81 @@ void EpollServer::run_thread(unsigned int thread_id){
 			continue;
 		}
 		for(i = 0; i < num_fds; ++i){
-			PRINT("check " << this->client_events[i].data.fd << " on " << thread_id)
-			if(this->client_events[i].data.fd == this->server_fd){
-				if((new_fd = accept(this->server_fd, 0, 0)) < 0){
-					perror("accept");
-					running = false;
-					break;
-				}
-				PRINT("Accepted " << new_fd << " on " << thread_id)
-				// Util::set_non_blocking(new_fd);
-				struct epoll_event next_event;
-				next_event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-				next_event.data.fd = new_fd;
-				if(epoll_ctl(this->epoll_fd, EPOLL_CTL_ADD, new_fd, &next_event) < 0){
-					perror("epoll_ctl add client");
-					close(new_fd);
-				}else{
-					this->num_connections++;
-					if(this->on_connect != nullptr){
-						this->on_connect(new_fd);
-					}
-				}
+			int the_fd = this->client_events[i].data.fd;
+			if(!this->fd_mutexes[the_fd].try_lock()){
+				continue;
+			}
+			PRINT("check " << the_fd << " on " << thread_id)
+			if(the_fd == this->server_fd){
 				if(this->num_connections < this->max_connections){
-					this->client_events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-					this->client_events[i].data.fd = this->server_fd;
-					if(epoll_ctl(this->epoll_fd, EPOLL_CTL_MOD, this->client_events[i].data.fd, &this->client_events[i]) < 0){
-						perror("epoll_ctl mod server");
-					}
-				}else{
-					if(epoll_ctl(this->epoll_fd, EPOLL_CTL_DEL, this->client_events[i].data.fd, &this->client_events[i]) < 0){
-						perror("epoll_ctl del server");
-					}
-				}
-			}else{
-				PRINT("Try read from " << this->client_events[i].data.fd << " on " << thread_id)
-				if((len = this->recv(this->client_events[i].data.fd, packet, PACKET_LIMIT)) < 0){
-					PRINT("...Thread : " << thread_id)
-					if(this->on_disconnect != nullptr){
-						this->on_disconnect(this->client_events[i].data.fd);
-					}
-					if(close(this->client_events[i].data.fd) < 0){
-						PRINT("CLOSE " << this->client_events[i].data.fd)
-						perror("close client");
-						sleep(1);
-					}
-					//if(epoll_ctl(this->epoll_fd, EPOLL_CTL_DEL, this->client_events[i].data.fd, &this->client_events[i]) < 0){
-					//	perror("epoll_ctl del client");
-					//}
-					if(this->num_connections >= this->max_connections){
+					if((new_fd = accept(this->server_fd, 0, 0)) < 0){
+						if(errno != EWOULDBLOCK && errno != EAGAIN){
+							PRINT(new_fd << " on " << thread_id << " with server: " << this->server_fd)
+							perror("accept");
+							running = false;
+							break;
+						}
+					}else{
+						PRINT("Accepted " << new_fd << " on " << thread_id)
+						Util::set_non_blocking(new_fd);
 						struct epoll_event next_event;
-						next_event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-						next_event.data.fd = this->server_fd;
-						if(epoll_ctl(this->epoll_fd, EPOLL_CTL_ADD, this->server_fd, &next_event) < 0){
-							perror("epoll_ctl add server");
+						next_event.events = EPOLLIN | EPOLLET;
+						next_event.data.fd = new_fd;
+						if(epoll_ctl(this->epoll_fd, EPOLL_CTL_ADD, new_fd, &next_event) < 0){
+							perror("epoll_ctl add client");
+							close(new_fd);
+						}else{
+							this->num_connections++;
+							if(this->on_connect != nullptr){
+								this->on_connect(new_fd);
+							}
 						}
 					}
+				}
+				this->client_events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+				this->client_events[i].data.fd = this->server_fd;
+				if(epoll_ctl(this->epoll_fd, EPOLL_CTL_MOD, this->server_fd, &this->client_events[i]) < 0){
+					perror("epoll_ctl mod server");
+				}
+			//	}else{
+			//		if(epoll_ctl(this->epoll_fd, EPOLL_CTL_DEL, this->server_fd, &this->client_events[i]) < 0){
+			//			perror("epoll_ctl del server");
+			//		}
+			//	}
+			}else{
+				PRINT("Try read from " << the_fd << " on " << thread_id)
+				if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
+					PRINT("read error, " << the_fd << " done from " << thread_id)
+			//		if(epoll_ctl(this->epoll_fd, EPOLL_CTL_DEL, the_fd, &this->client_events[i]) < 0){
+			//			perror("epoll_ctl del client");
+			//		}
+					if(close(the_fd) < 0){
+						PRINT("CLOSE OLD " << the_fd)
+						perror("close client");
+					}
+					if(this->on_disconnect != nullptr){
+						this->on_disconnect(the_fd);
+					}
+			//		if(this->num_connections >= this->max_connections){
+			//			struct epoll_event next_event;
+			//			next_event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+			//			next_event.data.fd = this->server_fd;
+			//			if(epoll_ctl(this->epoll_fd, EPOLL_CTL_ADD, this->server_fd, &next_event) < 0){
+			//				perror("epoll_ctl add server");
+			//			}
+			//		}
 					this->num_connections--;
 				}else if(len == PACKET_LIMIT){
-					ERROR("more to read uh oh!")
+					ERROR("OVERFLOAT more to read uh oh!")
 				}else{
-					this->client_events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-					if(epoll_ctl(this->epoll_fd, EPOLL_CTL_MOD, this->client_events[i].data.fd, &this->client_events[i]) < 0){
-					 	perror("epoll_ctl mod client");
-					}
+			//		this->client_events[i].events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+			//		this->client_events[i].data.fd = the_fd;
+			//		if(epoll_ctl(this->epoll_fd, EPOLL_CTL_MOD, the_fd, &this->client_events[i]) < 0){
+			//		 	perror("epoll_ctl mod client");
+			//		}
 				}
 			}
+			this->fd_mutexes[the_fd].unlock();
 		}
 	}
 }

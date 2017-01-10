@@ -18,6 +18,7 @@ int main(int argc, char** argv){
 			PRINT(packet)
 		}
 		if(server.send(fd, packet, length)){
+			PRINT("WRITE ERROR!!!")
 			return -1;
 		}
 		return static_cast<ssize_t>(length);
