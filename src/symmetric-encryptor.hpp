@@ -12,8 +12,6 @@ private:
 	CryptoPP::AutoSeededRandomPool random_pool;
 	byte key[CryptoPP::AES::MAX_KEYLENGTH];
 	byte iv[CryptoPP::AES::BLOCKSIZE];
-	byte salt[CryptoPP::AES::MAX_KEYLENGTH];
-
 public:
 	SymmetricEncryptor(std::string keyfile);
 

@@ -242,18 +242,16 @@ JsonObject::JsonObject(enum JsonType new_type)
 JsonObject::JsonObject(std::string new_stringValue)
 :type(STRING), stringValue(new_stringValue){}
 
+// NOTYPE is important in this constructor for the parsing strategy.
 JsonObject::JsonObject()
 :type(NOTYPE){}
 
 JsonObject::~JsonObject(){
-	if(this->type == OBJECT){
-		for(auto it = this->objectValues.begin(); it != this->objectValues.end(); ++it){
-			delete it->second;
-		}
-	}else if(this->type == ARRAY){
-		for(JsonObject* item : this->arrayValues){
-			delete item;
-		}
+	for(auto it = this->objectValues.begin(); it != this->objectValues.end(); ++it){
+		delete it->second;
+	}
+	for(JsonObject* item : this->arrayValues){
+		delete item;
 	}
 }
 

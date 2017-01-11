@@ -9,19 +9,19 @@ PrivateEventServer::PrivateEventServer(std::string certificate, std::string priv
 
         if((this->ctx = SSL_CTX_new(SSLv23_server_method())) == 0){
                 ERR_print_errors_fp(stdout);
-		throw new std::runtime_error("SSL_CTX_new");
+		throw std::runtime_error(this->name + "SSL_CTX_new");
         }
         if(SSL_CTX_set_ecdh_auto(this->ctx, 1) == 0){
                 ERR_print_errors_fp(stdout);
-		throw new std::runtime_error("SSL_CTX_set_ecdh_auto");
+		throw std::runtime_error(this->name + "SSL_CTX_set_ecdh_auto");
 	}
         if(SSL_CTX_use_certificate_file(this->ctx, certificate.c_str(), SSL_FILETYPE_PEM) != 1){
                 ERR_print_errors_fp(stdout);
-		throw new std::runtime_error("SSL_CTX_use_certificate_file");
+		throw std::runtime_error(this->name + "SSL_CTX_use_certificate_file");
         }
         if(SSL_CTX_use_PrivateKey_file(this->ctx, private_key.c_str(), SSL_FILETYPE_PEM) != 1){
                 ERR_print_errors_fp(stdout);
-		throw new std::runtime_error("SSL_CTX_use_PrivateKey_file");
+		throw std::runtime_error(this->name + "SSL_CTX_use_PrivateKey_file");
         }
 
 //	PRINT("SSL Mode: " << SSL_CTX_set_mode(this->ctx, SSL_MODE_ENABLE_PARTIAL_WRITE))

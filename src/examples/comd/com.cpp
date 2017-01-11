@@ -139,6 +139,14 @@ int main(int argc, char** argv){
 		return false;
 	};
 
+	if(routine == SHELL){
+		if(ttyraw(STDIN_FILENO) < 0){
+			ttyreset(STDIN_FILENO);
+			ERROR("ttyraw")
+			return -1;
+		}
+	}
+
 	client.run([&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		switch(state){
 		case VERIFY_IDENTITY:
@@ -159,12 +167,6 @@ int main(int argc, char** argv){
 				std::signal(SIGINT, sigcatch);
 				std::signal(SIGQUIT, sigcatch);
 				std::signal(SIGTERM, sigcatch);
-
-				if(ttyraw(STDIN_FILENO) < 0){
-					ttyreset(STDIN_FILENO);
-					ERROR("ttyraw")
-					return -1;
-				}
 
 				/*
 				 * Major bug note:

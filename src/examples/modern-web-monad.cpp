@@ -39,10 +39,8 @@ static bool parse_request(const char* request){
 	const char* it;
 
 	delete request_object;
-	request_object = new JsonObject();
-	request_object->type = OBJECT;
-	request_object->objectValues["route"] = new JsonObject();
-	request_object->objectValues["route"]->type = STRING;
+	request_object = new JsonObject(OBJECT);
+	request_object->objectValues["route"] = new JsonObject(STRING);
 
 	// Get the route.
 	for(it = request; *it; ++it){
@@ -198,21 +196,13 @@ int main(int argc, char **argv){
 	route("/", root);
 	route("/routes", routes);
 
-	JsonObject* routes_object = new JsonObject();
-	routes_object->type = OBJECT;
-	routes_object->objectValues["result"] = new JsonObject();
-	routes_object->objectValues["result"]->type = STRING;
-	routes_object->objectValues["result"]->stringValue = "This is a list of the routes and their required JSON parameters";
-	JsonObject* routes_sub_object = new JsonObject();
-	routes_sub_object->type = OBJECT;
+	JsonObject* routes_object = new JsonObject(OBJECT);
+	routes_object->objectValues["result"] = new JsonObject("This is a list of the routes and their required JSON parameters");
+	JsonObject* routes_sub_object = new JsonObject(OBJECT);
 	for(auto iter = routemap.begin(); iter != routemap.end(); ++iter){
-		routes_sub_object->objectValues[iter->first] = new JsonObject();
-		routes_sub_object->objectValues[iter->first]->type = ARRAY;
+		routes_sub_object->objectValues[iter->first] = new JsonObject(ARRAY);
 		for(auto &field : required_fields[iter->first]){
-			JsonObject* array_item = new JsonObject();
-			array_item->type = STRING;
-			array_item->stringValue = field.first;
-			routes_sub_object->objectValues[iter->first]->arrayValues.push_back(array_item);
+			routes_sub_object->objectValues[iter->first]->arrayValues.push_back(new JsonObject(field.first));
 		}
 	}
 	routes_object->objectValues["routes"] = routes_sub_object;

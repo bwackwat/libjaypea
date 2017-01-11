@@ -7,10 +7,10 @@
 #include "cryptopp/filters.h"
 #include "cryptopp/cryptlib.h"
 
-#include "tcp-event-server.hpp"
+#include "tcp-epoll-server.hpp"
 #include "symmetric-encryptor.hpp"
 
-class SymmetricEventServer : public EventServer {
+class SymmetricEventServer : public EpollServer {
 private:
 	SymmetricEncryptor encryptor;
 public:

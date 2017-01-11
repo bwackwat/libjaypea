@@ -5,7 +5,7 @@
 #include "symmetric-event-server.hpp"
 
 SymmetricEventServer::SymmetricEventServer(std::string keyfile, uint16_t port, size_t new_max_connections)
-:EventServer(port, new_max_connections, "SymmetricEventServer"),
+:EpollServer(port, new_max_connections, "SymmetricEventServer"),
 encryptor(keyfile){}
 
 bool SymmetricEventServer::send(int fd, const char* data, size_t data_length){

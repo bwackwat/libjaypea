@@ -12,6 +12,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 	unsigned long num_connections = 0;
 	char packet[PACKET_LIMIT];
 	ssize_t len;
+
 	struct epoll_event new_event;
 	struct epoll_event* client_events = new struct epoll_event[this->max_connections];
 

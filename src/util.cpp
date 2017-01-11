@@ -98,15 +98,15 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 				switch(arg.type){
 				case ARG_STRING:
 					arg.string_value.get() = config_object[arg.name]->stringValue;
-					PRINT("CONFIG SET " << arg.name << " = " << arg.string_value.get())
+					PRINT("CONFIG SET STRING " << arg.name << " = " << arg.string_value.get())
 					break;
 				case ARG_INTEGER:
 					*arg.integer_value = std::stoi(config_object[arg.name]->stringValue);
-					PRINT("CONFIG SET " << arg.name << " = " << *arg.integer_value)
+					PRINT("CONFIG SET INTEGER " << arg.name << " = " << *arg.integer_value)
 					break;
 				case ARG_BOOLEAN:
 					*arg.boolean_value = true;
-					PRINT("CONFIG SET " << arg.name << " = " << *arg.boolean_value)
+					PRINT("CONFIG SET BOOLEAN " << arg.name << " = " << *arg.boolean_value)
 					break;
 				}
 				if(arg.callback != nullptr){
