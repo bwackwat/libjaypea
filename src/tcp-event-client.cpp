@@ -31,7 +31,7 @@ void EventClient::add(std::string hostname, uint16_t port){
 
 void EventClient::close_client(Connection* conn){
 	if(close(conn->fd) < 0){
-		ERROR("close")
+		perror("close");
 	}
 	conn->state = DEAD;
 }
@@ -54,15 +54,20 @@ void EventClient::run(std::function<ssize_t(int, const char*, size_t)> new_on_re
 		switch(connection->state){
 		case DISCONNECTED:
 			if((connection->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-				ERROR("socket")
-				this->close_client(connection);
-				break;
+				if(errno == EMFILE){
+					continue;
+				}else{	
+					perror("socket");
+					PRINT("errno " << errno);
+					this->close_client(connection);
+					break;
+				}
 			}
 			Util::set_non_blocking(connection->fd);
 			if(!this->host_addresses.count(connection->hostname)){
 				struct hostent* host;
 				if((host = gethostbyname(connection->hostname.c_str())) == 0){
-					ERROR("gethostbyname")
+					perror("gethostbyname");
 					this->close_client(connection);
 					break;
 				}
@@ -78,7 +83,7 @@ void EventClient::run(std::function<ssize_t(int, const char*, size_t)> new_on_re
 			bzero(&(connection->server_address->sin_zero), 8);
 			if(connect(connection->fd, reinterpret_cast<struct sockaddr*>(connection->server_address), sizeof(struct sockaddr_in)) < 0){
 				if(errno !=  EINPROGRESS && errno != EALREADY){
-					ERROR("connect")
+					perror("connect");
 					this->close_client(connection);
 					break;
 				}
@@ -112,6 +117,7 @@ void EventClient::run(std::function<ssize_t(int, const char*, size_t)> new_on_re
 
 bool EventClient::send(int fd, const char* data, size_t data_length){
 	if(write(fd, data, data_length) < 0){
+		perror("write");
 		ERROR("send")
 		return true;
 	}
@@ -123,6 +129,7 @@ ssize_t EventClient::recv(int fd, char* data, size_t data_length){
 	ssize_t len;
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK){
+			perror("read");
 			ERROR("read")
 			return -1;
 		}

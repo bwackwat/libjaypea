@@ -36,11 +36,9 @@ protected:
 	std::mutex* thread_event_queue_mutexes;
 
 	int server_fd;
-	std::atomic<unsigned int> accepting_id;
+	std::mutex accept_mutex;
 	
 	virtual void run_thread(unsigned int id);
-	bool non_blocking_accept(int* new_client_fd);
-
 	virtual bool accept_continuation(int* new_client_fd);
 	virtual void close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback);
 public:

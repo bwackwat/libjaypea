@@ -46,7 +46,7 @@ build keyfile-gen "-lcryptopp examples/keyfile-gen.cpp"
 build tcp-poll-server "examples/tcp-poll-server.cpp"
 build ponald "-lpthread examples/ponal-server.cpp tcp-event-server.cpp"
 build comd "-lcryptopp -lpthread symmetric-encryptor.cpp examples/comd/comd-util.cpp examples/comd/comd.cpp tcp-event-server.cpp symmetric-event-server.cpp"
-build chat-server "-lpthread tcp-event-server.cpp examples/chat-server.cpp"
+build chat-server "-lpthread tcp-epoll-server.cpp tcp-event-server.cpp examples/chat-server.cpp"
 
 build tcp-poll-client "examples/tcp-poll-client.cpp"
 build ponal "examples/ponal-client.cpp simple-tcp-client.cpp"

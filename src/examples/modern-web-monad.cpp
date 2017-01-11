@@ -179,7 +179,7 @@ int main(int argc, char **argv){
 		"\n\n" +
 		http_response_body;
 	
-	EventServer redirecter("HttpRedirecter", 80, 10);
+	EventServer redirecter(80, 10);
 	redirecter.on_read = [&](int fd, const char*, ssize_t)->ssize_t{
 		redirecter.send(fd, http_response.c_str(), http_response.length());
 		return -1;

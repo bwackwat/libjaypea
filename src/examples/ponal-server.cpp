@@ -67,7 +67,7 @@ int main(int argc, char** argv){
 	Util::define_argument("port", &port, {"-p"});
 	Util::parse_arguments(argc, argv, "This is a simple key-value server.");
 
-	EventServer server("ponald", static_cast<uint16_t>(port), 10);
+	EventServer server(static_cast<uint16_t>(port), 10);
 
 	std::string response;
 	std::unordered_map<int, int> transaction;

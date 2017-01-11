@@ -37,20 +37,6 @@ running(true){
 }
 
 void EventServer::start_event(Event* event){
-/*
-	for(unsigned int i = 0; i < this->num_threads; ++i){
-		this->thread_event_starting_queues[i].enqueue(event);
-	}
-	for(unsigned int i = 0; i < this->num_threads; ++i){
-		if(this->thread_event_queue_mutexes[i].try_lock()){
-			while(this->thread_event_starting_queues[i].size > 0){
-				this->thread_event_queues[i].enqueue(this->thread_event_starting_queues[i].dequeue());
-			}
-			this->thread_event_queue_mutexes[i].unlock();
-		}
-	}
-*/
-
 	for(unsigned int i = 0; i < this->num_threads; ++i){
 		this->thread_event_queue_mutexes[i].lock();
 		this->thread_event_queues[i].enqueue(event);
@@ -86,36 +72,15 @@ ssize_t EventServer::recv(int fd, char* data, size_t data_length){
 		}
 		return 0;
 	}else if(len == 0){
-		ERROR("server read zero on " << fd)
 		return -2;
 	}else{
-		//PRINT("server read " << len << " on " << fd)
 		data[len] = 0;
 		return this->on_read(fd, data, len);
 	}
 }
 
-bool EventServer::non_blocking_accept(int* new_client_fd){
-	if((*new_client_fd = accept(this->server_fd, 0, 0)) < 0){
-		if(errno != EWOULDBLOCK){
-			ERROR("accept")
-			return false;
-		}
-		// Nothing to accept = ^_^
-		*new_client_fd = 0;
-		return true;
-	}
-	this->read_counter[*new_client_fd] = 0;
-	this->write_counter[*new_client_fd] = 0;
-	return this->accept_continuation(new_client_fd);
-}
-
-bool EventServer::accept_continuation(int* new_client_fd){
-	Util::set_non_blocking(*new_client_fd);
-	if(this->on_connect != nullptr){
-		this->on_connect(*new_client_fd);
-	}
-	return true;
+bool EventServer::accept_continuation(int*){
+	return false;
 }
 
 void EventServer::run_thread(unsigned int id){
@@ -167,29 +132,31 @@ void EventServer::run_thread(unsigned int id){
 				}
 			}
 		}
-		if(this->accepting_id == id){
+		if(this->accept_mutex.try_lock()){
 			if(next_fd_indexes.size > 0){
-				this->running = this->non_blocking_accept(&new_fd);
-				if(new_fd > 0){
-					new_fd_index = next_fd_indexes.pop();
-					client_fds[new_fd_index] = new_fd;
-					PRINT("accepted " << new_fd_index << " from " << new_fd << " on " << id)
-					if(++this->accepting_id >= this->num_threads){
-						this->accepting_id = 0;
+				if((new_fd = accept(this->server_fd, 0, 0)) < 0){
+					if(errno != EWOULDBLOCK && errno != EAGAIN){
+						ERROR("accept")
+						running = false;
 					}
-					num_connections++;
-				}else if(new_fd == -1){
-					new_fd_index = next_fd_indexes.pop();
-					client_fds[new_fd_index] = new_fd;
-					PRINT("-1 closing: accepted " << new_fd_index << " from " << new_fd)
-					num_connections++;
-					this->close_client(new_fd_index, &client_fds[new_fd_index], close_client_callback);
-				}else if(new_fd == 0){
-					//Nothing to accept
 				}else{
-					ERROR("GOT STRANGE NEW FD" << new_fd)
+					if(this->accept_continuation(&new_fd)){
+						close(new_fd);
+					}else{
+						Util::set_non_blocking(new_fd);
+						new_fd_index = next_fd_indexes.pop();
+						client_fds[new_fd_index] = new_fd;
+						PRINT("accepted " << new_fd_index << " from " << new_fd << " on " << id)
+						this->read_counter[new_fd] = 0;
+						this->write_counter[new_fd] = 0;
+						if(this->on_connect != nullptr){
+							this->on_connect(new_fd);
+						}
+						num_connections++;
+					}
 				}
 			}
+			this->accept_mutex.unlock();
 		}
 		if(num_connections > 0){
 			connections_done = 0;
@@ -234,17 +201,4 @@ void EventServer::run(bool returning, unsigned int new_num_threads){
 	}
 
 	this->run_thread(total);
-
-/*
-	if(close(this->server_fd) < 0){
-		ERROR("close server_fd")
-	}
-	for(size_t i = 0; i < this->max_connections; ++i){
-		if(this->client_fds[i] != -1){
-			if(close(this->client_fds[i]) < 0){
-				ERROR("close")
-			}
-		}
-	}
-*/
 }

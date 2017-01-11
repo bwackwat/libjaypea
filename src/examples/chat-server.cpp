@@ -23,7 +23,7 @@ int main(){
 	std::string message;
 
 	std::unordered_map<int, std::string> client_data;
-	EpollServer server(10000, 10);
+	EpollServer server(10000, 100);
 
 	server.on_connect = [&](int fd){
 		client_data[fd] = std::string();

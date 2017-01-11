@@ -3,7 +3,7 @@
 #include "private-event-server.hpp"
 
 PrivateEventServer::PrivateEventServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections)
-:EventServer("PrivateEventServer", port, max_connections){
+:EventServer(port, max_connections, "PrivateEventServer"){
 	SSL_library_init();
 	SSL_load_error_strings();
 
@@ -28,8 +28,8 @@ PrivateEventServer::PrivateEventServer(std::string certificate, std::string priv
 }
 
 // Basically does an SSL_free before closing the socket.
-void PrivateEventServer::close_client(size_t index, int fd, std::function<void(size_t, int)> callback){
-	SSL_free(this->client_ssl[fd]);
+void PrivateEventServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
+	SSL_free(this->client_ssl[*fd]);
 	callback(index, fd);
 }
 
@@ -44,7 +44,6 @@ bool PrivateEventServer::send(int fd, const char* data, size_t data_length){
 	}
 	if(len != static_cast<int>(data_length)){
 		ERROR("Invalid number of bytes written...")
-		return true;
 	}
 	this->write_counter[fd]++;
 	return false;
@@ -58,16 +57,16 @@ ssize_t PrivateEventServer::recv(int fd, char* data, size_t data_length){
 		break;
 	case SSL_ERROR_WANT_READ:
 		// Nothing to read, nonblocking mode.
-		return false;
+		return 0;
 	case SSL_ERROR_ZERO_RETURN:
 		ERROR("server read zero")
-		return true;
+		return -2;
 	default:
 		ERROR("other SSL_read")
-		return true;
+		return -1;
 	}
 	data[len] = 0;
-	return this->on_read(fd, data, static_cast<size_t>(len));
+	return this->on_read(fd, data, static_cast<ssize_t>(len));
 }
 
 bool PrivateEventServer::accept_continuation(int* new_client_fd){
@@ -88,7 +87,7 @@ bool PrivateEventServer::accept_continuation(int* new_client_fd){
 		return true;
 	}
 
-	return EventServer::accept_continuation(new_client_fd);
+	return false;
 }
 
 PrivateEventServer::~PrivateEventServer(){
