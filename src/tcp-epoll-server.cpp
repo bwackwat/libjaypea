@@ -4,17 +4,26 @@
 
 #define EVENTS EPOLLIN | EPOLLET | EPOLLONESHOT | EPOLLERR
 
+class Detail{
+public:
+	time_t since_activity;
+};
+
 EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
 :EventServer(port, new_max_connections, new_name){}
 
 void EpollServer::run_thread(unsigned int thread_id){
-	int num_fds, new_fd, i, epoll_fd;
+	int num_fds, num_timeouts, new_fd, i, j, epoll_fd, timeout_epoll_fd;
 	unsigned long num_connections = 0;
 	char packet[PACKET_LIMIT];
 	ssize_t len;
 
 	struct epoll_event new_event;
-	struct epoll_event* client_events = new struct epoll_event[this->max_connections];
+	struct epoll_event* client_events = new struct epoll_event[this->max_connections + 2];
+						// + 2 for server_fd and timeout_epoll_fd
+	struct epoll_event* timeout_events = new struct epoll_event[this->max_connections];
+	
+	std::unordered_map<int /* fd */, Detail*> event_details;
 
 	if((epoll_fd = epoll_create1(0)) < 0){
 		perror("epoll_create1");
@@ -25,6 +34,17 @@ void EpollServer::run_thread(unsigned int thread_id){
 	if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, this->server_fd, &new_event) < 0){
 		perror("epoll_ctl");
 		throw std::runtime_error(this->name + " epoll_ctl");
+	}
+
+	if((timeout_epoll_fd = epoll_create1(0)) < 0){
+		perror("epoll_create1 timeout");
+		throw std::runtime_error(this->name + " epoll_create1 timeout");
+	}
+	new_event.events = EVENTS;
+	new_event.data.fd = timeout_epoll_fd;
+	if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timeout_epoll_fd, &new_event) < 0){
+		perror("epoll_ctl timeout");
+		throw std::runtime_error(this->name + " epoll_ctl timeout");
 	}
 
 	std::function<void(size_t, int*)> close_client_callback = [&](size_t, int* fd){
@@ -46,7 +66,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 	};
 
 	while(this->running){
-		if((num_fds = epoll_wait(epoll_fd, client_events, static_cast<int>(this->max_connections + 1), -1)) < 0){
+		if((num_fds = epoll_wait(epoll_fd, client_events, static_cast<int>(this->max_connections + 2), -1)) < 0){
 			perror("epoll_wait");
 			this->running = false;
 			continue;
@@ -64,8 +84,17 @@ void EpollServer::run_thread(unsigned int thread_id){
 				this->close_client(0, &the_fd, close_client_callback);
 				continue;
 			}
-//			PRINT("check " << the_fd << " on " << thread_id)
-			if(the_fd == this->server_fd){
+			if(the_fd == timeout_epoll_fd){
+				if((num_timeouts = epoll_wait(timeout_epoll_fd, timeout_events, static_cast<int>(this->max_connections), 1000)) < 0){
+					perror("epoll_wait timeout");
+					continue;
+				}else if(num_timeouts > 0){
+					for(j = 0; j < num_timeouts; ++j){
+					}
+				}else{
+					ERORR("NO TIMEOUTS WHY DID EVENT FIRE?")
+				}
+			}else if(the_fd == this->server_fd){
 				if(this->accept_mutex.try_lock()){
 					while(num_connections < this->max_connections){
 						if((new_fd = accept(this->server_fd, 0, 0)) < 0){
