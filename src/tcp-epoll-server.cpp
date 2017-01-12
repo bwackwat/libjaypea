@@ -1,3 +1,5 @@
+#include "sys/timerfd.h"
+
 #include "util.hpp"
 #include "stack.hpp"
 #include "tcp-epoll-server.hpp"
@@ -13,17 +15,19 @@ EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string 
 :EventServer(port, new_max_connections, new_name){}
 
 void EpollServer::run_thread(unsigned int thread_id){
-	int num_fds, num_timeouts, new_fd, i, j, epoll_fd, timeout_epoll_fd;
+	int num_fds, num_timeouts, new_fd, the_fd, timer_fd, i, j, epoll_fd, timeout_epoll_fd;
 	unsigned long num_connections = 0;
 	char packet[PACKET_LIMIT];
 	ssize_t len;
+	struct itimerspec timer_spec;
 
 	struct epoll_event new_event;
 	struct epoll_event* client_events = new struct epoll_event[this->max_connections + 2];
 						// + 2 for server_fd and timeout_epoll_fd
 	struct epoll_event* timeout_events = new struct epoll_event[this->max_connections];
 	
-	std::unordered_map<int /* fd */, Detail*> event_details;
+	std::unordered_map<int /* timer fd */, int /* client fd */> timer_to_client_map;
+	std::unordered_map<int /* client fd */, int /* timer fd */> client_to_timer_map;
 
 	if((epoll_fd = epoll_create1(0)) < 0){
 		perror("epoll_create1");
@@ -72,7 +76,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 			continue;
 		}
 		for(i = 0; i < num_fds; ++i){
-			int the_fd = client_events[i].data.fd;
+			the_fd = client_events[i].data.fd;
 			if(client_events[i].events & EPOLLERR){
 				std::cout << "EPOLLERR ";
 			}
@@ -81,6 +85,12 @@ void EpollServer::run_thread(unsigned int thread_id){
 			}
 			if((client_events[i].events & EPOLLERR) || 
 			(!(client_events[i].events & EPOLLIN))){
+				timer_fd = client_to_timer_map[the_fd];
+				client_to_timer_map.erase(the_fd);
+				timer_to_client_map.erase(timer_fd);
+				if(close(timer_fd) < 0){
+					perror("close timer_fd on error");
+				}
 				this->close_client(0, &the_fd, close_client_callback);
 				continue;
 			}
@@ -90,9 +100,22 @@ void EpollServer::run_thread(unsigned int thread_id){
 					continue;
 				}else if(num_timeouts > 0){
 					for(j = 0; j < num_timeouts; ++j){
+						timer_fd = timeout_events[j].data.fd;
+						new_fd = timer_to_client_map[timer_fd];
+						timer_to_client_map.erase(timer_fd);
+						client_to_timer_map.erase(new_fd);
+						if(close(timer_fd) < 0){
+							perror("close timer_fd on timeout");
+						}
+						this->close_client(0, &new_fd, close_client_callback);
 					}
 				}else{
-					ERORR("NO TIMEOUTS WHY DID EVENT FIRE?")
+					ERROR("NO TIMEOUTS WHY DID EVENT FIRE?")
+				}
+				client_events[i].events = EVENTS;
+				client_events[i].data.fd = timeout_epoll_fd;
+				if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, timeout_epoll_fd, &client_events[i]) < 0){
+					perror("epoll_ctl mod timeout");
 				}
 			}else if(the_fd == this->server_fd){
 				if(this->accept_mutex.try_lock()){
@@ -114,6 +137,25 @@ void EpollServer::run_thread(unsigned int thread_id){
 									perror("epoll_ctl add client");
 									close(new_fd);
 								}else{
+									if((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) < 0){
+										perror("timerfd_create");
+									}else{
+										timer_spec.it_interval.tv_sec = 10;
+										timer_spec.it_interval.tv_nsec = 0;
+										timer_spec.it_value.tv_sec = 10;
+										timer_spec.it_value.tv_nsec = 0;
+										if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
+											perror("timerfd_settime");
+										}else{
+											timer_to_client_map[timer_fd] = new_fd;
+											client_to_timer_map[new_fd] = timer_fd;
+											new_event.events = EVENTS;
+											new_event.data.fd = timer_fd;
+											if(epoll_ctl(timeout_epoll_fd, EPOLL_CTL_ADD, timer_fd, &new_event) < 0){
+												perror("epoll_ctl timer add");
+											}
+										}
+									}
 									this->read_counter[new_fd] = 0;
 									this->write_counter[new_fd] = 0;
 									if(this->on_connect != nullptr){
@@ -138,7 +180,20 @@ void EpollServer::run_thread(unsigned int thread_id){
 					this->accept_mutex.unlock();
 				}
 			}else{
+				timer_fd = client_to_timer_map[the_fd];
+				timer_spec.it_interval.tv_sec = 10;
+				timer_spec.it_interval.tv_nsec = 0;
+				timer_spec.it_value.tv_sec = 10;
+				timer_spec.it_value.tv_nsec = 0;
+				if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
+					perror("timerfd_settime update");
+				}
 				if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
+					timer_to_client_map.erase(timer_fd);
+					client_to_timer_map.erase(the_fd);
+					if(close(timer_fd) < 0){
+						perror("close timer_fd");
+					}
 					this->close_client(0, &the_fd, close_client_callback);
 				}else if(len == PACKET_LIMIT){
 					ERROR("OVERFLOAT more to read uh oh!")
