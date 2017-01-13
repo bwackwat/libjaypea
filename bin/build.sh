@@ -53,7 +53,7 @@ build ponal "examples/ponal-client.cpp simple-tcp-client.cpp"
 build com "-lcryptopp symmetric-encryptor.cpp examples/comd/comd-util.cpp examples/comd/com.cpp tcp-event-client.cpp symmetric-event-client.cpp"
 build chat-client "simple-tcp-client.cpp examples/chat-client.cpp"
 
-build modern-web-monad "-lssl -lcrypto -lpthread examples/modern-web-monad.cpp tcp-event-server.cpp private-event-server.cpp"
+build modern-web-monad "-lssl -lcrypto -lpthread examples/modern-web-monad.cpp tcp-event-server.cpp tcp-epoll-server.cpp private-event-server.cpp"
 build echo-server "-lpthread tcp-event-server.cpp tcp-epoll-server.cpp examples/echo-server.cpp"
 
 build tcp-client "-lpthread examples/tcp-client.cpp simple-tcp-client.cpp"

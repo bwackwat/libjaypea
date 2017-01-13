@@ -4,12 +4,7 @@
 #include "stack.hpp"
 #include "tcp-epoll-server.hpp"
 
-#define EVENTS EPOLLIN | EPOLLET | EPOLLONESHOT | EPOLLERR
-
-class Detail{
-public:
-	time_t since_activity;
-};
+#define EVENTS EPOLLIN | EPOLLET | EPOLLONESHOT | EPOLLERR | EPOLLHUP
 
 EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
 :EventServer(port, new_max_connections, new_name){}
@@ -79,16 +74,18 @@ void EpollServer::run_thread(unsigned int thread_id){
 			the_fd = client_events[i].data.fd;
 			if(client_events[i].events & EPOLLERR){
 				std::cout << "EPOLLERR ";
-			}
-			if(!(client_events[i].events & EPOLLIN)){
+			}else if(client_events[i].events & EPOLLHUP){
+				std::cout << "EPOLLHUP ";
+			}else if(!(client_events[i].events & EPOLLIN)){
 				std::cout << "NOT EPOLLIN? ";
 			}
 			if((client_events[i].events & EPOLLERR) || 
+			(client_events[i].events & EPOLLHUP) || 
 			(!(client_events[i].events & EPOLLIN))){
 				timer_fd = client_to_timer_map[the_fd];
 				client_to_timer_map.erase(the_fd);
 				timer_to_client_map.erase(timer_fd);
-				std::cout << "close tfd " << timer_fd << ' ';
+				std::cout << "error, close tfd " << timer_fd << ' ';
 				if(close(timer_fd) < 0){
 					perror("close timer_fd on error");
 				}
@@ -105,9 +102,11 @@ void EpollServer::run_thread(unsigned int thread_id){
 						new_fd = timer_to_client_map[timer_fd];
 						timer_to_client_map.erase(timer_fd);
 						client_to_timer_map.erase(new_fd);
-						std::cout << "close tfd " << timer_fd << ' ';
+						std::cout << "timeout, close tfd " << timer_fd << ' ';
 						if(close(timer_fd) < 0){
 							perror("close timer_fd on timeout");
+							// TODO: If the timer is invalid, then forget about closing the client...
+							continue;
 						}
 						this->close_client(0, &new_fd, close_client_callback);
 					}

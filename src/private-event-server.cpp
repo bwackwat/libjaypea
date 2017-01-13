@@ -1,9 +1,10 @@
 #include "util.hpp"
 #include "tcp-event-server.hpp"
+#include "tcp-epoll-server.hpp"
 #include "private-event-server.hpp"
 
 PrivateEventServer::PrivateEventServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections)
-:EventServer(port, max_connections, "PrivateEventServer"){
+:EpollServer(port, max_connections, "PrivateEventServer"){
 	SSL_library_init();
 	SSL_load_error_strings();
 

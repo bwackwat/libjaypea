@@ -5,7 +5,9 @@
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 
-class PrivateEventServer : public EventServer{
+#include "tcp-epoll-server.hpp"
+
+class PrivateEventServer : public EpollServer{
 private:
 	SSL_CTX* ctx;
 	std::unordered_map<int, SSL*> client_ssl;
