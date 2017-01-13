@@ -81,6 +81,7 @@ int main(int argc, char** argv){
 	struct Shell* shell = shell_routine();
 	if(shell == 0){
 		ERROR("shell_routine")
+		return -1;
 	}
 	int shell_client_fd;
 	char packet[PACKET_LIMIT];
@@ -116,7 +117,7 @@ int main(int argc, char** argv){
 			PRINT(data)
 			if(std::strcmp(data, ROUTINES[SHELL].c_str()) == 0){
 				if(server.send(fd, START_ROUTINE.c_str(), START_ROUTINE.length())){
-					return true;
+					return -1;
 				}
 				shell_client_fd = fd;
 				routine = SHELL;
@@ -135,9 +136,17 @@ int main(int argc, char** argv){
 		case EXCHANGE_PACKETS:
 			switch(routine){
 			case SHELL:
-				if((len = write(shell->input, data, static_cast<size_t>(data_length))) < 0){
-					ERROR("shell input write")
-					return -1;
+				if(shell == 0){
+					shell = shell_routine();
+					if(shell == 0){
+						ERROR("shell_routine recall")
+					}
+				}
+				if(shell != 0){
+					if((len = write(shell->input, data, static_cast<size_t>(data_length))) < 0){
+						ERROR("shell input write")
+						return -1;
+					}
 				}
 				break;
 			case SEND_FILE:
@@ -158,31 +167,35 @@ int main(int argc, char** argv){
 
 	while(true){
 		if(shell == 0){
-			shell = shell_routine();
-			if(shell == 0){
-				ERROR("shell_routine recall")
-				break;
-			}
+			continue;
 		}
 		if((len = read(shell->output, packet, PACKET_LIMIT)) < 0){
 			if(errno != EWOULDBLOCK){
 				ERROR("shell output read")
 				kill(shell->pid, SIGTERM);
+				close(shell->input);
+				close(shell->output);
 				delete shell;
 				shell = 0;
 			}
 		}else if(len == 0){
 			PRINT("shell output read zero")
 			kill(shell->pid, SIGTERM);
+			close(shell->input);
+			close(shell->output);
 			delete shell;
 			shell = 0;
 		}else{
 			packet[len] = 0;
-			if(server.send(shell_client_fd, packet, static_cast<size_t>(len))){
-				kill(shell->pid, SIGTERM);
-				delete shell;
-				shell = 0;
+			if(shell != 0){
+				if(server.send(shell_client_fd, packet, static_cast<size_t>(len))){
+					kill(shell->pid, SIGTERM);
+					close(shell->input);
+					close(shell->output);
+					delete shell;
+					shell = 0;
+				}
 			}
 		}
-	};
+	}
 }

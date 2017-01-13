@@ -88,6 +88,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				timer_fd = client_to_timer_map[the_fd];
 				client_to_timer_map.erase(the_fd);
 				timer_to_client_map.erase(timer_fd);
+				std::cout << "close tfd " << timer_fd << ' ';
 				if(close(timer_fd) < 0){
 					perror("close timer_fd on error");
 				}
@@ -104,6 +105,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 						new_fd = timer_to_client_map[timer_fd];
 						timer_to_client_map.erase(timer_fd);
 						client_to_timer_map.erase(new_fd);
+						std::cout << "close tfd " << timer_fd << ' ';
 						if(close(timer_fd) < 0){
 							perror("close timer_fd on timeout");
 						}
@@ -144,6 +146,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 										timer_spec.it_interval.tv_nsec = 0;
 										timer_spec.it_value.tv_sec = 10;
 										timer_spec.it_value.tv_nsec = 0;
+										PRINT("TIME " << timer_fd)
 										if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
 											perror("timerfd_settime");
 										}else{
@@ -151,6 +154,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 											client_to_timer_map[new_fd] = timer_fd;
 											new_event.events = EVENTS;
 											new_event.data.fd = timer_fd;
+											PRINT("new tfd " << timer_fd)
 											if(epoll_ctl(timeout_epoll_fd, EPOLL_CTL_ADD, timer_fd, &new_event) < 0){
 												perror("epoll_ctl timer add");
 											}
@@ -191,6 +195,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
 					timer_to_client_map.erase(timer_fd);
 					client_to_timer_map.erase(the_fd);
+					PRINT("BAD RECV. " << the_fd << " timing " << timer_fd)
 					if(close(timer_fd) < 0){
 						perror("close timer_fd");
 					}
