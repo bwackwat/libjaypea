@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include <map>
+#include <unordered_map>
 
 enum JsonType {
 	NOTYPE,
@@ -28,7 +29,7 @@ public:
 
 	std::string stringValue;
 	double numberValue;
-	std::map<std::string, JsonObject*> objectValues;
+	std::unordered_map<std::string, JsonObject*> objectValues;
 	std::vector<JsonObject*> arrayValues;
 
 	static std::string escape(std::string value);
@@ -41,5 +42,7 @@ public:
 	~JsonObject();
 
 	JsonObject* operator[](const char* index);
-	JsonObject* operator[](std::string index);
+	JsonObject* operator[](size_t index);
+	JsonObject* operator[](int index);
+	JsonObject* operator[](const std::string& key);
 };

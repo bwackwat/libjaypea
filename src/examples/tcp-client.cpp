@@ -55,7 +55,7 @@ int main(int argc, char** argv){
 
 	std::vector<std::thread> thread_list;
 	for(int i = 1; i <= connections; ++i){
-		thread_list.push_back(std::thread(handle_connection, new SimpleTcpClient(static_cast<uint16_t>(port), host_addr), i));
+		thread_list.push_back(std::thread(handle_connection, new SimpleTcpClient(host_addr, static_cast<uint16_t>(port)), i));
 	}
 
 	for(auto &t : thread_list){

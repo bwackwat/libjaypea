@@ -59,8 +59,12 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/, 
 	// Might fix encryption buggies...
 	//std::string send_data = this->encrypt(data, data_length);
 	std::string send_data = this->encrypt(data, transaction);
-	if(write(fd, send_data.c_str(), send_data.length()) < 0){
+	ssize_t len;
+	if((len = write(fd, send_data.c_str(), send_data.length())) < 0){
 		ERROR("encryptor write")
+		return true;
+	}else if(len != static_cast<ssize_t>(send_data.length())){
+		ERROR("encryptor didn't write all")
 		return true;
 	}
 	return false;
@@ -72,7 +76,8 @@ std::function<ssize_t(int, const char*, size_t)> callback, int transaction){
 	std::string recv_data;
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK){
-			ERROR("encryptor read")
+			perror("encryptor read");
+			ERROR("encryptor read " << fd)
 			return -1;
 		}
 		return 0;
@@ -89,6 +94,10 @@ std::function<ssize_t(int, const char*, size_t)> callback, int transaction){
 			ERROR(e.what() << "\nImplied hacker, closing!")
 			return -3;
 		}
-		return callback(fd, recv_data.c_str(), recv_data.length());
+		if(callback != nullptr){
+			return callback(fd, recv_data.c_str(), recv_data.length());
+		}
+		std::strcpy(data, recv_data.c_str());
+		return static_cast<ssize_t>(recv_data.length());
 	}
 }

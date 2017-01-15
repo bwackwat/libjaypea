@@ -13,10 +13,10 @@ int main(int argc, char **argv){
 	Util::parse_arguments(argc, argv, "This is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
 
 	WebMonad monad(hostname, public_directory, ssl_certificate, ssl_private_key);
-	monad.route("GET", "/", [&](JsonObject*)->std::string{
+	monad.route("/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API!\"}";
 	});
-	monad.route("GET", "/routes", [&](JsonObject*)->std::string{
+	monad.route("/routes", [&](JsonObject*)->std::string{
 		return monad.routes_string;
 	});
 	monad.start();

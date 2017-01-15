@@ -1,6 +1,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <unordered_map>
 #include <map>
 #include <stdexcept>
 #include <iostream>
@@ -193,11 +194,11 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 				ss << std::string(depth, '\t');
 			}
 			ss << escape(it->first) << ':';
-			if(it == --this->objectValues.end()){
-                                       ss << it->second->stringify(pretty, depth);
-                               }else{
-                                       ss << it->second->stringify(pretty, depth) << ',';
-                               }
+			if(std::next(it) == this->objectValues.end()){
+				ss << it->second->stringify(pretty, depth);
+			}else{
+				ss << it->second->stringify(pretty, depth) << ',';
+			}
 			if(pretty){
 				ss << '\n';
 			}
@@ -255,10 +256,14 @@ JsonObject::~JsonObject(){
 	}
 }
 
-JsonObject* JsonObject::operator[](const char* index){
-	return this->objectValues[index];
+JsonObject* JsonObject::operator[](const char* key){
+	return this->objectValues[key];
 }
 
-JsonObject* JsonObject::operator[](std::string index){
-	return this->objectValues[index];
+JsonObject* JsonObject::operator[](size_t index){
+	return this->arrayValues[index];
+}
+
+JsonObject* JsonObject::operator[](const std::string& key){
+	return this->objectValues[key];
 }

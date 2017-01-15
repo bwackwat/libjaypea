@@ -29,8 +29,6 @@ extern std::string IDENTITY, VERIFIED;
 // These are "routines" of operation.
 // Shell is the classic routine,
 // File transfer is new.
-//extern std::string SHELL, SEND_FILE, RECV_FILE;
-
 enum ComdRoutine {
 	SHELL,
 	SEND_FILE,
