@@ -32,10 +32,10 @@ verbose(new_verbose),
 requests(0){
 	this->remote_address.s_addr = inet_addr(ip_address);
 
-	this->reconnect();
+	this->connected = this->reconnect();
 }
 
-void SimpleTcpClient::reconnect(){
+bool SimpleTcpClient::reconnect(){
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr = this->remote_address;
@@ -43,18 +43,18 @@ void SimpleTcpClient::reconnect(){
 	bzero(&(server_addr.sin_zero), 8);
 	if((this->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		perror("reconnect socket");
-		this->connected = false;
+		return false;
 //		throw std::runtime_error(this->name + " socket " + std::to_string(errno).c_str());
 	}
 	if(connect(this->fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(struct sockaddr_in)) < 0){
 		perror("reconnect connect");
-		this->connected = false;
+		return false;
 //		throw std::runtime_error(this->name + " connect " + std::to_string(errno).c_str());
 	}
 	if(this->verbose){
 		PRINT(this->name << " connected")
 	}
-	this->connected = true;
+	return true;
 }
 
 bool SimpleTcpClient::communicate(const char* request, size_t length, char* response){

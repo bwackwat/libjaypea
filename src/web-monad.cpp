@@ -69,22 +69,22 @@ void WebMonad::start(){
 		
 		std::string response_length;
 		std::string response_body = std::string();
-		std::string api_route = std::string();
+
 		JsonObject* r_obj = new JsonObject(OBJECT);
+
 		enum RequestResult r_type = this->parse_request(data, r_obj);
+
+		std::string api_route = r_obj->objectValues["route"]->stringValue;
 
 		if(r_type == API || r_type == OTHER){
 			// JSON API request with or without HTTP.
-			if(r_obj->objectValues["route"]->stringValue.length() < 4){
-				api_route = r_obj->objectValues["route"]->stringValue;
-			}else{
-				api_route = r_obj->objectValues["route"]->stringValue.substr(4);
+			if(r_obj->objectValues["route"]->stringValue.length() >= 4 &&
+			!Util::strict_compare_inequal(r_obj->objectValues["route"]->stringValue.c_str(), "/api", 4)){
+				api_route = r_obj->objectValues["method"]->stringValue + ' ' + api_route;
+				if(api_route.length() > 0 && api_route[api_route.length() - 1] != '/'){
+					api_route += '/';
+				}
 			}
-			if(api_route.length() > 0 && api_route[api_route.length() - 1] != '/'){
-				api_route += '/';
-			}
-			PRINT("APIR:" << api_route)
-			api_route = r_obj->objectValues["method"]->stringValue + " /api" + api_route;
 			PRINT("APIR:" << api_route)
 
 			if(this->routemap.count(api_route)){
@@ -99,7 +99,9 @@ void WebMonad::start(){
 					}
 				}
 				if(good_call){
-					response_body = this->routemap[api_route]->function(r_obj);
+					if((response_body = this->routemap[api_route]->function(r_obj)).empty()){
+						response_body = "{\"error\":\"The data could not be acquired.\"}";
+					}
 				}
 			}else{
 				response_body = "{\"error\":\"Invalid API route.\"}";

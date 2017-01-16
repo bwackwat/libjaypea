@@ -31,12 +31,12 @@ int main(int argc, char **argv){
 
 	std::string get_users = "{\"table\":\"users\",\"operation\":\"all\"}";
 	monad.route("GET", "/users", [&](JsonObject*)->std::string{
-		return provider.communicate(get_users.c_str(), get_users.length());;
+		return provider.communicate(get_users.c_str(), get_users.length());
 	});
 
 	std::string get_user = "{\"table\":\"users\",\"operation\":\"where\"}";
 	monad.route("GET", "/user", [&](JsonObject*)->std::string{
-		return provider.communicate(get_users.c_str(), get_users.length());;
+		return provider.communicate(get_users.c_str(), get_users.length());
 	});
 
 	monad.start();

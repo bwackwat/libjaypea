@@ -4,10 +4,13 @@ SymmetricTcpClient::SymmetricTcpClient(std::string ip_address, uint16_t port, st
 :SimpleTcpClient(ip_address, port),
 encryptor(keyfile){}
 
-void SymmetricTcpClient::reconnect(){
+bool SymmetricTcpClient::reconnect(){
+	if(close(this->fd) < 0){
+		perror("symmetric tcp client reconnect closing socket");
+	}
 	this->writes = 0;
 	this->reads = 0;
-	SimpleTcpClient::reconnect();
+	return SimpleTcpClient::reconnect();
 }
 
 std::string SymmetricTcpClient::communicate(const char* request, size_t length){
@@ -16,9 +19,17 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 	this->comm_mutex.lock();
 
 	do{
+		PRINT("RECON LOOP")
 
-		while(!this->connected){
-			this->reconnect();
+		if(!this->connected){
+			unsigned char i = 0;
+			while(!this->connected){
+				this->connected = this->reconnect();
+				if(i++ > 10){
+					this->comm_mutex.unlock();
+					return std::string();
+				}
+			}
 		}
 
 		ssize_t len;
