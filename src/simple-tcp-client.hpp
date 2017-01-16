@@ -27,17 +27,18 @@
 #include "simple-tcp-client.hpp"
 
 class SimpleTcpClient{
-private:
+protected:
 	uint16_t port;
 	std::string name;
 	bool verbose;
 	struct in_addr remote_address;
+	bool connected;
 public:
 	SimpleTcpClient(std::string hostname, uint16_t new_port, bool new_verbose = false);
 	SimpleTcpClient(struct in_addr new_remote_address, uint16_t new_port, bool new_verbose = false);
 	SimpleTcpClient(const char* ip_address, uint16_t new_port, bool new_verbose = false);
 
-	virtual bool communicate(const char* request, size_t length, char* response);
+	bool communicate(const char* request, size_t length, char* response);
 	virtual void reconnect();
 	virtual ~SimpleTcpClient();
 

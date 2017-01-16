@@ -1,5 +1,8 @@
 #pragma once
 
+#include <mutex>
+
+#include "util.hpp"
 #include "simple-tcp-client.hpp"
 #include "symmetric-encryptor.hpp"
 
@@ -8,8 +11,9 @@ public:
 	SymmetricTcpClient(std::string ip_address, uint16_t port, std::string keyfile);
 
 	void reconnect();
-	bool communicate(const char* request, size_t length, char* response);
+	std::string communicate(const char* request, size_t length);
 private:
+	std::mutex comm_mutex;
 	int writes;
 	int reads;
 	SymmetricEncryptor encryptor;

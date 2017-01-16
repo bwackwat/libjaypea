@@ -43,18 +43,24 @@ void SimpleTcpClient::reconnect(){
 	bzero(&(server_addr.sin_zero), 8);
 	if((this->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		perror("reconnect socket");
-		throw std::runtime_error(this->name + " socket " + std::to_string(errno).c_str());
+		this->connected = false;
+//		throw std::runtime_error(this->name + " socket " + std::to_string(errno).c_str());
 	}
 	if(connect(this->fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(struct sockaddr_in)) < 0){
 		perror("reconnect connect");
-		throw std::runtime_error(this->name + " connect " + std::to_string(errno).c_str());
+		this->connected = false;
+//		throw std::runtime_error(this->name + " connect " + std::to_string(errno).c_str());
 	}
 	if(this->verbose){
 		PRINT(this->name << " connected")
 	}
+	this->connected = true;
 }
 
 bool SimpleTcpClient::communicate(const char* request, size_t length, char* response){
+	while(!this->connected){
+		this->reconnect();
+	}
 	ssize_t len;
 	if(write(this->fd, request, length) < 0){
 		perror("write");

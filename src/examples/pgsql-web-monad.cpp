@@ -1,3 +1,4 @@
+#include "symmetric-tcp-client.hpp"
 #include "web-monad.hpp"
 
 int main(int argc, char **argv){
@@ -5,19 +6,33 @@ int main(int argc, char **argv){
 	std::string public_directory;
 	std::string ssl_certificate = "etc/ssl/ssl.crt";
 	std::string ssl_private_key = "etc/ssl/ssl.key";
+	std::string database_ip = "127.0.0.1";
+	std::string keyfile = "etc/keyfile";
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
-	Util::parse_arguments(argc, argv, "This is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
+	Util::define_argument("database_ip", database_ip, {"-dbip"});
+	Util::define_argument("keyfile", keyfile, {"-k"});
+	Util::parse_arguments(argc, argv, "This is a web monad which holds the routes for bwackwat.com; gets data from a secure PostgreSQL provider.");
+
+	SymmetricTcpClient provider(database_ip, 10000, keyfile);
 
 	WebMonad monad(hostname, public_directory, ssl_certificate, ssl_private_key);
-	monad.route("/", [&](JsonObject*)->std::string{
+
+	monad.route("GET", "/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API!\"}";
 	});
-	monad.route("/routes", [&](JsonObject*)->std::string{
+
+	monad.route("GET", "/routes", [&](JsonObject*)->std::string{
 		return monad.routes_string;
 	});
+
+	std::string get_users = "{\"table\":\"users\",\"operation\":\"all\"}";
+	monad.route("GET", "/users", [&](JsonObject*)->std::string{
+		return provider.communicate(get_users.c_str(), get_users.length());
+	});
+
 	monad.start();
 }

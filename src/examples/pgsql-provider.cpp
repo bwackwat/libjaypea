@@ -33,12 +33,6 @@ int main(int argc, char** argv){
 		{users->table, users},
 		{poi->table, poi},
 		{posts->table, posts}
-/*		"users", new PgSqlModel(connection_string, "users",
-			{"id", "username", "password", "email", "first_name", "last_name", "created_on"}),
-		"poi", new PgSqlModel(connection_string, "poi",
-			{"id", "owner_id", "label", "description", "location", "created_on"}),
-		"posts", new PgSqlModel(connection_string, "posts",
-			{"id", "owner_id", "title", "content", "created_on"})*/
 	};
 	
 	SymmetricEventServer server(keyfile, 10000, 1);
@@ -52,25 +46,27 @@ int main(int argc, char** argv){
 		request->objectValues.count("operation")){
 			std::string& table = request->objectValues["table"]->stringValue;
 			std::string& operation = request->objectValues["operation"]->stringValue;
-			if(operation == "where"){
+			if(operation == "all"){
+				response = db_tables[table]->All();
+			}else if(operation == "where"){
 				if(request->objectValues.count("key") &&
 				request->objectValues.count("value")){
 					response = db_tables[table]->Where(request->objectValues["key"]->stringValue, request->objectValues["value"]->stringValue);
 				}else{
-					response = json_error("Missing \"key\" and/or \"value\" JSON.");
+					response = json_error("Missing \"key\" and/or \"value\" JSON strings.");
 				}
 			}else if(operation == "insert"){
-				if(request->objectValues.count("key") &&
-				request->objectValues.count("value")){
+				if(request->objectValues.count("values") &&
+				request->objectValues["values"]->type == ARRAY){
 					response = db_tables[table]->Where(request->objectValues["key"]->stringValue, request->objectValues["value"]->stringValue);
 				}else{
-					response = json_error("Missing \"key\" and/or \"value\" JSON.");
+					response = json_error("Missing \"values\" JSON array.");
 				}
 			}else{
 				response = json_error("Invalid \"operation\" " + operation + ".");
 			}
 		}else{
-			response = json_error("Missing \"table\" and/or \"operation\" JSON.");
+			response = json_error("Missing \"table\" and/or \"operation\" JSON strings.");
 		}
 
 		delete request;
@@ -86,11 +82,9 @@ int main(int argc, char** argv){
 	};
 
 	// Easy DDOS protection. (This is not a multi-user tool.)
-	server.on_disconnect = [&](int){
-		sleep(10);
-	};
+	// server.on_disconnect = [&](int){
+	//	sleep(10);
+	// };
 
 	server.run(false, 1);
 }
-
-//"host=localhost dbname=webservice user=postgres password=aq12ws"

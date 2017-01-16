@@ -13,8 +13,9 @@ public:
 
 	PgSqlModel(std::string new_conn, std::string new_table, std::vector<std::string> new_keys);
 
+	JsonObject* All();
 	JsonObject* Where(std::string key, std::string value);
-	void Insert(std::vector<std::string> values);
+	void Insert(std::vector<JsonObject*> values);
 private:
 	pqxx::connection conn;
 	std::vector<std::string> keys;

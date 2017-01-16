@@ -1,4 +1,5 @@
 #include "sys/timerfd.h"
+#include "signal.h"
 
 #include "util.hpp"
 #include "stack.hpp"
@@ -23,6 +24,9 @@ void EpollServer::run_thread(unsigned int thread_id){
 	
 	std::unordered_map<int /* timer fd */, int /* client fd */> timer_to_client_map;
 	std::unordered_map<int /* client fd */, int /* timer fd */> client_to_timer_map;
+
+	// Broken pipes will make SSL_write (or any write, actually) return with an error instead of interrupting the program.
+	signal(SIGPIPE, SIG_IGN);
 
 	if((epoll_fd = epoll_create1(0)) < 0){
 		perror("epoll_create1");
@@ -66,6 +70,9 @@ void EpollServer::run_thread(unsigned int thread_id){
 
 	while(this->running){
 		if((num_fds = epoll_wait(epoll_fd, client_events, static_cast<int>(this->max_connections + 2), -1)) < 0){
+			if(errno == EINTR){
+				continue;
+			}
 			perror("epoll_wait");
 			this->running = false;
 			continue;
