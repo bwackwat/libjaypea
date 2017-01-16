@@ -18,7 +18,7 @@ static size_t request_length = strlen(request);
 
 int main(int argc, char** argv){
 	std::string hostname = "localhost";
-	int port = 80, connections = 1, num_connected = 0, num_completed = 0, num_clients = 0, res;
+	int port, connections = 1, num_connected = 0, num_completed = 0, num_clients = 0, res;
 	ssize_t len;
 	struct hostent* host;
 

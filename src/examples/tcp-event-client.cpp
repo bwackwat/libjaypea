@@ -6,8 +6,8 @@
 #include "tcp-event-client.hpp"
 
 int main(int argc, char** argv){
-	std::string hostname = "localhost";
-	int port = 80, connections = 1, requests = 1;
+	std::string hostname;
+	int port, connections = 1, requests = 1;
 	bool verbose = false;
 
 	const char* request = "GET / HTTP/1.1\n"

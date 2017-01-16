@@ -60,6 +60,7 @@ private:
 	static std::vector<struct Argument> arguments;
 
 public:
+	static bool verbose;
 	static JsonObject config_object;
 
 	static void define_argument(std::string name, std::string& value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);

@@ -12,8 +12,8 @@ static JsonObject* json_error(std::string message){
 }
 
 int main(int argc, char** argv){
+	std::string keyfile;
 	std::string connection_string;
-	std::string keyfile = "etc/keyfile";
 
 	Util::define_argument("keyfile", keyfile, {"-k"});
 	Util::define_argument("postgresql_connection", connection_string, {"-pcs"});

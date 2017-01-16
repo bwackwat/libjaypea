@@ -46,7 +46,7 @@ static int get_line(std::istream& is, std::string& result){
 int main(int argc, char** argv){
 	int terminal = isatty(fileno(stdin));
 	std::string hostname = "localhost";
-	int port = 4767;
+	int port;
 
 	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::define_argument("port", &port, {"-p"});

@@ -1,10 +1,10 @@
 #include "web-monad.hpp"
 
 int main(int argc, char **argv){
-	std::string hostname;
 	std::string public_directory;
-	std::string ssl_certificate = "etc/ssl/ssl.crt";
-	std::string ssl_private_key = "etc/ssl/ssl.key";
+	std::string hostname;
+	std::string ssl_certificate;
+	std::string ssl_private_key;
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("hostname", hostname, {"-hn"});
@@ -13,11 +13,14 @@ int main(int argc, char **argv){
 	Util::parse_arguments(argc, argv, "This is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
 
 	WebMonad monad(hostname, public_directory, ssl_certificate, ssl_private_key);
+
 	monad.route("GET", "/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API!\"}";
 	});
+
 	monad.route("GET", "/routes", [&](JsonObject*)->std::string{
 		return monad.routes_string;
 	});
+
 	monad.start();
 }

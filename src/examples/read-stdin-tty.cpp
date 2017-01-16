@@ -83,7 +83,7 @@ int main(int argc, char** argv){
 	std::signal(SIGTERM, sigcatch);
 
 	if(ttyraw(STDIN_FILENO) < 0){
-		std::cout << "Uh oh, ttyraw error!" << std::endl;
+		ERROR("ttyraw")
 		return 1;
 	}
 
@@ -95,25 +95,25 @@ int main(int argc, char** argv){
 
 		len = read(STDIN_FILENO, &chars, STDIN_MAX);
 		if(len < 0){
-			std::cout << "Uh oh, read error!" << std::endl;
+			ERROR("read")
 			break;
 		}
 		if(chars[0] == 3){
-			std::cout << "CTRL + C!" << std::endl;
+			PRINT("CTRL + C!")
 			break;
 		}else if(chars[0] == 27 && chars[1] == 91){
 			switch(chars[2]){
 			case 65:
-				std::cout << "Up!" << std::endl;
+				PRINT("Up!")
 				break;
 			case 66:
-				std::cout << "Down!" << std::endl;
+				PRINT("Down!")
 				break;
 			case 67:
-				std::cout << "Right!" << std::endl;
+				PRINT("Right!")
 				break;
 			case 68:
-				std::cout << "Left!" << std::endl;
+				PRINT("Left!")
 				break;
 			default:
 				print(chars);
@@ -124,14 +124,14 @@ int main(int argc, char** argv){
 		std::cout << '\r';
 
 		if(len > 5){
-			std::cout << "You found a key which is represented by more than 5 characters!" << std::endl;
+			PRINT("You found a key which is represented by more than 5 characters!")
 		}
 
 		memset(chars, 0, STDIN_MAX);
 	}
 	
 	if(ttyreset(STDIN_FILENO) < 0){
-		std::cout << "Uh oh, ttyreset error!\n";
+		ERROR("ttyreset")
 		return 1;
 	}
 

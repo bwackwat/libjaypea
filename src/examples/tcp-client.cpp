@@ -6,7 +6,6 @@
 #include "simple-tcp-client.hpp"
 
 static int requests = 1;
-static bool verbose = false;
 
 static const char* request = "GET / HTTP/1.1\n"
 "User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0\n"
@@ -24,27 +23,26 @@ static void handle_connection(SimpleTcpClient* client, int connection){
 				PRINT("Server kicked client!");
 				break;
 			}
-			if(verbose){
-				std::cout << "Response: " << response << std::endl;
+			if(Util::verbose){
+				PRINT("Response: " << response)
 			}
 		}catch(std::exception& e){
-			std::cout << e.what() << std::endl;
+			PRINT(e.what())
 		}
 	}
-	std::cout << "Connection #" << connection << " done." << std::endl;
+	PRINT("Connection #" << connection << " done.")
 	delete client;
 }
 
 int main(int argc, char** argv){
-	std::string hostname = "localhost";
-	int port = 80, connections = 1;
+	std::string hostname;
+	int port, connections = 1;
 	struct hostent* host;
 
 	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("connections", &connections, {"-c"});
 	Util::define_argument("requests", &requests, {"-r"});
-	Util::define_argument("verbose", &verbose, {"-v"});
 	Util::parse_arguments(argc, argv, "This program will make threads for connections, each making a bunch of requests.");
 
 	if((host = gethostbyname(hostname.c_str())) == 0){

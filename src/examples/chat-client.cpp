@@ -15,8 +15,8 @@ static void reset_input_mode(){
 */
 
 int main(int argc, char** argv){
-	int port = 10000;
-	std::string hostname = "localhost";
+	int port;
+	std::string hostname;
 	std::string handle = ANONYMOUS;
 	ssize_t len;
 	char packet[PACKET_LIMIT];

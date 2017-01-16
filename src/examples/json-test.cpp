@@ -26,6 +26,8 @@ static void test(std::string str){
 
 	if(Util::strict_compare_inequal(objectString.c_str(), verifyString.c_str())){
 		std::cout << "Verification Failure...\n";
+	}else if(objectString.length() != verifyString.length()){
+		std::cout << "Verification Failure CHECK LENGTH...\n";
 	}else{
 		std::cout << "Verification Success!\n";
 	}

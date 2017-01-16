@@ -11,21 +11,28 @@ void SymmetricTcpClient::reconnect(){
 }
 
 std::string SymmetricTcpClient::communicate(const char* request, size_t length){
-	this->comm_mutex.lock();
-	while(!this->connected){
-		this->reconnect();
-	}
-	ssize_t len;
-	if(this->encryptor.send(this->fd, request, length, this->writes++)){
-		ERROR("COULD NOT SEND")
-	}
 	char response[PACKET_LIMIT];
-	len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, nullptr, this->reads++);
-	if(len < 0){
-		this->connected = false;
-		this->comm_mutex.unlock();
-		return this->communicate(request, length);
-	}
+
+	this->comm_mutex.lock();
+
+	do{
+
+		while(!this->connected){
+			this->reconnect();
+		}
+
+		ssize_t len;
+		if(this->encryptor.send(this->fd, request, length, this->writes++)){
+			ERROR("send")
+			this->connected = false;
+		}else if((len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, nullptr, this->reads++)) <= 0){
+			ERROR("recv")
+			this->connected = false;
+		}
+
+	}while(!this->connected);
+
 	this->comm_mutex.unlock();
+
 	return std::string(response);
 }

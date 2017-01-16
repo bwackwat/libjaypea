@@ -21,7 +21,6 @@
 #include "tcp-event-server.hpp"
 
 static std::unordered_map<std::string, std::string> values;
-static int loud = 1;
 
 static int set_value(const char* key_and_value){
 	int get_key = 1;
@@ -62,7 +61,7 @@ static const char* set_command = "set ";
 static const char* exit_command = "exit";
 
 int main(int argc, char** argv){
-	int port = 4767;
+	int port;
 
 	Util::define_argument("port", &port, {"-p"});
 	Util::parse_arguments(argc, argv, "This is a simple key-value server.");
@@ -77,7 +76,7 @@ int main(int argc, char** argv){
 	};
 
 	server.on_read = [&](int fd, const char* packet, size_t){
-		if(loud)
+		if(Util::verbose)
 			std::cout << "Connection #" << fd << " transaction #" << transaction[fd] << ": " << packet << std::endl;
 		
 		response = "success";
@@ -94,7 +93,7 @@ int main(int argc, char** argv){
 		}else if(Util::strict_compare_inequal(packet, exit_command, 4) == 0){
 			return true;
 		}else{
-			if(loud)
+			if(Util::verbose)
 				std::cout << "Unknown command: " << get_command_from_request(packet) << std::endl;
 			response = "failure";
 		}

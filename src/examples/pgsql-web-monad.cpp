@@ -2,12 +2,12 @@
 #include "web-monad.hpp"
 
 int main(int argc, char **argv){
-	std::string hostname;
 	std::string public_directory;
-	std::string ssl_certificate = "etc/ssl/ssl.crt";
-	std::string ssl_private_key = "etc/ssl/ssl.key";
+	std::string hostname;
+	std::string ssl_certificate;
+	std::string ssl_private_key;
 	std::string database_ip = "127.0.0.1";
-	std::string keyfile = "etc/keyfile";
+	std::string keyfile;
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("hostname", hostname, {"-hn"});
@@ -31,7 +31,12 @@ int main(int argc, char **argv){
 
 	std::string get_users = "{\"table\":\"users\",\"operation\":\"all\"}";
 	monad.route("GET", "/users", [&](JsonObject*)->std::string{
-		return provider.communicate(get_users.c_str(), get_users.length());
+		return provider.communicate(get_users.c_str(), get_users.length());;
+	});
+
+	std::string get_user = "{\"table\":\"users\",\"operation\":\"where\"}";
+	monad.route("GET", "/user", [&](JsonObject*)->std::string{
+		return provider.communicate(get_users.c_str(), get_users.length());;
 	});
 
 	monad.start();

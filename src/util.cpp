@@ -17,6 +17,7 @@
 
 std::vector<struct Argument> Util::arguments;
 
+bool Util::verbose;
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
@@ -35,6 +36,8 @@ void Util::define_argument(std::string name, bool* value, std::vector<std::strin
 }
 
 void Util::parse_arguments(int argc, char** argv, std::string description){
+	define_argument("verbose", &verbose, {"-v"});
+
 	PRINT("------------------------------------------------------")
 
 	std::string check;

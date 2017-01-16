@@ -6,6 +6,7 @@
 #include <iostream>
 #include <csignal>
 #include <typeinfo>
+#include <atomic>
 #include <cstdio>
 
 #include <stdio.h>
@@ -32,8 +33,8 @@ protected:
 	std::string name;
 	bool verbose;
 	struct in_addr remote_address;
-	bool connected;
 public:
+	std::atomic<bool> connected;
 	SimpleTcpClient(std::string hostname, uint16_t new_port, bool new_verbose = false);
 	SimpleTcpClient(struct in_addr new_remote_address, uint16_t new_port, bool new_verbose = false);
 	SimpleTcpClient(const char* ip_address, uint16_t new_port, bool new_verbose = false);

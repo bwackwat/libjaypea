@@ -1,3 +1,5 @@
+#include <csignal>
+
 #include "util.hpp"
 #include "tcp-event-server.hpp"
 #include "tcp-epoll-server.hpp"
@@ -24,6 +26,8 @@ PrivateEventServer::PrivateEventServer(std::string certificate, std::string priv
                 ERR_print_errors_fp(stdout);
 		throw std::runtime_error(this->name + "SSL_CTX_use_PrivateKey_file");
         }
+
+	std::signal(SIGPIPE, SIG_IGN);
 
 //	PRINT("SSL Mode: " << SSL_CTX_set_mode(this->ctx, SSL_MODE_ENABLE_PARTIAL_WRITE))
 }

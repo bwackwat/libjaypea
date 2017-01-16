@@ -7,7 +7,7 @@ int main(int argc, char** argv){
 	struct sockaddr_in client_addr;
 	uint addr_len = sizeof(client_addr);
 	bool exit = false, close_connection;
-	int port = 80;
+	int port;
 
 	char packet[PACKET_LIMIT];
 	struct pollfd clients[CONNECTIONS_LIMIT];

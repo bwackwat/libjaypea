@@ -75,7 +75,7 @@ void WebMonad::start(){
 
 		if(r_type == API || r_type == OTHER){
 			// JSON API request with or without HTTP.
-			if(r_obj->objectValues["route"]->stringValue.length() <= 4){
+			if(r_obj->objectValues["route"]->stringValue.length() < 4){
 				api_route = r_obj->objectValues["route"]->stringValue;
 			}else{
 				api_route = r_obj->objectValues["route"]->stringValue.substr(4);
