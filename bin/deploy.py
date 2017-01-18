@@ -41,6 +41,7 @@ runcmd:
  - /opt/libjaypea/bin/setup-centos7.sh > setup-centos7.log 2>&1
  - chmod +x /opt/libjaypea/build.sh
  - /opt/libjaypea/bin/build.sh > build.log 2>&1
+ - /opt/libjaypea/bin/modern-web-monad
 """
 
 rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers, json={
