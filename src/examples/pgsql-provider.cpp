@@ -5,12 +5,6 @@
 #include "pgsql-model.hpp"
 #include "symmetric-event-server.hpp"
 
-static JsonObject* json_error(std::string message){
-	JsonObject* error = new JsonObject(OBJECT);
-	error->objectValues["error"] = new JsonObject(message);
-	return error;
-}
-
 int main(int argc, char** argv){
 	std::string keyfile;
 	std::string connection_string;
@@ -19,15 +13,35 @@ int main(int argc, char** argv){
 	Util::define_argument("postgresql_connection", connection_string, {"-pcs"});
 	Util::parse_arguments(argc, argv, "This is a securely communicating, database abstraction layer.");
 
-	PgSqlModel* users = new PgSqlModel(connection_string,
-		"users",
-		{"id", "username", "password", "email", "first_name", "last_name", "created_on"});
-	PgSqlModel* poi = new PgSqlModel(connection_string,
-		"poi",
-		{"id", "owner_id", "label", "description", "location", "created_on"});
-	PgSqlModel* posts = new PgSqlModel(connection_string,
-		"posts",
-		{"id", "owner_id", "title", "content", "created_on"});
+	// Reusable, common columns.
+	Column id("id", COL_AUTO);
+	Column created_on("created_on", COL_AUTO);
+	Column owner_id("owner_id");
+
+	PgSqlModel* users = new PgSqlModel(connection_string, "users", {
+		&id,
+		new Column("username"),
+		new Column("password"),
+		new Column("email"),
+		new Column("first_name"),
+		new Column("last_name"),
+		&created_on
+	});
+	PgSqlModel* poi = new PgSqlModel(connection_string, "poi", {
+		&id,
+		&owner_id,
+		new Column("label"),
+		new Column("description"),
+		new Column("location"),
+		&created_on
+	});
+	PgSqlModel* posts = new PgSqlModel(connection_string, "posts", {
+		&id,
+		&owner_id,
+		new Column("title"),
+		new Column("content"),
+		&created_on
+	});
 
 	std::unordered_map<std::string, PgSqlModel*> db_tables = {
 		{users->table, users},
@@ -53,27 +67,36 @@ int main(int argc, char** argv){
 				request->objectValues.count("value")){
 					response = db_tables[table]->Where(request->objectValues["key"]->stringValue, request->objectValues["value"]->stringValue);
 				}else{
-					response = json_error("Missing \"key\" and/or \"value\" JSON strings.");
+					response = PgSqlModel::Error("Missing \"key\" and/or \"value\" JSON strings.");
 				}
 			}else if(operation == "insert"){
 				if(request->objectValues.count("values") &&
 				request->objectValues["values"]->type == ARRAY){
-					response = db_tables[table]->Where(request->objectValues["key"]->stringValue, request->objectValues["value"]->stringValue);
+					response = db_tables[table]->Insert(request->objectValues["values"]->arrayValues);
 				}else{
-					response = json_error("Missing \"values\" JSON array.");
+					response = PgSqlModel::Error("Missing \"values\" JSON array.");
+				}
+			}else if(operation == "update"){
+				if(request->objectValues.count("id") &&
+                                request->objectValues["id"]->type == STRING &&
+				request->objectValues.count("values") &&
+                                request->objectValues["values"]->type == OBJECT){
+					response = db_tables[table]->Update(request->objectValues["id"]->stringValue, request->objectValues["values"]->objectValues);
+				}else{
+					response = PgSqlModel::Error("Missing \"values\" JSON object.");
 				}
 			}else{
-				response = json_error("Invalid \"operation\" " + operation + ".");
+				response = PgSqlModel::Error("Invalid \"operation\" " + operation + ".");
 			}
 		}else{
-			response = json_error("Missing \"table\" and/or \"operation\" JSON strings.");
+			response = PgSqlModel::Error("Missing \"table\" and/or \"operation\" JSON strings.");
 		}
 
 		delete request;
 		std::string response_string = response->stringify();
 		delete response;
 
-		if(server.send(fd, response_string.c_str(), response_string.length()) < 0){
+		if(server.send(fd, response_string.c_str(), response_string.length())){
 			ERROR("server.send")
 			return -1;
 		}
