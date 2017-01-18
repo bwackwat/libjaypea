@@ -1,2 +1,4 @@
 bin/*
 !bin/build.sh
+!bin/deploy.py
+!bin/setup-centos7.sh
