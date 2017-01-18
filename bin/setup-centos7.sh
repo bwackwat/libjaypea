@@ -9,7 +9,9 @@ yum -y install libstdc++-static libstdc++ cryptopp cryptopp-devel openssl openss
 yum -y install firewalld
 
 systemctl enable fail2ban
+systemctl restart fail2ban
 systemctl enable firewalld
+systemctl restart firewalld
 
 rkhunter --update
 rkhunter --propupd
