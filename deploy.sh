@@ -5,13 +5,13 @@
 
 cd $1
 
-chmod +x setup-centos7.sh
-setup-centos7.sh > setup-centos7.log 2>&1
+chmod +x $1/setup-centos7.sh
+$1/setup-centos7.sh > $1/setup-centos7.log 2>&1
 
-chmod +x build.sh
-build.sh > build.log 2>&1
+chmod +x $1/build.sh
+$1/build.sh > $1/build.log 2>&1
 
-echo "$3" >> deploy-keyfile
+echo "$3" >> $1/keyfile.deploy
 
 echo -e "$1/bin/comd \
 --port $2 \
