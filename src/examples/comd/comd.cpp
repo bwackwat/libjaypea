@@ -66,7 +66,7 @@ static struct Shell* shell_routine(){
 		close(shell_pipe[0][0]);
 		close(shell_pipe[1][1]);
 
-		Util::set_non_blocking(shell_pipe[1][0]);
+		//Util::set_non_blocking(shell_pipe[1][0]);
 
 		new_shell->output = shell_pipe[1][0];
 		new_shell->input = shell_pipe[0][1];
@@ -165,35 +165,29 @@ int main(int argc, char** argv){
 	// Returns and is single threaded.
 	server.run(true, 1);
 
+	auto close_shell = [&](){
+		kill(shell->pid, SIGTERM);
+		close(shell->input);
+		close(shell->output);
+		delete shell;
+		shell = 0;
+	};
+
 	while(true){
 		if(shell == 0){
 			continue;
 		}
-		if((len = read(shell->output, packet, PACKET_LIMIT)) < 0){
-			if(errno != EWOULDBLOCK){
-				ERROR("shell output read")
-				kill(shell->pid, SIGTERM);
-				close(shell->input);
-				close(shell->output);
-				delete shell;
-				shell = 0;
-			}
+		if((len = read(shell->output, packet, PACKET_LIMIT)) <= 0){
+			ERROR("shell read")
+			close_shell();
 		}else if(len == 0){
 			PRINT("shell output read zero")
-			kill(shell->pid, SIGTERM);
-			close(shell->input);
-			close(shell->output);
-			delete shell;
-			shell = 0;
+			close_shell();
 		}else{
 			packet[len] = 0;
 			if(shell != 0){
 				if(server.send(shell_client_fd, packet, static_cast<size_t>(len))){
-					kill(shell->pid, SIGTERM);
-					close(shell->input);
-					close(shell->output);
-					delete shell;
-					shell = 0;
+					close_shell();
 				}
 			}
 		}

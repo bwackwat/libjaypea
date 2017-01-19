@@ -31,6 +31,7 @@ class EventClient{
 protected:
 	std::unordered_map<std::string, struct in_addr> host_addresses;
 	std::vector<Connection*> connections;
+	int alive_connections;
 
 	std::unordered_map<int /* fd */, int> read_counter;
 	std::unordered_map<int /* fd */, int> write_counter;

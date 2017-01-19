@@ -6,7 +6,7 @@
 
 echo -e "$#: $@"
 
-cd $(dirname "${BASH_SOURCE[0]}")/../src
+cd $(dirname "${BASH_SOURCE[0]}")/src
 srcdir=$(pwd)
 argc=$#
 argv=($@)
