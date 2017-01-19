@@ -32,7 +32,10 @@ for image in images["images"]:
 
 print '-----------------------------------------------------------------'
 
-newport = raw_input("Enter a port for comd [40000]: ") or "40000"
+newuser = raw_input("Enter a username for the deployment [admin]: ") or "admin"
+newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/web]: ") or "/opt/web"
+newport = raw_input("Enter a port for comd [10000]: ") or "10000"
+
 newkey = raw_input("Enter a new 96 byte key for comd (enjoy writing a sentence): ")
 newkeylen = len(newkey)
 if newkeylen < 96:
@@ -40,7 +43,7 @@ if newkeylen < 96:
 	print "Appended " + str(96 - newkeylen) + " characters to the key."
 with open("keyfile.deploy", "w") as f:
 	f.write(newkey)
-	print "Key is written to /opt/keyfile.deploy and will be used with cloud-init."
+	print "Key is written to " + newdir + "/keyfile.deploy and will be used with cloud-init."
 
 print '-----------------------------------------------------------------'
 
@@ -53,23 +56,24 @@ if(raw_input("\nDeploy script good to go (y?): ") != "y"):
 	print "Exiting."
 	sys.exit(0)
 
-newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt]: ") or "/opt"
-
 cloud_config = """
 #cloud-config
+
+users:
+ - name: {3}
 
 runcmd:
  - yum -y install git
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
- - chmod + x {0}/deploy.sh
- - {0}/deploy.sh {0} {1} "{2}"
+ - chmod +x {0}/deploy.sh
+ - {0}/deploy.sh {0} {1} "{2}" {3}
 
 power_state:
    mode: reboot
 """
 
-cloud_config = cloud_config.format(newdir, newport, newkey)
+cloud_config = cloud_config.format(newdir, newport, newkey, newuser)
 print cloud_config
 
 print '-----------------------------------------------------------------'
