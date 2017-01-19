@@ -59,6 +59,7 @@ cloud_config = """
 runcmd:
  - yum -y install git
  - git clone https://github.com/bwackwat/libjaypea /opt
+ - chmod + x /opt/deploy.sh
  - /opt/deploy.sh %s "%s"
 
 power_state:
