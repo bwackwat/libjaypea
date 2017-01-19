@@ -27,5 +27,32 @@ int main(int argc, char **argv){
 		return monad.routes_string;
 	});
 
+	std::mutex message_mutex;
+	std::deque<std::string> messages;
+
+	monad.route("GET", "/message", [&](JsonObject*)->std::string{
+		JsonObject result(OBJECT);
+		result.objectValues["result"] = new JsonObject(ARRAY);
+
+		message_mutex.lock();
+		for(auto it = messages.begin(); it != messages.end(); ++it){
+			result["result"]->arrayValues.push_back(new JsonObject(*it));
+		}
+		message_mutex.unlock();
+
+		return result.stringify();
+	});
+
+	monad.route("POST", "/message", [&](JsonObject* json)->std::string{
+		message_mutex.lock();
+		messages.push_front(json->objectValues["message"]->stringValue);
+		if(messages.size() > 10){
+			messages.pop_back();
+		}
+		message_mutex.unlock();
+
+		return "{\"result\":\"Message posted.\"}";
+	}, {{"message", STRING}});
+
 	monad.start();
 }

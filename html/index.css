@@ -1,7 +1,6 @@
-a {
-	text-decoration: none;
-}
-
-a:hover {
-	text-decoration: underline;
+html, body {
+	height: 95vh;
+	background-color: black;
+	color: white;
+	overflow: hidden;
 }
