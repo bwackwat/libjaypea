@@ -53,20 +53,23 @@ if(raw_input("\nDeploy script good to go (y?): ") != "y"):
 	print "Exiting."
 	sys.exit(0)
 
+newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt]: ") or "/opt"
+
 cloud_config = """
 #cloud-config
 
 runcmd:
  - yum -y install git
- - git clone https://github.com/bwackwat/libjaypea /opt
- - chmod + x /opt/deploy.sh
- - /opt/deploy.sh %s "%s"
+ - mkdir -p {0}
+ - git clone https://github.com/bwackwat/libjaypea {0}
+ - chmod + x {0}/deploy.sh
+ - {0}/deploy.sh {0} {1} "{2}"
 
 power_state:
    mode: reboot
 """
 
-cloud_config = cloud_config % (newport, newkey)
+cloud_config = cloud_config.format(newdir, newport, newkey)
 print cloud_config
 
 print '-----------------------------------------------------------------'

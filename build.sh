@@ -32,7 +32,7 @@ echo $compiler
 function build {
 	if [ $argc -eq 0 ] || [[ "$1" = *"$argv"* ]]; then
 		echo -e "\n-------------------------building $1-------------------------\n"
-		eval "$compiler $2 $3 $4 $5 $6 $7 $8 $9 util.cpp json.cpp -o ../bin/$1"
+		eval "$compiler $2 $3 $4 $5 $6 $7 $8 $9 util.cpp json.cpp -o bin/$1"
 	fi
 }
 
