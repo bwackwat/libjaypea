@@ -113,23 +113,34 @@ int main(int argc, char** argv){
 	ssize_t len;
 	char packet[PACKET_LIMIT];
 
-	std::string hostname = "localhost";
-	int port = 3424;
-	std::string keyfile = "etc/keyfile";
+	std::string ip_address;
+	bool use_ip = false;
+	std::string hostname;
+	int port;
+	std::string keyfile;
 	std::string file_path;
 
 	Util::define_argument("hostname", hostname, {"-hn"});
+	Util::define_argument("ip_address", ip_address, {"-ip"}, [&](){
+		use_ip = true;});
 	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("keyfile", keyfile, {"-k"});
-	Util::define_argument("send-file", file_path, {"-sf"}, [routine]()mutable{
+	Util::define_argument("send-file", file_path, {"-sf"}, [&](){
 		routine = SEND_FILE;});
-	Util::define_argument("recv-file", file_path, {"-rf"}, [routine]()mutable{
+	Util::define_argument("recv-file", file_path, {"-rf"}, [&](){
 		routine = RECV_FILE;});
 	Util::parse_arguments(argc, argv, "This is a secure client for comd, supporting remote shell, send file, and receive file routines.");
 
 	SymmetricEventClient client(keyfile);
 
-	client.add(hostname, static_cast<uint16_t>(port));
+	if(!use_ip){
+		client.add(new Connection(hostname, static_cast<uint16_t>(port)));
+	}else if(!ip_address.empty()){
+		client.add(new Connection(static_cast<uint16_t>(port), ip_address));
+	}else{
+		PRINT("You must provide either a hostname or an ip_address!")
+		return 1;
+	}
 
 	client.on_connect = [&](int fd){
 		if(client.send(fd, IDENTITY.c_str(), IDENTITY.length())){

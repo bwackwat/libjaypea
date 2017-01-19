@@ -30,7 +30,7 @@ int main(int argc, char** argv){
 	EventClient client;
 
 	for(int i = 0; i < connections; ++i){
-		client.add(hostname, static_cast<uint16_t>(port));
+		client.add(new Connection(hostname, static_cast<uint16_t>(port)));
 	}
 
 	client.on_connect = [&](int fd){

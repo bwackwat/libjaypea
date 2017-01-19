@@ -13,15 +13,17 @@ class Connection{
 public:
 	int fd;
 	std::string hostname;
+	std::string ip_address;
 	uint16_t port;
 	enum ConnectionState state;
 	struct sockaddr_in* server_address;
 
 	Connection(std::string new_hostname, uint16_t new_port)
-	:fd(-1),
-	hostname(new_hostname),
-	port(new_port),
-	state(DISCONNECTED),
+	:fd(-1), hostname(new_hostname), port(new_port), state(DISCONNECTED),
+	server_address(new struct sockaddr_in()){}
+
+	Connection(uint16_t new_port, std::string new_ip_address)
+	:fd(-1), hostname(std::string()), ip_address(new_ip_address), port(new_port), state(DISCONNECTED),
 	server_address(new struct sockaddr_in()){}
 };
 
@@ -41,7 +43,7 @@ protected:
 public:
 	virtual ~EventClient(){}
 
-	void add(std::string hostname, uint16_t port);
+	void add(Connection* conn);
 	void run(std::function<ssize_t(int, const char*, size_t)> new_on_read);
 
 	std::function<bool(int)> on_connect;

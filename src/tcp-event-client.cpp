@@ -25,8 +25,8 @@
 #include "util.hpp"
 #include "tcp-event-client.hpp"
 
-void EventClient::add(std::string hostname, uint16_t port){
-	this->connections.push_back(new Connection(hostname, port));
+void EventClient::add(Connection* conn){
+	this->connections.push_back(conn);
 }
 
 void EventClient::close_client(Connection* conn){
@@ -64,18 +64,26 @@ void EventClient::run(std::function<ssize_t(int, const char*, size_t)> new_on_re
 				}
 			}
 			Util::set_non_blocking(connection->fd);
-			if(!this->host_addresses.count(connection->hostname)){
-				struct hostent* host;
-				if((host = gethostbyname(connection->hostname.c_str())) == 0){
-					perror("gethostbyname");
-					this->close_client(connection);
-					break;
+			if(!connection->hostname.empty()){
+				PRINT("Using hostname " << connection->hostname)
+				if(!this->host_addresses.count(connection->hostname)){
+					struct hostent* host;
+					if((host = gethostbyname(connection->hostname.c_str())) == 0){
+						perror("gethostbyname");
+						this->close_client(connection);
+						break;
+					}
+					this->host_addresses[connection->hostname] = *reinterpret_cast<struct in_addr*>(host->h_addr);
 				}
-				this->host_addresses[connection->hostname] = *reinterpret_cast<struct in_addr*>(host->h_addr);
+				connection->server_address->sin_family = AF_INET;
+				connection->server_address->sin_addr = this->host_addresses[connection->hostname];
+				connection->server_address->sin_port = htons(connection->port);
+			}else{
+				PRINT("Using IP Address " << connection->ip_address)
+				connection->server_address->sin_family = AF_INET;
+				connection->server_address->sin_addr.s_addr = inet_addr(connection->ip_address.c_str());
+				connection->server_address->sin_port = htons(connection->port);
 			}
-			connection->server_address->sin_family = AF_INET;
-			connection->server_address->sin_addr = this->host_addresses[connection->hostname];
-			connection->server_address->sin_port = htons(connection->port);
 			connection->state = CONNECTING;
 			running = true;
 			break;
