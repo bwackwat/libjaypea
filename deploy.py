@@ -68,7 +68,7 @@ runcmd:
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
  - chmod +x {0}/deploy.sh
- - {0}/deploy.sh {0} "{2}" {3} {4}
+ - {0}/deploy.sh {0} "{1}" {2} {3}
 
 power_state:
    mode: reboot

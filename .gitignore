@@ -1,3 +1,4 @@
 bin/*
 *.log
 keyfile.deploy
+start.sh

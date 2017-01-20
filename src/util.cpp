@@ -35,6 +35,13 @@ void Util::define_argument(std::string name, bool* value, std::vector<std::strin
 	arguments.push_back({name, alts, callback, required, ARG_BOOLEAN, std::ref(name), 0, value});
 }
 
+static std::string get_exe_path()
+{
+	char result[32];
+	ssize_t count = readlink( "/proc/self/exe", result, 32);
+	return std::string(result, (count > 0) ? static_cast<size_t>(count) : 0);
+}
+
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
 
@@ -89,7 +96,8 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		}
 	}
 
-	std::ifstream config_file(CONFIG_PATH);
+	std::string config_path = get_exe_path() + CONFIG_PATH;
+	std::ifstream config_file(config_path);
 	if(config_file.is_open()){
 		std::string config_data((std::istreambuf_iterator<char>(config_file)),
 			(std::istreambuf_iterator<char>()));
@@ -118,7 +126,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			}
 		}
 	}else{
-		PRINT("Could not open " << CONFIG_PATH << ", ignoring.")
+		PRINT("Could not open " << config_path << ", ignoring.")
 	}
 	
 	PRINT("------------------------------------------------------")
