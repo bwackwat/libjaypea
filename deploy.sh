@@ -29,7 +29,7 @@ $1/build.sh > $1/build.log 2>&1
 
 $1/bin/comd \
 --port $COMD \
---keyfile $1/bin/keyfile.deploy \
+--keyfile $1/keyfile.deploy \
 > $1/comd.log 2>&1 &
 
 $1/bin/modern-web-monad \
