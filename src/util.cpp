@@ -18,6 +18,7 @@
 std::vector<struct Argument> Util::arguments;
 
 bool Util::verbose;
+std::string Util::root_path;
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
@@ -37,8 +38,8 @@ void Util::define_argument(std::string name, bool* value, std::vector<std::strin
 
 static std::string get_exe_path()
 {
-	char result[32];
-	ssize_t count = readlink( "/proc/self/exe", result, 32);
+	char result[128];
+	ssize_t count = readlink( "/proc/self/exe", result, 128);
 	return std::string(result, (count > 0) ? static_cast<size_t>(count) : 0);
 }
 
@@ -96,13 +97,16 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		}
 	}
 
-	std::string config_path = get_exe_path() + CONFIG_PATH;
+	root_path = get_exe_path();
+	root_path = root_path.substr(0, root_path.find_last_of('/'));
+	root_path = root_path.substr(0, root_path.find_last_of('/')) + '/';
+	std::string config_path = root_path + CONFIG_PATH;
 	std::ifstream config_file(config_path);
 	if(config_file.is_open()){
 		std::string config_data((std::istreambuf_iterator<char>(config_file)),
 			(std::istreambuf_iterator<char>()));
 		config_object.parse(config_data.c_str());
-		PRINT("Loaded " << CONFIG_PATH)
+		PRINT("Loaded " << config_path)
 		// PRINT(config_object.stringify(true))
 		for(auto& arg : arguments){
 			if(config_object.objectValues.count(arg.name)){

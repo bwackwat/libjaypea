@@ -16,8 +16,12 @@ int main(int argc, char **argv){
 	Util::define_argument("https", &https_port);
 	Util::parse_arguments(argc, argv, "This is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
 
-	WebMonad monad(hostname, public_directory, ssl_certificate, ssl_private_key,
-		static_cast<uint16_t>(http_port), static_cast<uint16_t>(https_port));
+	WebMonad monad(hostname,
+		Util::root_path + public_directory,
+		Util::root_path + ssl_certificate,
+		Util::root_path + ssl_private_key,
+		static_cast<uint16_t>(http_port),
+		static_cast<uint16_t>(https_port));
 
 	monad.route("GET", "/", [&](JsonObject*)->std::string{
 		JsonObject result(OBJECT);

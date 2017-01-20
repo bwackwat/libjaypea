@@ -19,19 +19,6 @@ def rprint(response):
 # rprint(requests.get("https://api.digitalocean.com/v2/droplets", headers=headers))
 # rprint(requests.get("https://api.digitalocean.com/v2/actions", headers=headers))
 
-images = rprint(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers))
-
-print '-----------------------------------------------------------------'
-
-for image in images["images"]:
-	if image["distribution"] == "CentOS":
-		print "\nCentOS Image"
-		print "id: " + str(image["id"])
-		print "name: " + image["name"]
-		print "created_at: " + image["created_at"]
-
-print '-----------------------------------------------------------------'
-
 newuser = raw_input("Enter a username for the deployment [admin]: ") or "admin"
 newpass = ""
 if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
@@ -55,7 +42,7 @@ with open("deploy.sh") as f:
 
 print '-----------------------------------------------------------------'
 
-if(raw_input("\nDeploy script good to go [y]: ") or "y" == "y"):
+if(raw_input("\nDeploy script good to go? [y]: ") or "y" != "y"):
 	print "Exiting."
 	sys.exit(0)
 
@@ -63,7 +50,7 @@ cloud_config = """
 #cloud-config
 
 runcmd:
- - useradd {3}
+ - useradd {2}
  - yum -y install git
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
@@ -79,9 +66,21 @@ print cloud_config
 
 print '-----------------------------------------------------------------'
 
-if(raw_input("\nCloud init good to go (y?): ") != "y"):
+if(raw_input("\nCloud init good to go? [y]: ") or "y" != "y"):
 	print "Exiting."
 	sys.exit(0)
+
+print '-----------------------------------------------------------------'
+
+images = json.loads(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers))
+for image in images["images"]:
+	if image["distribution"] == "CentOS":
+		print "\nCentOS Image"
+		print "id: " + str(image["id"])
+		print "name: " + image["name"]
+		print "created_at: " + image["created_at"]
+
+print '-----------------------------------------------------------------'
 
 rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers, json={
 	"name":raw_input("Enter a name for the droplet: "),
@@ -94,5 +93,7 @@ rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers
 	"private_networking":False,
 	"user_data":cloud_config
 }))
+
+print '-----------------------------------------------------------------'
 
 print "DONE!"

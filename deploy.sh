@@ -25,7 +25,7 @@ echo "$2" >> $1/keyfile.deploy
 cat <<EOF >> $1/start.sh 
 #!/bin/bash
 
-$1/build.sh 2>&1 | tee $1/build.log
+$1/build.sh > $1/build.log 2>&1
 
 $1/bin/comd \
 --port $COMD \
