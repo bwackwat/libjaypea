@@ -42,6 +42,7 @@ public:
 
 class WebMonad{
 public:
+	JsonObject* routes_object;
 	std::string routes_string;
 
 	WebMonad(std::string hostname, std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t http_port = 80, uint16_t https_port = 443);

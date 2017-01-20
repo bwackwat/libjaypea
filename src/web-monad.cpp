@@ -19,6 +19,7 @@ server(new PrivateEventServer(ssl_certificate, ssl_private_key, https_port, 10))
 		"</html>";
 	std::string response = "HTTP/1.1 301 Moved Permanently\n" 
 		"Location: https://" + hostname + "/\n"
+		"Accept-Ranges: bytes\n"
 		"Content-Type: text/html\n"
 		"Content-Length: " + std::to_string(response_body.length()) + "\n"
 		"\n\n" +
@@ -45,18 +46,14 @@ void WebMonad::start(){
 		"Accept-Ranges: bytes\n"
 		"Content-Type: text\n";
 
-	JsonObject* routes_object = new JsonObject(OBJECT);
-	routes_object->objectValues["result"] = new JsonObject("This is a list of the routes and their required JSON parameters");
-	JsonObject* routes_sub_object = new JsonObject(OBJECT);
+	this->routes_object = new JsonObject(OBJECT);
 	for(auto iter = this->routemap.begin(); iter != this->routemap.end(); ++iter){
-		routes_sub_object->objectValues[iter->first] = new JsonObject(ARRAY);
+		routes_object->objectValues[iter->first] = new JsonObject(ARRAY);
 		for(auto &field : iter->second->requires){
-			routes_sub_object->objectValues[iter->first]->arrayValues.push_back(new JsonObject(field.first));
+			routes_object->objectValues[iter->first]->arrayValues.push_back(new JsonObject(field.first));
 		}
 	}
-	routes_object->objectValues["routes"] = routes_sub_object;
 	this->routes_string = routes_object->stringify(true);
-	delete routes_object;
 
 	PRINT("WebMonad running with routes: " << this->routes_string)
 

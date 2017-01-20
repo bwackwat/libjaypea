@@ -1,10 +1,12 @@
 #!/bin/bash
 
-# This is pretty epic.
-# echo "abc123" | passwd root --stdin
-
 HTTP=10080
 HTTPS=10443
+COMD=10000
+
+if ![ -z $5 ]; then
+	echo "$5" | passwd "$4" --stdin
+fi
 
 cd $1
 
@@ -21,7 +23,7 @@ cat <<EOF >> $1/start.sh
 
 $1/bin/comd \
 --port $2 \
---keyfile $1/keyfile.deploy \
+--keyfile $1/bin/keyfile.deploy \
 > $1/comd.log 2>&1 &
 
 $1/bin/modern-web-monad \
@@ -33,12 +35,14 @@ $1/bin/modern-web-monad \
 > $1/modern-web-monad.log 2>&1 &
 EOF
 
+chmod +x $1/start.sh
+
 echo -e "\n@reboot $4 $1/start.sh" >> /etc/crontab
 
 firewall-cmd --zone=public --permanent --add-masquerade
 firewall-cmd --zone=public --permanent --add-forward-port=port=80:proto=tcp:toport=$HTTP
 firewall-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:toport=$HTTPS
-firewall-cmd --zone=public --permanent --add-port=$2/tcp
+firewall-cmd --zone=public --permanent --add-port=$COMD/tcp
 firewall-cmd --reload
 
 chown -R $4:$4 $1

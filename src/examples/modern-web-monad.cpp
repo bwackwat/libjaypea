@@ -20,11 +20,12 @@ int main(int argc, char **argv){
 		static_cast<uint16_t>(http_port), static_cast<uint16_t>(https_port));
 
 	monad.route("GET", "/", [&](JsonObject*)->std::string{
-		return "{\"result\":\"Welcome to the API!\"}";
-	});
-
-	monad.route("GET", "/routes", [&](JsonObject*)->std::string{
-		return monad.routes_string;
+		JsonObject result(OBJECT);
+		result.objectValues["result"] = new JsonObject("Welcome to the API!");
+		result.objectValues["routes"] = monad.routes_object;
+		return result.stringify(true);
+		// Simpler.
+		// return "{\"result\":\"Welcome to the API!\",\"routes\":\"" + monad.routes_string + "\"}";
 	});
 
 	std::mutex message_mutex;

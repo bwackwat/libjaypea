@@ -33,10 +33,13 @@ for image in images["images"]:
 print '-----------------------------------------------------------------'
 
 newuser = raw_input("Enter a username for the deployment [admin]: ") or "admin"
-newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/web]: ") or "/opt/web"
-newport = raw_input("Enter a port for comd [10000]: ") or "10000"
+newpass = ""
+if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
+	newpass = raw_input("Password: ")
 
-newkey = raw_input("Enter a new 96 byte key for comd (enjoy writing a sentence): ")
+newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/web]: ") or "/opt/web"
+
+newkey = raw_input("Enter a new 96 byte key for comd (enjoy writing a sentence) [pads random letters]: \n")
 newkeylen = len(newkey)
 if newkeylen < 96:
 	newkey += ''.join(random.choice(string.ascii_letters) for x in range(96 - newkeylen))
@@ -52,28 +55,26 @@ with open("deploy.sh") as f:
 
 print '-----------------------------------------------------------------'
 
-if(raw_input("\nDeploy script good to go (y?): ") != "y"):
+if(raw_input("\nDeploy script good to go [y]: ") or "y" == "y"):
 	print "Exiting."
 	sys.exit(0)
 
 cloud_config = """
 #cloud-config
 
-users:
- - name: {3}
-
 runcmd:
+ - useradd {3}
  - yum -y install git
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
  - chmod +x {0}/deploy.sh
- - {0}/deploy.sh {0} {1} "{2}" {3}
+ - {0}/deploy.sh {0} "{2}" {3} {4}
 
 power_state:
    mode: reboot
 """
 
-cloud_config = cloud_config.format(newdir, newport, newkey, newuser)
+cloud_config = cloud_config.format(newdir, newkey, newuser, newpass)
 print cloud_config
 
 print '-----------------------------------------------------------------'
