@@ -18,7 +18,6 @@
 std::vector<struct Argument> Util::arguments;
 
 bool Util::verbose;
-std::string Util::root_path;
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
@@ -97,7 +96,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		}
 	}
 
-	root_path = get_exe_path();
+	std::string root_path = get_exe_path();
 	root_path = root_path.substr(0, root_path.find_last_of('/'));
 	root_path = root_path.substr(0, root_path.find_last_of('/')) + '/';
 	std::string config_path = root_path + CONFIG_PATH;
