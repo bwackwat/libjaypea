@@ -67,17 +67,17 @@ void WebMonad::start(){
 		std::string response_length;
 		std::string response_body = std::string();
 
-		JsonObject* r_obj = new JsonObject(OBJECT);
+		JsonObject r_obj(OBJECT);
 
-		enum RequestResult r_type = this->parse_request(data, r_obj);
+		enum RequestResult r_type = this->parse_request(data, &r_obj);
 
-		std::string api_route = r_obj->objectValues["route"]->stringValue;
+		std::string api_route = r_obj.objectValues["route"]->stringValue;
 
 		if(r_type == API || r_type == OTHER){
 			// JSON API request with or without HTTP.
-			if(r_obj->objectValues["route"]->stringValue.length() >= 4 &&
-			!Util::strict_compare_inequal(r_obj->objectValues["route"]->stringValue.c_str(), "/api", 4)){
-				api_route = r_obj->objectValues["method"]->stringValue + ' ' + api_route;
+			if(r_obj.objectValues["route"]->stringValue.length() >= 4 &&
+			!Util::strict_compare_inequal(r_obj.objectValues["route"]->stringValue.c_str(), "/api", 4)){
+				api_route = r_obj.objectValues["method"]->stringValue + ' ' + api_route;
 				if(api_route.length() > 0 && api_route[api_route.length() - 1] != '/'){
 					api_route += '/';
 				}
@@ -87,8 +87,8 @@ void WebMonad::start(){
 			if(this->routemap.count(api_route)){
 				bool good_call = true;
 				for(auto iter = this->routemap[api_route]->requires.begin(); iter != this->routemap[api_route]->requires.end(); ++iter){
-					if(!r_obj->objectValues.count(iter->first) ||
-					r_obj->objectValues[iter->first]->type != iter->second){
+					if(!r_obj.objectValues.count(iter->first) ||
+					r_obj.objectValues[iter->first]->type != iter->second){
 						// Missing parameter
 						response_body = "{\"error\":\"'" + iter->first + "' requries a " + JsonObject::typeString[iter->second] + ".\"}";
 						good_call = false;
@@ -96,7 +96,7 @@ void WebMonad::start(){
 					}
 				}
 				if(good_call){
-					if((response_body = this->routemap[api_route]->function(r_obj)).empty()){
+					if((response_body = this->routemap[api_route]->function(&r_obj)).empty()){
 						response_body = "{\"error\":\"The data could not be acquired.\"}";
 					}
 				}
@@ -106,13 +106,13 @@ void WebMonad::start(){
 		}else{
 			// "Regular" HTTP request.
 			std::string clean_route = this->public_directory;
-			for(size_t i = 0; i < r_obj->objectValues["route"]->stringValue.length(); ++i){
-				if(i < r_obj->objectValues["route"]->stringValue.length() - 1 &&
-				r_obj->objectValues["route"]->stringValue[i] == '.' &&
-				r_obj->objectValues["route"]->stringValue[i + 1] == '.'){
+			for(size_t i = 0; i < r_obj.objectValues["route"]->stringValue.length(); ++i){
+				if(i < r_obj.objectValues["route"]->stringValue.length() - 1 &&
+				r_obj.objectValues["route"]->stringValue[i] == '.' &&
+				r_obj.objectValues["route"]->stringValue[i + 1] == '.'){
 					continue;
 				}
-				clean_route += r_obj->objectValues["route"]->stringValue[i];
+				clean_route += r_obj.objectValues["route"]->stringValue[i];
 			}
 
 			ssize_t len;
@@ -180,8 +180,7 @@ void WebMonad::start(){
 			PRINT("DELI:" << response_body)
 		}
 
-		PRINT("JSON:" << r_obj->stringify(true))
-		delete r_obj;
+		PRINT("JSON:" << r_obj.stringify(true))
 		return data_length;
 	};
 

@@ -42,9 +42,11 @@ with open("deploy.sh") as f:
 
 print '-----------------------------------------------------------------'
 
-if(raw_input("\nDeploy script good to go? [y]: ") or "y" != "y"):
+if(raw_input("Deploy script good to go? [y]: ") or "y" != "y"):
 	print "Exiting."
 	sys.exit(0)
+
+print '-----------------------------------------------------------------'
 
 cloud_config = """
 #cloud-config
@@ -66,13 +68,13 @@ print cloud_config
 
 print '-----------------------------------------------------------------'
 
-if(raw_input("\nCloud init good to go? [y]: ") or "y" != "y"):
+if(raw_input("Cloud init good to go? [y]: ") or "y" != "y"):
 	print "Exiting."
 	sys.exit(0)
 
 print '-----------------------------------------------------------------'
 
-images = json.loads(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers))
+images = json.loads(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers).content)
 for image in images["images"]:
 	if image["distribution"] == "CentOS":
 		print "\nCentOS Image"
