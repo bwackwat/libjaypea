@@ -237,8 +237,12 @@ enum RequestResult WebMonad::parse_request(const char* request, JsonObject* requ
 				if(!request_obj->objectValues.count(new_key)){
 					request_obj->objectValues[new_key] = new JsonObject();
 				}
-				request_obj->objectValues[new_key]->type = STRING;
-				request_obj->objectValues[new_key]->stringValue = new_value;
+				request_obj->objectValues[new_key]->type = NOTYPE;
+				request_obj->objectValues[new_key]->parse(new_value.c_str());
+				if(request_obj->objectValues[new_key]->type == NOTYPE){
+					request_obj->objectValues[new_key]->type = STRING;
+					request_obj->objectValues[new_key]->stringValue = new_value;
+				}
 				state = 4;
 				new_value = "";
 				continue;
@@ -264,8 +268,12 @@ enum RequestResult WebMonad::parse_request(const char* request, JsonObject* requ
 				if(!request_obj->objectValues.count(new_key)){
 					request_obj->objectValues[new_key] = new JsonObject();
 				}
-				request_obj->objectValues[new_key]->type = STRING;
-				request_obj->objectValues[new_key]->stringValue = new_value;
+				request_obj->objectValues[new_key]->type = NOTYPE;
+				request_obj->objectValues[new_key]->parse(new_value.c_str());
+				if(request_obj->objectValues[new_key]->type == NOTYPE){
+					request_obj->objectValues[new_key]->type = STRING;
+					request_obj->objectValues[new_key]->stringValue = new_value;
+				}
 				new_key = "";
 				state = 2;
 				continue;
@@ -305,7 +313,13 @@ enum RequestResult WebMonad::parse_request(const char* request, JsonObject* requ
 		case 3:
 		case 4:
 		case 6:
-			new_value += *it;
+			if(*it == '%' && *(it + 1) == '2' && *(it + 1) == '2'){
+				it++;
+				it++;
+				new_value += '"';
+			}else{
+				new_value += *it;
+			}
 			break;
 		case 2:
 		case 5:

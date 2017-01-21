@@ -1,6 +1,22 @@
 #include "symmetric-tcp-client.hpp"
 #include "web-monad.hpp"
 
+static std::string All(const std::string& table){
+	return "{\"table\":\"" + table + "\",\"operation\":\"all\"}";
+}
+
+static std::string Where(const std::string& table, const char* key, const char* value){
+	return "{\"table\":\"" + table + "\",\"operation\":\"where\",\"key\":\"" + key + "\",\"value\":\"" + value + "\"}";
+}
+
+static std::string Insert(const std::string& table, JsonObject* values){
+	return "{\"table\":\"" + table + "\",\"operation\":\"insert\",\"values\":" + values->stringify() + "}";
+}
+
+static std::string Update(const std::string& table, const char* id, JsonObject* values){
+	return "{\"table\":\"" + table + "\",\"operation\":\"update\",\"id\":\"" + id + "\",\"values\":" + values->stringify() + "}";
+}
+
 int main(int argc, char **argv){
 	std::string public_directory;
 	std::string hostname;
@@ -22,22 +38,37 @@ int main(int argc, char **argv){
 	WebMonad monad(hostname, public_directory, ssl_certificate, ssl_private_key);
 
 	monad.route("GET", "/", [&](JsonObject*)->std::string{
-		return "{\"result\":\"Welcome to the API!\"}";
+		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + monad.routes_string + "}";
 	});
 
-	monad.route("GET", "/routes", [&](JsonObject*)->std::string{
-		return monad.routes_string;
-	});
-
-	std::string get_users = "{\"table\":\"users\",\"operation\":\"all\"}";
 	monad.route("GET", "/users", [&](JsonObject*)->std::string{
-		return provider.communicate(get_users.c_str(), get_users.length());
+		std::string query = All("users");
+		
+		return provider.communicate(query.c_str(), query.length());
 	});
 
-	std::string get_user = "{\"table\":\"users\",\"operation\":\"where\"}";
-	monad.route("GET", "/user", [&](JsonObject*)->std::string{
-		return provider.communicate(get_users.c_str(), get_users.length());
-	});
+	monad.route("GET", "/user", [&](JsonObject* json)->std::string{
+		std::string query = Where("users",
+			json->objectValues["key"]->stringValue.c_str(),
+			json->objectValues["value"]->stringValue.c_str());
+	
+		return provider.communicate(query.c_str(), query.length());
+	}, {{"key", STRING}, {"value", STRING}});
+	
+	monad.route("POST", "/user", [&](JsonObject* json)->std::string{
+		std::string query = Insert("users",
+			json->objectValues["values"]);
+	
+		return provider.communicate(query.c_str(), query.length());
+	}, {{"values", ARRAY}});
+	
+	monad.route("PUT", "/user", [&](JsonObject* json)->std::string{
+		std::string query = Update("users",
+			json->objectValues["id"]->stringValue.c_str(),
+			json->objectValues["values"]);
+	
+		return provider.communicate(query.c_str(), query.length());
+	}, {{"id", STRING}, {"values", OBJECT}});
 
 	monad.start();
 }

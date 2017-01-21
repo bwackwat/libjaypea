@@ -21,7 +21,7 @@ int main(int argc, char** argv){
 	PgSqlModel* users = new PgSqlModel(connection_string, "users", {
 		&id,
 		new Column("username"),
-		new Column("password"),
+		new Column("password", COL_HIDDEN),
 		new Column("email"),
 		new Column("first_name"),
 		new Column("last_name"),
@@ -64,7 +64,9 @@ int main(int argc, char** argv){
 				response = db_tables[table]->All();
 			}else if(operation == "where"){
 				if(request->objectValues.count("key") &&
-				request->objectValues.count("value")){
+           		request->objectValues["key"]->type == STRING &&
+				request->objectValues.count("value") &&
+           		request->objectValues["value"]->type == STRING){
 					response = db_tables[table]->Where(request->objectValues["key"]->stringValue, request->objectValues["value"]->stringValue);
 				}else{
 					response = PgSqlModel::Error("Missing \"key\" and/or \"value\" JSON strings.");

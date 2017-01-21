@@ -10,6 +10,7 @@
 // http://stackoverflow.com/questions/18591924/how-to-use-bitmask
 #define COL_REG 0
 #define COL_AUTO 1
+#define COL_HIDDEN 2
 
 class Column{
 public:

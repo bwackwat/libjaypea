@@ -28,8 +28,10 @@ JsonObject* PgSqlModel::All(){
 	for(pqxx::result::size_type i = 0; i < res.size(); ++i){
 		JsonObject* next_item = new JsonObject(OBJECT);
 		for(size_t j = 0; j < this->cols.size(); ++j){
-			next_item->objectValues[this->cols[j]->name] = new JsonObject(STRING);
-			next_item->objectValues[this->cols[j]->name]->stringValue = res[i][this->cols[j]->name].c_str();
+			if(!(this->cols[j]->flags & COL_HIDDEN)){
+				next_item->objectValues[this->cols[j]->name] = new JsonObject(STRING);
+				next_item->objectValues[this->cols[j]->name]->stringValue = res[i][this->cols[j]->name].c_str();
+			}
 		}
 		result_json->arrayValues.push_back(next_item);
 	}
@@ -46,8 +48,10 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	for(pqxx::result::size_type i = 0; i < res.size(); ++i){
 		JsonObject* next_item = new JsonObject(OBJECT);
 		for(size_t j = 0; j < this->cols.size(); ++j){
-			next_item->objectValues[this->cols[j]->name] = new JsonObject(STRING);
-			next_item->objectValues[this->cols[j]->name]->stringValue = res[i][this->cols[j]->name].c_str();
+			if(!(this->cols[j]->flags & COL_HIDDEN)){
+				next_item->objectValues[this->cols[j]->name] = new JsonObject(STRING);
+				next_item->objectValues[this->cols[j]->name]->stringValue = res[i][this->cols[j]->name].c_str();
+			}
 		}
 		result_json->arrayValues.push_back(next_item);
 	}
@@ -70,14 +74,19 @@ JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
 		if(i < values.size() - 1){
 			sql << txn.quote(values[i]->stringValue) << ", ";
 		}else{
-			sql << txn.quote(values[i]->stringValue) << "RETURNING id;";
+			sql << txn.quote(values[i]->stringValue) << ") RETURNING id;";
 		}
-	}	
-	pqxx::result res = txn.exec(sql.str());
-	txn.commit();
-	JsonObject* result = new JsonObject(OBJECT);
-	result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
-	return result;
+	}
+	try{
+		pqxx::result res = txn.exec(sql.str());
+		txn.commit();
+		JsonObject* result = new JsonObject(OBJECT);
+		result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
+		return result;
+	}catch(const pqxx::pqxx_exception &e){
+		PRINT(e.base().what())
+		return Error("You provided incomplete or bad data.");
+	}
 }
 
 bool PgSqlModel::HasColumn(std::string name){
@@ -87,6 +96,16 @@ bool PgSqlModel::HasColumn(std::string name){
 		}
 	}
 	return false;
+}
+
+static void result_print(pqxx::result result){
+	PRINT("RESULTS:")
+	for(auto row : result){
+		PRINT("ROW:")
+		for(auto col : row){
+			PRINT(col.as<const char*>())
+		}
+	}
 }
 
 JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, JsonObject*> values){
@@ -102,10 +121,15 @@ JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, J
 			sql << ", ";
 		}
 	}
-	sql << " WHERE id = " + txn.quote(id) + ';';
-	pqxx::result res = txn.exec(sql.str());
-	txn.commit();
-	JsonObject* result = new JsonObject(OBJECT);
-	result->objectValues["id"] = new JsonObject(id);
-	return result;
+	sql << " WHERE id = " + txn.quote(id) + " RETURNING id;";
+	try{
+		pqxx::result res = txn.exec(sql.str());
+		txn.commit();
+		JsonObject* result = new JsonObject(OBJECT);
+		result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
+		return result;
+	}catch(const std::exception &e){
+		PRINT(e.what())
+		return Error("You provided incomplete or bad data.");
+	}
 }
