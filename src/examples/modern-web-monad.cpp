@@ -14,13 +14,13 @@ int main(int argc, char **argv){
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
 	Util::define_argument("http", &http_port);
 	Util::define_argument("https", &https_port);
-	Util::parse_arguments(argc, argv, "This is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
+	Util::parse_arguments(argc, argv, "This serves HTTP 301, HTTPS for files, and a JSON (with or without HTTPS) API is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
 
 	WebMonad monad(hostname, public_directory, ssl_certificate, ssl_private_key,
 		static_cast<uint16_t>(http_port), static_cast<uint16_t>(https_port));
 
 	monad.route("GET", "/", [&](JsonObject*)->std::string{
-		return "{\"result\":\"Welcome to the API!\",\"routes\":\"" + monad.routes_string + "\"}";
+		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + monad.routes_string + "}";
 	});
 
 	std::mutex message_mutex;

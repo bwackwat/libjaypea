@@ -33,7 +33,7 @@ if newkeylen < 96:
 	print "Appended " + str(96 - newkeylen) + " characters to the key."
 with open("keyfile.deploy", "w") as f:
 	f.write(newkey)
-	print "Key is written to " + newdir + "/keyfile.deploy and will be used with cloud-init."
+print "Key is written to keyfile.deploy and will be used with cloud-init."
 
 print '-----------------------------------------------------------------'
 
@@ -56,7 +56,7 @@ runcmd:
  - yum -y install git
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
- - chmod +x {0}/deploy.sh
+ - chmod +x {0}/bin/deploy.sh
  - {0}/deploy.sh {0} "{1}" {2} {3}
 
 power_state:

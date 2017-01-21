@@ -112,7 +112,6 @@ void EpollServer::run_thread(unsigned int thread_id){
 						std::cout << "timeout, close tfd " << timer_fd << ' ';
 						if(close(timer_fd) < 0){
 							perror("close timer_fd on timeout");
-							// TODO: If the timer is invalid, then forget about closing the client...
 							continue;
 						}
 						this->close_client(0, &new_fd, close_client_callback);

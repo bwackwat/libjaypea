@@ -1,4 +1,4 @@
-bin/*
+build/*
 *.log
 keyfile.deploy
 start.sh

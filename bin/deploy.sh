@@ -15,24 +15,26 @@ fi
 
 cd $1
 
-chmod +x $1/setup-centos7.sh
-$1/setup-centos7.sh 2>&1 | tee $1/setup-centos7.log
+chmod +x $1/bin/setup-centos7.sh
+$1/bin/setup-centos7.sh 2>&1 | tee $1/setup-centos7.log
 
-chmod +x $1/build.sh
+chmod +x $1/bin/build.sh
 
 echo "$2" >> $1/keyfile.deploy
 
 cat <<EOF >> $1/start.sh 
 #!/bin/bash
 
-$1/build.sh > $1/build.log 2>&1
+$1/bin/build.sh comd OPT > $1/build-comd.log 2>&1
 
-$1/bin/comd \
+$1/bin/build.sh modern-web-monad OPT > $1/build-comd.log 2>&1
+
+$1/build/comd \
 --port $COMD \
 --keyfile $1/keyfile.deploy \
 > $1/comd.log 2>&1 &
 
-$1/bin/modern-web-monad \
+$1/build/modern-web-monad \
 --public_directory $1/html \
 --ssl_certificate $1/etc/ssl/ssl.crt \
 --ssl_private_key $1/etc/ssl/ssl.key \

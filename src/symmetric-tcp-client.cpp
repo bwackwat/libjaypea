@@ -13,6 +13,10 @@ bool SymmetricTcpClient::reconnect(){
 	return SimpleTcpClient::reconnect();
 }
 
+std::string SymmetricTcpClient::communicate(std::string request){
+	return this->communicate(request.c_str(), request.length());
+}
+
 std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 	char response[PACKET_LIMIT];
 

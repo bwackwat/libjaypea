@@ -78,9 +78,9 @@ int main(int argc, char** argv){
 				}
 			}else if(operation == "update"){
 				if(request->objectValues.count("id") &&
-                                request->objectValues["id"]->type == STRING &&
+           		request->objectValues["id"]->type == STRING &&
 				request->objectValues.count("values") &&
-                                request->objectValues["values"]->type == OBJECT){
+				request->objectValues["values"]->type == OBJECT){
 					response = db_tables[table]->Update(request->objectValues["id"]->stringValue, request->objectValues["values"]->objectValues);
 				}else{
 					response = PgSqlModel::Error("Missing \"values\" JSON object.");

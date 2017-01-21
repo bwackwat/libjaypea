@@ -26,8 +26,8 @@
 
 enum RequestResult {
 	HTTP,
-	API,
-	OTHER
+	HTTP_API,
+	API
 };
 
 class Route{
