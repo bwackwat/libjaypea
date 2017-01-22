@@ -25,15 +25,19 @@ class PgSqlModel {
 public:
 	const std::string table;
 
-	PgSqlModel(std::string new_conn, std::string new_table, std::vector<Column*> new_colss);
+	PgSqlModel(std::string new_conn, std::string new_table, std::vector<Column*> new_cols);
 
+	JsonObject* ResultToJson(pqxx::result* res);
 	static JsonObject* Error(std::string message);
 	bool HasColumn(std::string name);
-
+	
 	JsonObject* All();
 	JsonObject* Where(std::string key, std::string value);
 	JsonObject* Insert(std::vector<JsonObject*> values);
 	JsonObject* Update(std::string id, std::unordered_map<std::string, JsonObject*> values);
+	
+	// Try to get an access token for the model.
+	JsonObject* Access(const std::string& key, const std::string& value, const std::string& password);
 private:
 	pqxx::connection conn;
 	std::vector<Column*> cols;

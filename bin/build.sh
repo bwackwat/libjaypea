@@ -40,7 +40,7 @@ function build {
 
 build json-test "examples/json-test.cpp"
 build queue-test "examples/queue-test.cpp"
-build pgsql-provider "-lpqxx -lcryptopp pgsql-model.cpp symmetric-encryptor.cpp symmetric-event-server.cpp tcp-event-server.cpp tcp-epoll-server.cpp examples/pgsql-provider.cpp"
+build pgsql-provider "-lpqxx -lcryptopp -largon2 pgsql-model.cpp symmetric-encryptor.cpp symmetric-event-server.cpp tcp-event-server.cpp tcp-epoll-server.cpp examples/pgsql-provider.cpp"
 
 build read-stdin-tty "examples/read-stdin-tty.cpp"
 build keyfile-gen "-lcryptopp examples/keyfile-gen.cpp"

@@ -5,7 +5,7 @@ static std::string All(const std::string& table){
 	return "{\"table\":\"" + table + "\",\"operation\":\"all\"}";
 }
 
-static std::string Where(const std::string& table, const char* key, const char* value){
+static std::string Where(const std::string& table, const std::string& key, const std::string& value){
 	return "{\"table\":\"" + table + "\",\"operation\":\"where\",\"key\":\"" + key + "\",\"value\":\"" + value + "\"}";
 }
 
@@ -13,8 +13,12 @@ static std::string Insert(const std::string& table, JsonObject* values){
 	return "{\"table\":\"" + table + "\",\"operation\":\"insert\",\"values\":" + values->stringify() + "}";
 }
 
-static std::string Update(const std::string& table, const char* id, JsonObject* values){
+static std::string Update(const std::string& table, const std::string& id, JsonObject* values){
 	return "{\"table\":\"" + table + "\",\"operation\":\"update\",\"id\":\"" + id + "\",\"values\":" + values->stringify() + "}";
+}
+
+static std::string Access(const std::string& table, const std::string& key, const std::string& password){
+	return "{\"table\":\"" + table + "\",\"operation\":\"access\",\"key\":\"" + key + "\",\"password\":" + password + "}";
 }
 
 int main(int argc, char **argv){
@@ -42,33 +46,31 @@ int main(int argc, char **argv){
 	});
 
 	monad.route("GET", "/users", [&](JsonObject*)->std::string{
-		std::string query = All("users");
-		
-		return provider.communicate(query.c_str(), query.length());
+		return provider.communicate(All("users"));
 	});
 
-	monad.route("GET", "/user", [&](JsonObject* json)->std::string{
-		std::string query = Where("users",
-			json->objectValues["key"]->stringValue.c_str(),
-			json->objectValues["value"]->stringValue.c_str());
-	
-		return provider.communicate(query.c_str(), query.length());
+	monad.route("GET", "/user", [&](JsonObject* json)->std::string{	
+		return provider.communicate(Where("users",
+			json->objectValues["key"]->stringValue,
+			json->objectValues["value"]->stringValue));
 	}, {{"key", STRING}, {"value", STRING}});
 	
-	monad.route("POST", "/user", [&](JsonObject* json)->std::string{
-		std::string query = Insert("users",
-			json->objectValues["values"]);
-	
-		return provider.communicate(query.c_str(), query.length());
+	monad.route("POST", "/user", [&](JsonObject* json)->std::string{	
+		return provider.communicate(Insert("users",
+			json->objectValues["values"]));
 	}, {{"values", ARRAY}});
 	
-	monad.route("PUT", "/user", [&](JsonObject* json)->std::string{
-		std::string query = Update("users",
-			json->objectValues["id"]->stringValue.c_str(),
-			json->objectValues["values"]);
-	
-		return provider.communicate(query.c_str(), query.length());
+	monad.route("PUT", "/user", [&](JsonObject* json)->std::string{	
+		return provider.communicate(Update("users",
+			json->objectValues["id"]->stringValue,
+			json->objectValues["values"]));
 	}, {{"id", STRING}, {"values", OBJECT}});
+	
+	monad.route("POST", "/login", [&](JsonObject* json)->std::string{
+		return provider.communicate(Access("users",
+			json->objectValues["username"]->stringValue,
+			json->objectValues["password"]->stringValue));
+	}, {{"username", STRING}, {"password", STRING}});
 
 	monad.start();
 }

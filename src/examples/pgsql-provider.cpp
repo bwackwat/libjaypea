@@ -1,9 +1,45 @@
 #include <vector>
 #include <string>
 
+#include "argon2.h"
+
 #include "util.hpp"
 #include "pgsql-model.hpp"
 #include "symmetric-event-server.hpp"
+
+static std::string hash_value_argond2d(std::string password){
+	const uint32_t t_cost = 5;
+	const uint32_t m_cost = 1 << 16; //about 65MB
+	const uint32_t parallelism = 1; //TODO: can use std::thread::hardware_concurrency();?
+
+	std::vector<uint8_t> pwdvec(password.begin(), password.end());
+	uint8_t* pwd = &pwdvec[0];
+	const size_t pwdlen = password.length();
+
+	//TODO: Should this be used??
+	//INFO: If this changes, user passwords in DB will become invalid.
+	std::string nonce = "itmyepicsalt!@12";
+	std::vector<uint8_t> saltvec(nonce.begin(), nonce.end());
+	uint8_t* salt = &saltvec[0];
+	const size_t saltlen = nonce.length();
+
+	uint8_t hash[128];
+	
+	char encoded[256];
+
+	argon2_type type = Argon2_d;
+
+	int res = argon2_hash(t_cost, m_cost, parallelism,
+		pwd, pwdlen, salt, saltlen,
+		hash, 128, encoded, 256, type, ARGON2_VERSION_NUMBER);
+	
+	if(res){
+		ERROR("Hashing error: " << res)
+		return std::string();
+	}else{
+		return std::string(encoded);
+	}
+}
 
 int main(int argc, char** argv){
 	std::string keyfile;
@@ -50,6 +86,8 @@ int main(int argc, char** argv){
 	};
 	
 	SymmetricEventServer server(keyfile, 10000, 1);
+	
+	SymmetricEncryptor encryptor;
 
 	server.on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		JsonObject* request = new JsonObject();
@@ -85,7 +123,32 @@ int main(int argc, char** argv){
 				request->objectValues["values"]->type == OBJECT){
 					response = db_tables[table]->Update(request->objectValues["id"]->stringValue, request->objectValues["values"]->objectValues);
 				}else{
-					response = PgSqlModel::Error("Missing \"values\" JSON object.");
+					response = PgSqlModel::Error("Missing \"id\" JSON string and/or \"values\" JSON object.");
+				}
+			}else if(operation == "access"){
+				if(table == "users"){
+					if(request->objectValues.count("username") &&
+		      		request->objectValues["username"]->type == STRING &&
+					request->objectValues.count("password") &&
+		      		request->objectValues["password"]->type == STRING){
+		      			std::string password = hash_value_argond2d(request->objectValues["password"]->stringValue);
+		      			JsonObject* token = db_tables[table]->Access("username", request->objectValues["username"]->stringValue, password);
+						if(token == 0){
+							response = PgSqlModel::Error("Provided bad password.");
+							delete token;
+						}
+						
+						// This is nnecessary?
+						// token->objectValues["verify"] = new JsonObject(hash_value_sha256(password.substr(password.length() / 2)));
+						
+						response = new JsonObject(OBJECT);
+						response->objectValues["token"] = new JsonObject(encryptor.encrypt(token->stringify()));
+						delete token;
+					}else{
+						response = PgSqlModel::Error("Missing \"username\" JSON string and/or \"password\" JSON string.");
+					}
+				}else{
+					response = PgSqlModel::Error("You cannot gain access to this.");
 				}
 			}else{
 				response = PgSqlModel::Error("Invalid \"operation\" " + operation + ".");

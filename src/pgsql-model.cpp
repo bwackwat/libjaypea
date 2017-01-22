@@ -3,6 +3,13 @@
 
 #include <pqxx/pqxx>
 
+#include "cryptopp/aes.h"
+#include "cryptopp/osrng.h"
+#include "cryptopp/modes.h"
+#include "cryptopp/base64.h"
+#include "cryptopp/filters.h"
+#include "cryptopp/cryptlib.h"
+
 #include "util.hpp"
 #include "json.hpp"
 #include "pgsql-model.hpp"
@@ -18,19 +25,14 @@ JsonObject* PgSqlModel::Error(std::string message){
 	return error;
 }
 
-JsonObject* PgSqlModel::All(){
-	pqxx::work txn(this->conn);
-	std::string sql = "SELECT * FROM " + this->table + ';';
-	pqxx::result res = txn.exec(sql);
-	txn.commit();
-
+JsonObject* PgSqlModel::ResultToJson(pqxx::result* res){
 	JsonObject* result_json = new JsonObject(ARRAY);
-	for(pqxx::result::size_type i = 0; i < res.size(); ++i){
+	for(pqxx::result::size_type i = 0; i < res->size(); ++i){
 		JsonObject* next_item = new JsonObject(OBJECT);
 		for(size_t j = 0; j < this->cols.size(); ++j){
 			if(!(this->cols[j]->flags & COL_HIDDEN)){
 				next_item->objectValues[this->cols[j]->name] = new JsonObject(STRING);
-				next_item->objectValues[this->cols[j]->name]->stringValue = res[i][this->cols[j]->name].c_str();
+				next_item->objectValues[this->cols[j]->name]->stringValue = (*res)[i][this->cols[j]->name].as<std::string>();
 			}
 		}
 		result_json->arrayValues.push_back(next_item);
@@ -38,24 +40,26 @@ JsonObject* PgSqlModel::All(){
 	return result_json;
 }
 
+JsonObject* PgSqlModel::All(){
+	pqxx::work txn(this->conn);
+	std::string sql = "SELECT * FROM " + this->table + ';';
+	pqxx::result res = txn.exec(sql);
+	txn.commit();
+
+	return this->ResultToJson(&res);
+}
+
 JsonObject* PgSqlModel::Where(std::string key, std::string value){
+	if(!this->HasColumn(key)){
+		return Error("Bad key.");
+	}
+	
 	pqxx::work txn(this->conn);
 	std::string sql = "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + ';';
 	pqxx::result res = txn.exec(sql);
 	txn.commit();
 
-	JsonObject* result_json = new JsonObject(ARRAY);
-	for(pqxx::result::size_type i = 0; i < res.size(); ++i){
-		JsonObject* next_item = new JsonObject(OBJECT);
-		for(size_t j = 0; j < this->cols.size(); ++j){
-			if(!(this->cols[j]->flags & COL_HIDDEN)){
-				next_item->objectValues[this->cols[j]->name] = new JsonObject(STRING);
-				next_item->objectValues[this->cols[j]->name]->stringValue = res[i][this->cols[j]->name].c_str();
-			}
-		}
-		result_json->arrayValues.push_back(next_item);
-	}
-	return result_json;
+	return this->ResultToJson(&res);
 }
 
 JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
@@ -97,7 +101,7 @@ bool PgSqlModel::HasColumn(std::string name){
 	}
 	return false;
 }
-
+/*
 static void result_print(pqxx::result result){
 	PRINT("RESULTS:")
 	for(auto row : result){
@@ -107,7 +111,7 @@ static void result_print(pqxx::result result){
 		}
 	}
 }
-
+*/
 JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, JsonObject*> values){
 	pqxx::work txn(this->conn);
 	std::stringstream sql;
@@ -131,5 +135,36 @@ JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, J
 	}catch(const std::exception &e){
 		PRINT(e.what())
 		return Error("You provided incomplete or bad data.");
+	}
+}
+
+/*
+static std::string hash_value_sha256(std::string token){
+	std::string digest;
+	CryptoPP::SHA256 hash;
+
+	CryptoPP::StringSource source(token, true,
+		new CryptoPP::HashFilter(hash,
+		new CryptoPP::Base64Encoder(
+		new CryptoPP::StringSink(digest))));
+
+	return digest;
+}
+*/
+
+JsonObject* PgSqlModel::Access(const std::string& key, const std::string& value, const std::string& password){
+	if(!this->HasColumn("password")){
+		return Error("You cannot gain access to this.");
+	}
+	
+	pqxx::work txn(this->conn);
+	std::string sql = "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + ';';
+	pqxx::result res = txn.exec(sql);
+	txn.commit();
+	
+	if(res[0]["password"].as<std::string>() == password){
+		return this->ResultToJson(&res);
+	}else{
+		return 0;
 	}
 }

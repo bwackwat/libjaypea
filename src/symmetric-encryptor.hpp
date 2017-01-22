@@ -13,8 +13,11 @@ private:
 	byte key[CryptoPP::AES::MAX_KEYLENGTH];
 	byte iv[CryptoPP::AES::BLOCKSIZE];
 public:
+	SymmetricEncryptor();
 	SymmetricEncryptor(std::string keyfile);
 
+	std::string encrypt(std::string data);
+	std::string decrypt(std::string data);
 	std::string encrypt(std::string data, int transaction);
 	std::string decrypt(std::string data, int transaction);
 

@@ -3,6 +3,32 @@
 #include "util.hpp"
 #include "symmetric-encryptor.hpp"
 
+
+SymmetricEncryptor::SymmetricEncryptor(){
+	this->random_pool.GenerateBlock(this->key, CryptoPP::AES::MAX_KEYLENGTH);
+	this->random_pool.GenerateBlock(this->iv, CryptoPP::AES::BLOCKSIZE);
+}
+
+std::string SymmetricEncryptor::encrypt(std::string data){
+	std::string token;
+	CryptoPP::StringSink* sink = new CryptoPP::StringSink(token);
+	CryptoPP::Base64Encoder* base64_enc = new CryptoPP::Base64Encoder(sink, false);
+	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption enc(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
+	CryptoPP::StreamTransformationFilter* aes_enc = new CryptoPP::StreamTransformationFilter(enc, base64_enc);
+	CryptoPP::StringSource enc_source(data, true, aes_enc);
+	return token;
+}
+
+std::string SymmetricEncryptor::decrypt(std::string token){
+	std::string data;
+	CryptoPP::StringSink* sink = new CryptoPP::StringSink(data);
+	CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption dec(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
+	CryptoPP::StreamTransformationFilter* aes_dec = new CryptoPP::StreamTransformationFilter(dec, sink);
+	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
+	CryptoPP::StringSource dec_source(token, true, base64_dec);
+	return data;
+}
+
 SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 	std::string name = "SymmetricEncryptor";
 	int fd;
