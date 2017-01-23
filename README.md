@@ -13,14 +13,14 @@ Uses:
 
 ## Implementation Example
 
-1. Execute some commands to load and build the library:
+ 1. Execute some commands to load and build the library:
 ```bash
 git clone https://github.com/bwackwat/libjaypea
 cd libjaypea
 bin/setup-centos7.sh
 bin/build-library.sh
 ```
-2. Implement the library e.g. a simple echo server (echo.cpp):
+ 2. Implement the library e.g. a simple echo server (echo.cpp):
 ```c++
 #include "tcp-server.hpp"
 
@@ -39,13 +39,13 @@ int main(int, char**){
 	return 0;
 }
 ```
-3. Build your code:
+ 3. Build your code:
 ```bash
 bin/build-with-library.sh
 > Usage: <relative path to cpp file> <executable name> <optional additional libraries/compiler flags>
 bin/build-with-library.sh echo.cpp echo
 ```
-4. Run your code:
+ 4. Run your code:
 ```bash
 build/echo
 ```
@@ -69,13 +69,17 @@ If the send succeeds, then the function returns with a success code (the given l
 In order of coolness.
 
 1. [bwackwat](https://bwackwat.com/). Hopefully this example will replace NGINX running on bwackwat.com...
-
-1. [tcp-client](doc/tcp-client.md). You can speed test an TCP server.
-2. [tcp-poll-server](doc/tcp-poll-server.md). A TCP server able to manage many connections using poll.
-3. [modern-web-monad](doc/modern-web-monad.md). A modern web monad using SSL, JSON, and HTTP.
-4. [ponal-client](doc/ponal.md). A simple command line client to ponald.
-5. [ponal-server](doc/ponal.md). A simple redis-inspired key-value store server.
-6. [com](doc/comd.md). An AES encrypted client for comd.
-7. [comd](doc/comd.md). An AES encrypted alternative to SSH with file transfer support.
-8. [read-stdin-tty](doc/comd.md). A tool to read from STDIN tty in raw mode.
-9. [pgsql-model-test](doc/pgsql-model.md). A simple class to query a PostgreSQL database in a common way.
+2. [comd/com](doc/comd.md). An AES encrypted server and client. The server provides access to a shell, the client sends commands to that remote shell. Like sshd/ssh.
+3. [message-api](doc/modern-web-monad.md). An HTTPS JSON API.
+4. pgsql-provider. A secure database abstraction layer using pgsql-model as an ORM.
+5. [pgsql-model-test](doc/pgsql-model.md). A simple class to query a PostgreSQL database in a common way.
+6. [ponal-server/ponal-client](doc/ponal.md). A simple redis-inspired key-value store server and corresponding client.
+7. [tcp-poll-server](doc/tcp-poll-server.md). A TCP server able to manage many connections using poll.
+8. [tcp-client](doc/tcp-client.md). You can speed test an TCP server.
+9. echo-server. A fast, simple echo server.
+10. chat-server/chat-client. An incomplete chat server and client.
+11. [read-stdin-tty](doc/comd.md). A tool to read from STDIN tty in raw mode.
+12. keyfile-gen. Creates a key for comd/com.
+13. http-redirecter. Redirects HTTP traffic. Good practice.
+14. json-test. Tests JSON parsing.
+15. queue-test. Tests the queue implementation.
