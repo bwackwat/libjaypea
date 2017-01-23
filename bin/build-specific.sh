@@ -49,12 +49,12 @@ build keyfile-gen "-lcryptopp examples/keyfile-gen.cpp"
 
 build tcp-poll-server "examples/tcp-poll-server.cpp"
 build ponald "-lpthread examples/ponal-server.cpp tcp-server.cpp"
-build comd "-lcryptopp -lpthread symmetric-encryptor.cpp examples/comd/comd-util.cpp examples/comd/comd.cpp tcp-server.cpp symmetric-tcp-server.cpp"
+build comd "-lcryptopp -lpthread symmetric-encryptor.cpp comd-util.cpp examples/comd.cpp tcp-server.cpp symmetric-tcp-server.cpp"
 build chat-server "-lpthread tcp-server.cpp examples/chat-server.cpp"
 
 build tcp-poll-client "examples/tcp-poll-client.cpp"
 build ponal "examples/ponal-client.cpp simple-tcp-client.cpp"
-build com "-lcryptopp symmetric-encryptor.cpp examples/comd/comd-util.cpp examples/comd/com.cpp tcp-client.cpp symmetric-event-client.cpp"
+build com "-lcryptopp symmetric-encryptor.cpp comd-util.cpp examples/com.cpp tcp-client.cpp symmetric-event-client.cpp"
 build chat-client "simple-tcp-client.cpp examples/chat-client.cpp"
 
 build modern-web-monad "-lssl -lcryptopp -lcrypto -lpthread examples/modern-web-monad.cpp web-monad.cpp tcp-server.cpp private-tcp-server.cpp"
