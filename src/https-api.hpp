@@ -41,22 +41,19 @@ public:
 	{}
 };
 
-class WebMonad{
+class HttpsApi{
 public:
 	JsonObject* routes_object;
 	std::string routes_string;
 
-	WebMonad(std::string hostname, std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t http_port = 80, uint16_t https_port = 443);
+	HttpsApi(std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t https_port = 443);
 	void route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(), bool requires_human = false);
 	void start();
 private:
 	std::unordered_map<std::string, Route*> routemap;
 	std::string public_directory;
-	EpollServer* redirecter;
-	PrivateEpollServer* server;
 
-	const char* http_response;
-	size_t http_response_length;
+	PrivateEpollServer* server;
 
 	enum RequestResult parse_request(const char* request, JsonObject* request_obj);
 };

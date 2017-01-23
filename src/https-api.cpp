@@ -1,36 +1,13 @@
 #include <random>
 
-#include "web-monad.hpp"
+#include "https-api.hpp"
 
-WebMonad::WebMonad(std::string hostname, std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t http_port, uint16_t https_port)
+HttpsApi::HttpsApi(std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t https_port)
 :public_directory(new_public_directory),
-redirecter(new EpollServer(http_port, 10)),
-server(new PrivateEpollServer(ssl_certificate, ssl_private_key, https_port, 10)){
-	std::string response_body = "<html>\n"
-		"<head>\n"
-		"<title>301 Moved Permanently</title>\n"
-		"</head>\n"
-		"<body>\n"
-		"<h1>301 Moved Permanently</h1>\n"
-		"<p>This page has permanently moved to <a href=\"https://" +
-		hostname +
-		"/\">https://" +
-		hostname +
-		"/</a>.</p>\n"
-		"</body>\n"
-		"</html>";
-	std::string response = "HTTP/1.1 301 Moved Permanently\n" 
-		"Location: https://" + hostname + "/\n"
-		"Accept-Ranges: bytes\n"
-		"Content-Type: text/html\n"
-		"Content-Length: " + std::to_string(response_body.length()) + "\n"
-		"\n\n" +
-		response_body;
-	this->http_response = response.c_str();
-	this->http_response_length = response.length();
-}
+server(new PrivateEpollServer(ssl_certificate, ssl_private_key, https_port, 10))
+{}
 
-void WebMonad::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires, bool requires_human){
+void HttpsApi::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires, bool requires_human){
 	if(path[path.length() - 1] != '/'){
 		path += '/';
 	}
@@ -61,13 +38,7 @@ static struct Question* get_question(){
 
 static std::unordered_map<int, struct Question*> client_questions;
 
-void WebMonad::start(){
-	this->redirecter->on_read = [&](int fd, const char*, ssize_t)->ssize_t{
-		this->redirecter->send(fd, this->http_response, this->http_response_length);
-		return -1;
-	};
-	this->redirecter->run(true);
-
+void HttpsApi::start(){
 	std::string response_header = "HTTP/1.1 200 OK\n"
 		"Accept-Ranges: bytes\n"
 		"Content-Type: text\n";
@@ -227,7 +198,7 @@ void WebMonad::start(){
 	ERROR("something super broke")
 }
 
-enum RequestResult WebMonad::parse_request(const char* request, JsonObject* request_obj){
+enum RequestResult HttpsApi::parse_request(const char* request, JsonObject* request_obj){
 	const char* it = request;
 	bool exit_http_parse = false;
 

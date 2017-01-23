@@ -71,5 +71,7 @@ public:
 
 	static bool strict_compare_inequal(const char* forst, const char* second, int count = -1);
 	static void set_non_blocking(int fd);
+
+	static std::string get_redirection_html(const std::string& hostname);
 };
 

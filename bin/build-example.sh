@@ -29,8 +29,9 @@ build ponal-client
 build com "-lcryptopp"
 build chat-client
 
-build modern-web-monad
-build pgsql-web-monad "-lcryptopp"
+build message-api
+build bwackwat "-lcryptopp"
+build http-redirecter
 build echo-server
 build tcp-client
 build tcp-event-client

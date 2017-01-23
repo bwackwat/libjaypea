@@ -1,32 +1,27 @@
-#include "web-monad.hpp"
+#include "https-api.hpp"
 
 int main(int argc, char **argv){
 	std::string public_directory;
-	std::string hostname;
 	std::string ssl_certificate;
 	std::string ssl_private_key;
-	int http_port = 80;
 	int https_port = 443;
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
-	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
-	Util::define_argument("http", &http_port);
 	Util::define_argument("https", &https_port);
-	Util::parse_arguments(argc, argv, "This serves HTTP 301, HTTPS for files, and a JSON (with or without HTTPS) API is a modern web server monad which starts an HTTP redirection server, an HTTPS server for files, and a JSON API. Configured via etc/configuration.json.");
+	Util::parse_arguments(argc, argv, "This serves files over HTTPS , and JSON (with or without HTTP headers) through an API.");
 
-	WebMonad monad(hostname, public_directory, ssl_certificate, ssl_private_key,
-		static_cast<uint16_t>(http_port), static_cast<uint16_t>(https_port));
+	HttpsApi server(public_directory, ssl_certificate, ssl_private_key, static_cast<uint16_t>(https_port));
 
-	monad.route("GET", "/", [&](JsonObject*)->std::string{
-		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + monad.routes_string + "}";
+	server.route("GET", "/", [&](JsonObject*)->std::string{
+		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + server.routes_string + "}";
 	});
 
 	std::mutex message_mutex;
 	std::deque<std::string> messages;
 
-	monad.route("GET", "/message", [&](JsonObject*)->std::string{
+	server.route("GET", "/message", [&](JsonObject*)->std::string{
 		JsonObject result(OBJECT);
 		result.objectValues["result"] = new JsonObject(ARRAY);
 
@@ -39,7 +34,7 @@ int main(int argc, char **argv){
 		return result.stringify();
 	});
 
-	monad.route("POST", "/message", [&](JsonObject* json)->std::string{
+	server.route("POST", "/message", [&](JsonObject* json)->std::string{
 		message_mutex.lock();
 		messages.push_front(json->objectValues["message"]->stringValue);
 		if(messages.size() > 10){
@@ -50,5 +45,5 @@ int main(int argc, char **argv){
 		return "{\"result\":\"Message posted.\"}";
 	}, {{"message", STRING}});
 
-	monad.start();
+	server.start();
 }

@@ -237,3 +237,27 @@ void Util::set_non_blocking(int fd){
 	flags |= O_NONBLOCK;
 	fcntl(fd, F_SETFL, flags);
 }
+
+std::string Util::get_redirection_html(const std::string& hostname){
+	std::string response_body = "<!DOCTYPE html><html>\n"
+		"<head>\n"
+		"<title>301 Moved Permanently</title>\n"
+		"</head>\n"
+		"<body>\n"
+		"<h1>301 Moved Permanently</h1>\n"
+		"<p>This page has permanently moved to <a href=\"https://" +
+		hostname +
+		"/\">https://" +
+		hostname +
+		"/</a>.</p>\n"
+		"</body>\n"
+		"</html>";
+	std::string response = "HTTP/1.1 301 Moved Permanently\n" 
+		"Location: https://" + hostname + "/\n"
+		"Accept-Ranges: bytes\n"
+		"Content-Type: text/html\n"
+		"Content-Length: " + std::to_string(response_body.length()) + "\n"
+		"\r\n\r\n" +
+		response_body;
+	return response;
+}
