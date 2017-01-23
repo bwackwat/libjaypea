@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ $# -lt 2 ]; then
+	echo "Usage: <cpp files> <executable name> <optional additional libraries/compiler flags>"
+	exit
+fi
+
 thisdir=$(pwd)
 
 cd $(dirname "${BASH_SOURCE[0]}")/../

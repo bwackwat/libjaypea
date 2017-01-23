@@ -1,6 +1,8 @@
 #!/bin/python
 
-import requests, json, random, string, sys
+import requests, json, random, string, sys, os
+
+scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 headers = {
 	"Content-Type":"application/json",
@@ -31,13 +33,13 @@ newkeylen = len(newkey)
 if newkeylen < 96:
 	newkey += ''.join(random.choice(string.ascii_letters) for x in range(96 - newkeylen))
 	print "Appended " + str(96 - newkeylen) + " characters to the key."
-with open("keyfile.deploy", "w") as f:
+with open(scriptdir + "/../keyfile.deploy", "w") as f:
 	f.write(newkey)
 print "Key is written to keyfile.deploy and will be used with cloud-init."
 
 print '-----------------------------------------------------------------'
 
-with open("deploy.sh") as f:
+with open(scriptdir + "/deploy.sh") as f:
 	print f.read()
 
 print '-----------------------------------------------------------------'

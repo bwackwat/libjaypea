@@ -18,16 +18,19 @@ cd $1
 chmod +x $1/bin/setup-centos7.sh
 $1/bin/setup-centos7.sh 2>&1 | tee $1/setup-centos7.log
 
-chmod +x $1/bin/build.sh
+chmod +x $1/bin/build-library.sh
+$1/bin/build-library.sh 2>&1 | tee $1/build-library.log
+
+chmod +x $1/bin/build-example.sh
 
 echo "$2" >> $1/keyfile.deploy
 
 cat <<EOF >> $1/start.sh 
 #!/bin/bash
 
-$1/bin/build.sh comd OPT > $1/build-comd.log 2>&1
+$1/bin/build-example.sh comd PROD > $1/build-comd.log 2>&1
 
-$1/bin/build.sh modern-web-monad OPT > $1/build-comd.log 2>&1
+$1/bin/build-example.sh modern-web-monad PROD > $1/build-modern-web-monad.log 2>&1
 
 $1/build/comd \
 --port $COMD \
