@@ -5,7 +5,7 @@
 WebMonad::WebMonad(std::string hostname, std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t http_port, uint16_t https_port)
 :public_directory(new_public_directory),
 redirecter(new EpollServer(http_port, 10)),
-server(new PrivateEventServer(ssl_certificate, ssl_private_key, https_port, 10)){
+server(new PrivateEpollServer(ssl_certificate, ssl_private_key, https_port, 10)){
 	std::string response_body = "<html>\n"
 		"<head>\n"
 		"<title>301 Moved Permanently</title>\n"

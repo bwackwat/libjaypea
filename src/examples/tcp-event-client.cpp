@@ -3,7 +3,7 @@
 #include <cstring>
 
 #include "util.hpp"
-#include "tcp-event-client.hpp"
+#include "tcp-client.hpp"
 
 int main(int argc, char** argv){
 	std::string hostname;

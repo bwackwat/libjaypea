@@ -1,14 +1,87 @@
-#include "sys/timerfd.h"
-#include "signal.h"
-
 #include "util.hpp"
 #include "stack.hpp"
-#include "tcp-epoll-server.hpp"
-
-#define EVENTS EPOLLIN | EPOLLET | EPOLLONESHOT | EPOLLERR | EPOLLHUP
+#include "tcp-server.hpp"
 
 EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
-:EventServer(port, new_max_connections, new_name){}
+:name(new_name),
+max_connections(new_max_connections),
+running(true){
+	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+		perror("socket");
+		throw std::runtime_error(this->name + " socket");
+	}
+	Util::set_non_blocking(this->server_fd);
+/*
+	For this class, I am unsure about what this is genuinely useful for...
+	However, it has been useful in the past and I have read it as "good practice."
+*/
+	int opt = 1;
+	if(setsockopt(this->server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt)) < 0){
+		perror("setsockopt");
+		throw std::runtime_error(this->name + " setsockopt");
+	}
+
+	struct sockaddr_in server_addr;
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	server_addr.sin_port = htons(port);
+	if(bind(this->server_fd, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(server_addr)) < 0){
+		perror("bind");
+		throw std::runtime_error(this->name + " bind");
+	}
+	if(listen(this->server_fd, static_cast<int>(this->max_connections)) < 0){
+		perror("listen");
+		throw std::runtime_error(this->name + " listen");
+	}
+	PRINT(this->name << " listening on " << port)
+}
+
+void EpollServer::start_event(Event* event){
+	for(unsigned int i = 0; i < this->num_threads; ++i){
+		this->thread_event_queue_mutexes[i].lock();
+		this->thread_event_queues[i].enqueue(event);
+		this->thread_event_queue_mutexes[i].unlock();
+	}
+}
+
+void EpollServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
+	callback(index, fd);
+}
+
+bool EpollServer::send(int fd, const char* data, size_t data_length){
+	ssize_t len;
+	if((len = write(fd, data, data_length)) < 0){
+		perror("write");
+		ERROR("send")
+		return true;
+	}
+	if(static_cast<size_t>(len) != data_length){
+		ERROR("NOT ALL THE DATA WAS SENT TO " << fd)
+	}
+	this->write_counter[fd]++;
+	return false;
+}
+
+ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
+	ssize_t len;
+	if((len = read(fd, data, data_length)) < 0){
+		if(errno != EWOULDBLOCK && errno != EAGAIN){
+			perror("read");
+			ERROR(this->name << " on " << fd)
+			return -1;
+		}
+		return 0;
+	}else if(len == 0){
+		return -2;
+	}else{
+		data[len] = 0;
+		return this->on_read(fd, data, len);
+	}
+}
+
+bool EpollServer::accept_continuation(int*){
+	return false;
+}
 
 void EpollServer::run_thread(unsigned int thread_id){
 	int num_fds, num_timeouts, new_fd, the_fd, timer_fd, i, j, epoll_fd, timeout_epoll_fd;
@@ -218,4 +291,29 @@ void EpollServer::run_thread(unsigned int thread_id){
 			}
 		}
 	}
+}
+
+void EpollServer::run(bool returning, unsigned int new_num_threads){
+	this->num_threads = new_num_threads;
+	if(this->num_threads <= 0){
+		this->num_threads = 1;
+	}
+	thread_event_queues = new Queue<Event*>[this->num_threads];
+	thread_event_queue_mutexes = new std::mutex[this->num_threads];
+
+	unsigned int total = this->num_threads;
+	if(!returning){
+		total--;
+	}
+
+	for(unsigned int i = 0; i < total; ++i){
+			std::thread next(&EpollServer::run_thread, this, i);
+			next.detach();
+	}
+
+	if(returning){
+		return;
+	}
+
+	this->run_thread(total);
 }

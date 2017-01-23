@@ -7,14 +7,14 @@
 #include "cryptopp/filters.h"
 #include "cryptopp/cryptlib.h"
 
-#include "tcp-epoll-server.hpp"
+#include "tcp-server.hpp"
 #include "symmetric-encryptor.hpp"
 
-class SymmetricEventServer : public EpollServer {
+class SymmetricEpollServer : public EpollServer {
 private:
 	SymmetricEncryptor encryptor;
 public:
-	SymmetricEventServer(std::string keyfile, uint16_t port, size_t new_max_connections);
+	SymmetricEpollServer(std::string keyfile, uint16_t port, size_t new_max_connections);
 
 	bool send(int fd, const char* data, size_t data_length);
 	ssize_t recv(int fd, char* data, size_t data_length);

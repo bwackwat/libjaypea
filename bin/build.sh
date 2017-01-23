@@ -12,22 +12,24 @@ mkdir -p $srcdir/../build
 echo -e "$srcdir"
 argc=$#
 argv=($@)
-optimize="-O0"
 
-case "${argv[@]}" in *"OPT"*)
-	optimize="-O3"
-	((argc-=1))
-	argv=( "${argv[@]/"OPT"}" )
-esac
-
-compiler="clang++ -std=c++11 -rdynamic -g $optimize -I$srcdir/ \
+compiler="clang++ -std=c++11 -rdynamic -g -O0 -I$srcdir/ \
 -Weverything -Wpedantic -Wconversion \
 -Wno-c++98-compat -Wno-padded \
 -Wno-exit-time-destructors -Wno-global-constructors"
 
-fsanitize="-fsanitize=safe-stack"
-fsanitize="-fsanitize=cfi"
-hardened="-D_FORTIFY_SOURCE=2 -fstack-protector-all $fsanitize -Wformat -Wformat-security -Werror=format-security"
+case "${argv[@]}" in *"PROD"*)
+	compiler="clang++ -std=c++11 -O3 -I$srcdir/ \
+	-fsanitize=thread -fsanitize=undefined \
+	-D_FORTIFY_SOURCE=2 -fstack-protector-all \
+	-Wformat -Wformat-security -Werror=format-security \
+	-Weverything -Wpedantic -Wconversion \
+	-Wno-c++98-compat -Wno-padded \
+	-Wno-exit-time-destructors -Wno-global-constructors"
+	
+	((argc-=1))
+	argv=( "${argv[@]/"PROD"}" )
+esac
 
 echo $compiler
 
@@ -40,24 +42,24 @@ function build {
 
 build json-test "examples/json-test.cpp"
 build queue-test "examples/queue-test.cpp"
-build pgsql-provider "-lpqxx -lcryptopp -largon2 pgsql-model.cpp symmetric-encryptor.cpp symmetric-event-server.cpp tcp-event-server.cpp tcp-epoll-server.cpp examples/pgsql-provider.cpp"
+build pgsql-provider "-lpqxx -lcryptopp -largon2 pgsql-model.cpp symmetric-encryptor.cpp symmetric-tcp-server.cpp tcp-server.cpp examples/pgsql-provider.cpp"
 
 build read-stdin-tty "examples/read-stdin-tty.cpp"
 build keyfile-gen "-lcryptopp examples/keyfile-gen.cpp"
 
 build tcp-poll-server "examples/tcp-poll-server.cpp"
-build ponald "-lpthread examples/ponal-server.cpp tcp-event-server.cpp"
-build comd "-lcryptopp -lpthread symmetric-encryptor.cpp examples/comd/comd-util.cpp examples/comd/comd.cpp tcp-epoll-server.cpp tcp-event-server.cpp symmetric-event-server.cpp"
-build chat-server "-lpthread tcp-epoll-server.cpp tcp-event-server.cpp examples/chat-server.cpp"
+build ponald "-lpthread examples/ponal-server.cpp tcp-server.cpp"
+build comd "-lcryptopp -lpthread symmetric-encryptor.cpp examples/comd/comd-util.cpp examples/comd/comd.cpp tcp-server.cpp symmetric-tcp-server.cpp"
+build chat-server "-lpthread tcp-server.cpp examples/chat-server.cpp"
 
 build tcp-poll-client "examples/tcp-poll-client.cpp"
 build ponal "examples/ponal-client.cpp simple-tcp-client.cpp"
-build com "-lcryptopp symmetric-encryptor.cpp examples/comd/comd-util.cpp examples/comd/com.cpp tcp-event-client.cpp symmetric-event-client.cpp"
+build com "-lcryptopp symmetric-encryptor.cpp examples/comd/comd-util.cpp examples/comd/com.cpp tcp-client.cpp symmetric-event-client.cpp"
 build chat-client "simple-tcp-client.cpp examples/chat-client.cpp"
 
-build modern-web-monad "-lssl -lcryptopp -lcrypto -lpthread examples/modern-web-monad.cpp web-monad.cpp tcp-event-server.cpp tcp-epoll-server.cpp private-event-server.cpp"
-build pgsql-web-monad "-lssl -lcryptopp -lcrypto -lpthread examples/pgsql-web-monad.cpp symmetric-encryptor.cpp symmetric-tcp-client.cpp simple-tcp-client.cpp web-monad.cpp tcp-event-server.cpp tcp-epoll-server.cpp private-event-server.cpp"
-build echo-server "-lpthread tcp-event-server.cpp tcp-epoll-server.cpp examples/echo-server.cpp"
+build modern-web-monad "-lssl -lcryptopp -lcrypto -lpthread examples/modern-web-monad.cpp web-monad.cpp tcp-server.cpp private-tcp-server.cpp"
+build pgsql-web-monad "-lssl -lcryptopp -lcrypto -lpthread examples/pgsql-web-monad.cpp symmetric-encryptor.cpp symmetric-tcp-client.cpp simple-tcp-client.cpp web-monad.cpp tcp-server.cpp private-tcp-server.cpp"
+build echo-server "-lpthread tcp-server.cpp examples/echo-server.cpp"
 
 build tcp-client "-lpthread examples/tcp-client.cpp simple-tcp-client.cpp"
-build tcp-event-client "examples/tcp-event-client.cpp tcp-event-client.cpp"
+build tcp-event-client "examples/tcp-event-client.cpp tcp-client.cpp"

@@ -21,7 +21,7 @@
 
 #include "util.hpp"
 #include "comd-util.hpp"
-#include "symmetric-event-server.hpp"
+#include "symmetric-tcp-server.hpp"
 
 struct Shell{
 	int pid;
@@ -93,7 +93,7 @@ int main(int argc, char** argv){
 	Util::define_argument("keyfile", keyfile, {"-k"});
 	Util::parse_arguments(argc, argv, "This is a secure server application for com, supporting a remote shell, receive file, and send file routines.");
 
-	SymmetricEventServer server(keyfile, static_cast<uint16_t>(port), 1);
+	SymmetricEpollServer server(keyfile, static_cast<uint16_t>(port), 1);
 
 	// This "state" is not per-client, because comd is designed for a single connection.
 	server.on_connect = [&](int){

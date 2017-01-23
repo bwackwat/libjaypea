@@ -23,7 +23,7 @@
 #include <arpa/inet.h>
 
 #include "util.hpp"
-#include "tcp-event-client.hpp"
+#include "tcp-client.hpp"
 
 void EventClient::add(Connection* conn){
 	this->connections.push_back(conn);

@@ -1,5 +1,5 @@
 #include "util.hpp"
-#include "tcp-event-client.hpp"
+#include "tcp-client.hpp"
 #include "symmetric-encryptor.hpp"
 
 class SymmetricEventClient : public EventClient{

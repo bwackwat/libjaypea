@@ -7,7 +7,13 @@
 #include <thread>
 #include <unordered_map>
 
+#include "signal.h"
+#include "sys/timerfd.h"
+#include "sys/epoll.h"
+
 #include "queue.hpp"
+
+#define EVENTS EPOLLIN | EPOLLET | EPOLLONESHOT | EPOLLERR | EPOLLHUP
 
 enum EventType{
 	BROADCAST
@@ -22,7 +28,7 @@ public:
 	:type(new_type), data(new_data), data_length(new_data_length){}
 };
 
-class EventServer{
+class EpollServer{
 protected:
 	std::string name;
 	unsigned long max_connections;
@@ -42,8 +48,8 @@ protected:
 	virtual bool accept_continuation(int* new_client_fd);
 	virtual void close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback);
 public:
-	EventServer(uint16_t port, size_t new_max_connections, std::string new_name = "EventServer");
-	virtual ~EventServer(){}
+	EpollServer(uint16_t port, size_t new_max_connections, std::string new_name = "EpollServer");
+	virtual ~EpollServer(){}
 
 	virtual bool send(int fd, const char* data, size_t data_length);
 	virtual ssize_t recv(int fd, char* data, size_t data_length);

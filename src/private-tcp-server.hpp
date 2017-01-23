@@ -5,9 +5,9 @@
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 
-#include "tcp-epoll-server.hpp"
+#include "tcp-server.hpp"
 
-class PrivateEventServer : public EpollServer{
+class PrivateEpollServer : public EpollServer{
 private:
 	SSL_CTX* ctx;
 	std::unordered_map<int, SSL*> client_ssl;
@@ -16,7 +16,7 @@ private:
 	ssize_t recv(int fd, char* data, size_t data_length);
 	bool accept_continuation(int* new_client_fd);
 public:
-	PrivateEventServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections);
-	~PrivateEventServer();
+	PrivateEpollServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections);
+	~PrivateEpollServer();
 	bool send(int fd, const char* data, size_t data_length);
 };

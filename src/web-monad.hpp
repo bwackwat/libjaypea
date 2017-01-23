@@ -18,8 +18,8 @@
 
 #include "util.hpp"
 #include "json.hpp"
-#include "tcp-event-server.hpp"
-#include "private-event-server.hpp"
+#include "tcp-server.hpp"
+#include "private-tcp-server.hpp"
 
 #define BUFFER_LIMIT 8192
 #define HTTP_404 "<h1>404 Not Found</h1>"
@@ -53,7 +53,7 @@ private:
 	std::unordered_map<std::string, Route*> routemap;
 	std::string public_directory;
 	EpollServer* redirecter;
-	PrivateEventServer* server;
+	PrivateEpollServer* server;
 
 	const char* http_response;
 	size_t http_response_length;

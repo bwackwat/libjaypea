@@ -5,7 +5,7 @@
 
 #include "util.hpp"
 #include "pgsql-model.hpp"
-#include "symmetric-event-server.hpp"
+#include "symmetric-tcp-server.hpp"
 
 static std::string hash_value_argond2d(std::string password){
 	const uint32_t t_cost = 5;
@@ -89,7 +89,7 @@ int main(int argc, char** argv){
 		{posts->table, posts}
 	};
 	
-	SymmetricEventServer server(keyfile, 10000, 1);
+	SymmetricEpollServer server(keyfile, 10000, 1);
 	
 	SymmetricEncryptor encryptor;
 

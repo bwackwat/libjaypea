@@ -1,12 +1,10 @@
 #include <csignal>
 
 #include "util.hpp"
-#include "tcp-event-server.hpp"
-#include "tcp-epoll-server.hpp"
-#include "private-event-server.hpp"
+#include "private-tcp-server.hpp"
 
-PrivateEventServer::PrivateEventServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections)
-:EpollServer(port, max_connections, "PrivateEventServer"){
+PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections)
+:EpollServer(port, max_connections, "PrivateEpollServer"){
 	SSL_library_init();
 	SSL_load_error_strings();
 
@@ -33,12 +31,12 @@ PrivateEventServer::PrivateEventServer(std::string certificate, std::string priv
 }
 
 // Basically does an SSL_free before closing the socket.
-void PrivateEventServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
+void PrivateEpollServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
 	SSL_free(this->client_ssl[*fd]);
 	callback(index, fd);
 }
 
-bool PrivateEventServer::send(int fd, const char* data, size_t data_length){
+bool PrivateEpollServer::send(int fd, const char* data, size_t data_length){
 	int len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
 	switch(SSL_get_error(this->client_ssl[fd], len)){
 	case SSL_ERROR_NONE:
@@ -54,7 +52,7 @@ bool PrivateEventServer::send(int fd, const char* data, size_t data_length){
 	return false;
 }
 
-ssize_t PrivateEventServer::recv(int fd, char* data, size_t data_length){
+ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
 	int len;
 	len = SSL_read(this->client_ssl[fd], data, static_cast<int>(data_length));
 	switch(SSL_get_error(this->client_ssl[fd], len)){
@@ -74,7 +72,7 @@ ssize_t PrivateEventServer::recv(int fd, char* data, size_t data_length){
 	return this->on_read(fd, data, static_cast<ssize_t>(len));
 }
 
-bool PrivateEventServer::accept_continuation(int* new_client_fd){
+bool PrivateEpollServer::accept_continuation(int* new_client_fd){
 	if((this->client_ssl[*new_client_fd] = SSL_new(this->ctx)) == 0){
 		ERROR("SSL_new")
 		ERR_print_errors_fp(stdout);
@@ -95,7 +93,7 @@ bool PrivateEventServer::accept_continuation(int* new_client_fd){
 	return false;
 }
 
-PrivateEventServer::~PrivateEventServer(){
+PrivateEpollServer::~PrivateEpollServer(){
 	SSL_CTX_free(this->ctx);
 	EVP_cleanup();
 }
