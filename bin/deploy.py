@@ -27,8 +27,9 @@ if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
 	newpass = raw_input("Password: ")
 
 newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/web]: ") or "/opt/web"
-
+newhost = raw_input("Enter a hostname [bwackwat.com]: ") or "bwackwat.com"
 newkey = raw_input("Enter a new 96 byte key for comd (enjoy writing a sentence) [pads random letters]: \n")
+
 newkeylen = len(newkey)
 if newkeylen < 96:
 	newkey += ''.join(random.choice(string.ascii_letters) for x in range(96 - newkeylen))
@@ -59,13 +60,13 @@ runcmd:
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
  - chmod +x {0}/bin/deploy.sh
- - {0}/deploy.sh {0} "{1}" {2} {3}
+ - {0}/deploy.sh {0} "{1}" {2} {3} {4}
 
 power_state:
    mode: reboot
 """
 
-cloud_config = cloud_config.format(newdir, newkey, newuser, newpass)
+cloud_config = cloud_config.format(newdir, newkey, newuser, newhost, newpass)
 print cloud_config
 
 print '-----------------------------------------------------------------'

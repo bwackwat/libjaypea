@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 2 ]; then
-	echo "Usage: <cpp files> <executable name> <optional additional libraries/compiler flags>"
+	echo "Usage: <relative path to cpp file> <executable name> <optional additional libraries/compiler flags>"
 	exit
 fi
 
