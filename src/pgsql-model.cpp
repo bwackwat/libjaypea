@@ -14,10 +14,22 @@
 #include "json.hpp"
 #include "pgsql-model.hpp"
 
-PgSqlModel::PgSqlModel(std::string new_conn, std::string new_table, std::vector<Column*> new_cols)
-:table(new_table),
-conn(new_conn),
-cols(new_cols){}
+PgSqlModel::PgSqlModel(std::string new_conn, std::string new_table, std::vector<Column*> new_cols, unsigned char new_access_flags)
+:table(new_table), access_flags(new_access_flags), conn(new_conn), cols(new_cols){
+	this->num_insert_values = 0;
+	for(size_t i = 0; i < this->cols.size(); ++i){
+		if(!(this->cols[i]->flags & COL_AUTO)){
+			this->num_insert_values++;
+		}
+	}
+}
+
+static pqxx::result SqlWrap(pqxx::work* txn, std::string sql){
+	std::cout << "PSQL: |" << sql << "|" << std::endl;
+	pqxx::result res = txn->exec(sql);
+	txn->commit();
+	return res;
+}
 
 JsonObject* PgSqlModel::Error(std::string message){
 	JsonObject* error = new JsonObject(OBJECT);
@@ -40,12 +52,20 @@ JsonObject* PgSqlModel::ResultToJson(pqxx::result* res){
 	return result_json;
 }
 
+JsonObject* PgSqlModel::ResultToJson(pqxx::result::tuple row){
+	JsonObject* result_json= new JsonObject(OBJECT);
+	for(size_t j = 0; j < this->cols.size(); ++j){
+		if(!(this->cols[j]->flags & COL_HIDDEN)){
+			result_json->objectValues[this->cols[j]->name] = new JsonObject(STRING);
+			result_json->objectValues[this->cols[j]->name]->stringValue = row[this->cols[j]->name].as<std::string>();
+		}
+	}
+	return result_json;
+}
+
 JsonObject* PgSqlModel::All(){
 	pqxx::work txn(this->conn);
-	std::string sql = "SELECT * FROM " + this->table + ';';
-	pqxx::result res = txn.exec(sql);
-	txn.commit();
-
+	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + ';');
 	return this->ResultToJson(&res);
 }
 
@@ -55,10 +75,7 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	}
 	
 	pqxx::work txn(this->conn);
-	std::string sql = "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + ';';
-	pqxx::result res = txn.exec(sql);
-	txn.commit();
-
+	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + ';');
 	return this->ResultToJson(&res);
 }
 
@@ -82,8 +99,8 @@ JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
 		}
 	}
 	try{
-		pqxx::result res = txn.exec(sql.str());
-		txn.commit();
+		pqxx::result res = SqlWrap(&txn, sql.str());
+		
 		JsonObject* result = new JsonObject(OBJECT);
 		result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
 		return result;
@@ -101,6 +118,7 @@ bool PgSqlModel::HasColumn(std::string name){
 	}
 	return false;
 }
+
 /*
 static void result_print(pqxx::result result){
 	PRINT("RESULTS:")
@@ -112,6 +130,17 @@ static void result_print(pqxx::result result){
 	}
 }
 */
+
+bool PgSqlModel::IsOwner(std::string id, std::string owner_id){
+	pqxx::work txn(this->conn);
+	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE id = " + txn.quote(id) + ';');
+	
+	if(res[0]["owner_id"].as<std::string>() == owner_id){
+		return true;
+	}
+	return false;
+}
+
 JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, JsonObject*> values){
 	pqxx::work txn(this->conn);
 	std::stringstream sql;
@@ -127,12 +156,12 @@ JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, J
 	}
 	sql << " WHERE id = " + txn.quote(id) + " RETURNING id;";
 	try{
-		pqxx::result res = txn.exec(sql.str());
-		txn.commit();
+		pqxx::result res = SqlWrap(&txn, sql.str());
+		
 		JsonObject* result = new JsonObject(OBJECT);
 		result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
 		return result;
-	}catch(const std::exception &e){
+	}catch(const std::exception& e){
 		PRINT(e.what())
 		return Error("You provided incomplete or bad data.");
 	}
@@ -153,18 +182,23 @@ static std::string hash_value_sha256(std::string token){
 */
 
 JsonObject* PgSqlModel::Access(const std::string& key, const std::string& value, const std::string& password){
-	if(!this->HasColumn("password")){
-		return Error("You cannot gain access to this.");
-	}
+	try{
+		pqxx::work txn(this->conn);
+		pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + ';');
 	
-	pqxx::work txn(this->conn);
-	std::string sql = "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + ';';
-	pqxx::result res = txn.exec(sql);
-	txn.commit();
-	
-	if(res[0]["password"].as<std::string>() == password){
-		return this->ResultToJson(&res);
-	}else{
-		return 0;
+		if(res.size() == 0){
+			return Error("Bad username.");
+		}else if(res[0]["password"].as<std::string>() == password){
+			PRINT("DB: " << res[0]["password"].as<std::string>())
+			PRINT("PS: " << password)
+			return this->ResultToJson(res[0]);
+		}else{
+			PRINT("DB: " << res[0]["password"].as<std::string>())
+			PRINT("PS: " << password)
+			return Error("Bad password.");
+		}
+	}catch(const std::exception &e){
+		PRINT(e.what())
+		return Error("Bad data.");
 	}
 }

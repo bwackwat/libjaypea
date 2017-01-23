@@ -7,11 +7,13 @@
 #include <tuple>
 #include <vector>
 #include <algorithm>
+#include <csignal>
 
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <execinfo.h>
 
 #include "util.hpp"
 
@@ -42,8 +44,19 @@ static std::string get_exe_path()
 	return std::string(result, (count > 0) ? static_cast<size_t>(count) : 0);
 }
 
+[[noreturn]] static void trace_segfault(int sig){
+	void *array[10];
+	int size = backtrace(array, 10);
+
+	fprintf(stderr, "Error: signal %d:\n", sig);
+	backtrace_symbols_fd(array, size, STDERR_FILENO);
+	exit(1);
+}
+
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
+
+	std::signal(SIGSEGV, trace_segfault);
 
 	PRINT("------------------------------------------------------")
 

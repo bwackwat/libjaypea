@@ -151,7 +151,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 										timer_spec.it_interval.tv_nsec = 0;
 										timer_spec.it_value.tv_sec = 10;
 										timer_spec.it_value.tv_nsec = 0;
-										PRINT("TIME " << timer_fd)
+										//PRINT("TIME " << timer_fd)
 										if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
 											perror("timerfd_settime");
 										}else{
@@ -159,7 +159,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 											client_to_timer_map[new_fd] = timer_fd;
 											new_event.events = EVENTS;
 											new_event.data.fd = timer_fd;
-											PRINT("new tfd " << timer_fd)
+											//PRINT("new tfd " << timer_fd)
 											if(epoll_ctl(timeout_epoll_fd, EPOLL_CTL_ADD, timer_fd, &new_event) < 0){
 												perror("epoll_ctl timer add");
 											}

@@ -1,3 +1,5 @@
+#include <random>
+
 #include "web-monad.hpp"
 
 WebMonad::WebMonad(std::string hostname, std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t http_port, uint16_t https_port)
@@ -28,12 +30,36 @@ server(new PrivateEventServer(ssl_certificate, ssl_private_key, https_port, 10))
 	this->http_response_length = response.length();
 }
 
-void WebMonad::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires){
+void WebMonad::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires, bool requires_human){
 	if(path[path.length() - 1] != '/'){
 		path += '/';
 	}
-	this->routemap[method + " /api" + path] = new Route(function, requires);
+	this->routemap[method + " /api" + path] = new Route(function, requires, requires_human);
 }
+
+struct Question{
+	std::string q;
+	std::vector<std::string> a;
+};
+
+static struct Question questions[6] = {
+	{"What is the basic color of the sky?", {"blue"}},
+	{"What is the basic color of grass?", {"green"}},
+	{"What is the basic color of blood?", {"red"}},
+	{"What is the first name of the current president?", {"donald"}},
+	{"What is the last name of the current president?", {"trump"}},
+	{"How many planets are in the solar system?", {"8", "9"}}
+};
+
+static std::random_device rd;
+static std::mt19937 mt(rd());
+static std::uniform_int_distribution<size_t> dist(0, 5);
+
+static struct Question* get_question(){
+	return &questions[dist(mt)];
+}
+
+static std::unordered_map<int, struct Question*> client_questions;
 
 void WebMonad::start(){
 	this->redirecter->on_read = [&](int fd, const char*, ssize_t)->ssize_t{
@@ -56,6 +82,10 @@ void WebMonad::start(){
 	this->routes_string = routes_object->stringify(true);
 
 	PRINT("WebMonad running with routes: " << this->routes_string)
+	
+	this->server->on_connect = [&](int fd){
+		client_questions[fd] = get_question();
+	};
 
 	this->server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		PRINT(data)
@@ -65,16 +95,17 @@ void WebMonad::start(){
 
 		std::string response_body = std::string();
 		std::string response = std::string();
-
+		std::string route = r_obj.GetStr("route");
+		
 		if(r_type == HTTP){
 			std::string clean_route = this->public_directory;
-			for(size_t i = 0; i < r_obj.objectValues["route"]->stringValue.length(); ++i){
-				if(i < r_obj.objectValues["route"]->stringValue.length() - 1 &&
-				r_obj.objectValues["route"]->stringValue[i] == '.' &&
-				r_obj.objectValues["route"]->stringValue[i + 1] == '.'){
+			for(size_t i = 0; i < route.length(); ++i){
+				if(i < route.length() - 1 &&
+				route[i] == '.' &&
+				route[i + 1] == '.'){
 					continue;
 				}
-				clean_route += r_obj.objectValues["route"]->stringValue[i];
+				clean_route += route[i];
 			}
 
 			struct stat route_stat;
@@ -126,29 +157,47 @@ void WebMonad::start(){
 				response_body = HTTP_404;
 			}
 		}else{
-			std::string api_route = r_obj.objectValues["route"]->stringValue;
-			if(api_route.length() >= 4 &&
-			!Util::strict_compare_inequal(api_route.c_str(), "/api", 4)){
-				api_route = r_obj.objectValues["method"]->stringValue + ' ' + api_route;
-				if(api_route[api_route.length() - 1] != '/'){
-					api_route += '/';
+			if(route.length() >= 4 &&
+			!Util::strict_compare_inequal(route.c_str(), "/api", 4)){
+				route = r_obj.GetStr("method") + ' ' + route;
+				if(route[route.length() - 1] != '/'){
+					route += '/';
 				}
 			}
-			PRINT("APIR:" << api_route)
+			PRINT("APIR:" << route)
 
-			if(this->routemap.count(api_route)){
-				for(auto iter = this->routemap[api_route]->requires.begin(); iter != this->routemap[api_route]->requires.end(); ++iter){
-					if(!r_obj.objectValues.count(iter->first) ||
-					r_obj.objectValues[iter->first]->type != iter->second){
+			if(this->routemap.count(route)){
+				for(auto iter = this->routemap[route]->requires.begin(); iter != this->routemap[route]->requires.end(); ++iter){
+					if(!r_obj.HasObj(iter->first, iter->second)){
 						response_body = "{\"error\":\"'" + iter->first + "' requries a " + JsonObject::typeString[iter->second] + ".\"}";
 						break;
 					}
 				}
 				if(response_body.empty()){
-					if((response_body = this->routemap[api_route]->function(&r_obj)).empty()){
+					if(this->routemap[route]->requires_human){
+						if(!r_obj.HasObj("answer", STRING)){
+							response_body = "{\"result\":\"You need to answer the question: " + client_questions[fd]->q + "\"}";
+						}else{
+							for(auto sa : client_questions[fd]->a){
+								if(r_obj.GetStr("answer") == sa){
+									response_body = this->routemap[route]->function(&r_obj);
+									client_questions[fd] = get_question();
+									break;
+								}
+							}
+							if(response_body.empty()){
+								response_body = "{\"error\":\"You provided an incorrect answer.\"}";
+							}
+						}
+					}else{
+						response_body = this->routemap[route]->function(&r_obj);
+					}
+					if(response_body.empty()){
 						response_body = "{\"error\":\"The data could not be acquired.\"}";
 					}
 				}
+			}else if(route == "GET /api/question/"){
+				response_body = "{\"result\":\"Human verification question: " + client_questions[fd]->q + "\"}";
 			}else{
 				response_body = "{\"error\":\"Invalid API route.\"}";
 			}

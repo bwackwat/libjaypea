@@ -256,6 +256,14 @@ JsonObject::~JsonObject(){
 	}
 }
 
+bool JsonObject::HasObj(const std::string& key, enum JsonType t){
+	return this->objectValues.count(key) && this->objectValues[key]->type == t;
+}
+
+std::string JsonObject::GetStr(const char* key){
+	return this->objectValues[key]->stringValue;
+}
+
 JsonObject* JsonObject::operator[](const char* key){
 	return this->objectValues[key];
 }

@@ -20,7 +20,7 @@ case "${argv[@]}" in *"OPT"*)
 	argv=( "${argv[@]/"OPT"}" )
 esac
 
-compiler="clang++ -std=c++11 -g $optimize -I$srcdir/ \
+compiler="clang++ -std=c++11 -rdynamic -g $optimize -I$srcdir/ \
 -Weverything -Wpedantic -Wconversion \
 -Wno-c++98-compat -Wno-padded \
 -Wno-exit-time-destructors -Wno-global-constructors"

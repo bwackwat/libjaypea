@@ -34,10 +34,11 @@ class Route{
 public:
 	std::function<std::string(JsonObject*)> function;
 	std::unordered_map<std::string, JsonType> requires;
+	bool requires_human;
 
-	Route(std::function<std::string(JsonObject*)> new_function, std::unordered_map<std::string, JsonType> new_requires)
-	:function(new_function),
-	requires(new_requires){}
+	Route(std::function<std::string(JsonObject*)> new_function, std::unordered_map<std::string, JsonType> new_requires, bool new_requires_human)
+	:function(new_function), requires(new_requires), requires_human(new_requires_human)
+	{}
 };
 
 class WebMonad{
@@ -46,7 +47,7 @@ public:
 	std::string routes_string;
 
 	WebMonad(std::string hostname, std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t http_port = 80, uint16_t https_port = 443);
-	void route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>());
+	void route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(), bool requires_human = false);
 	void start();
 private:
 	std::unordered_map<std::string, Route*> routemap;

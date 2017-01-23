@@ -10,12 +10,18 @@ SymmetricEncryptor::SymmetricEncryptor(){
 }
 
 std::string SymmetricEncryptor::encrypt(std::string data){
+	byte salt[CryptoPP::AES::BLOCKSIZE];
+	this->random_pool.GenerateBlock(salt, CryptoPP::AES::BLOCKSIZE);
+	std::string salted(reinterpret_cast<const char*>(salt), CryptoPP::AES::BLOCKSIZE);
+	salted += data;
+	// Added salt.
+	
 	std::string token;
 	CryptoPP::StringSink* sink = new CryptoPP::StringSink(token);
 	CryptoPP::Base64Encoder* base64_enc = new CryptoPP::Base64Encoder(sink, false);
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption enc(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 	CryptoPP::StreamTransformationFilter* aes_enc = new CryptoPP::StreamTransformationFilter(enc, base64_enc);
-	CryptoPP::StringSource enc_source(data, true, aes_enc);
+	CryptoPP::StringSource enc_source(salted, true, aes_enc);
 	return token;
 }
 
@@ -26,6 +32,9 @@ std::string SymmetricEncryptor::decrypt(std::string token){
 	CryptoPP::StreamTransformationFilter* aes_dec = new CryptoPP::StreamTransformationFilter(dec, sink);
 	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
 	CryptoPP::StringSource dec_source(token, true, base64_dec);
+
+	// Ignore salt.
+	data.erase(0, CryptoPP::AES::BLOCKSIZE);
 	return data;
 }
 

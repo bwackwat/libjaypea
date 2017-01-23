@@ -40,7 +40,9 @@ public:
 	JsonObject(std::string new_stringValue);
 	JsonObject();
 	~JsonObject();
-
+	
+	bool HasObj(const std::string& key, enum JsonType t);
+	std::string GetStr(const char* key);
 	JsonObject* operator[](const char* index);
 	JsonObject* operator[](size_t index);
 	JsonObject* operator[](int index);
