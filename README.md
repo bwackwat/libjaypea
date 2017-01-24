@@ -15,7 +15,7 @@ Uses:
 
 1. Execute some commands to load and build the library:
 	```c++
-git clone https://github.com/bwackwat/libjaypea
+# git clone https://github.com/bwackwat/libjaypea
 cd libjaypea
 bin/setup-centos7.sh
 bin/build-library.sh
