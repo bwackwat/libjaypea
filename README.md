@@ -14,7 +14,7 @@ Uses:
 ## Implementation Example
 
 1. Execute some commands to load and build the library:
-	```c
+	```c++
 git clone https://github.com/bwackwat/libjaypea
 cd libjaypea
 bin/setup-centos7.sh
@@ -40,13 +40,13 @@ int main(int, char**){
 }
 ```
 3. Build your code:
-	```c
+	```c++
 bin/build-with-library.sh
 > Usage: <relative path to cpp file> <executable name> <optional additional libraries/compiler flags>
 bin/build-with-library.sh echo.cpp echo
 ```
 4. Run your code:
-	```c
+	```c++
 build/echo
 ```
 
