@@ -40,13 +40,13 @@ int main(int, char**){
 }
 ```
 3. Build your code:
-```
+ ```
 bin/build-with-library.sh
 > Usage: <relative path to cpp file> <executable name> <optional additional libraries/compiler flags>
 bin/build-with-library.sh echo.cpp echo
 ```
 4. Run your code:
-```
+ ```
 build/echo
 ```
 
