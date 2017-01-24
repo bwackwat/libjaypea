@@ -13,15 +13,15 @@ Uses:
 
 ## Implementation Example
 
- 1. Execute some commands to load and build the library:
-```bash
+1. Execute some commands to load and build the library:
+	```bash
 git clone https://github.com/bwackwat/libjaypea
 cd libjaypea
 bin/setup-centos7.sh
 bin/build-library.sh
 ```
- 2. Implement the library e.g. a simple echo server (echo.cpp):
-```c++
+2. Implement the library e.g. a simple echo server (echo.cpp):
+	```c++
 #include "tcp-server.hpp"
 
 int main(int, char**){
@@ -39,14 +39,14 @@ int main(int, char**){
 	return 0;
 }
 ```
- 3. Build your code:
-```bash
+3. Build your code:
+	```bash
 bin/build-with-library.sh
 > Usage: <relative path to cpp file> <executable name> <optional additional libraries/compiler flags>
 bin/build-with-library.sh echo.cpp echo
 ```
- 4. Run your code:
-```bash
+4. Run your code:
+	```bash
 build/echo
 ```
 
