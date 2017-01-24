@@ -14,14 +14,14 @@ Uses:
 ## Implementation Example
 
 1. Execute some commands to load and build the library:
-```
+ ```
 git clone https://github.com/bwackwat/libjaypea
 cd libjaypea
 bin/setup-centos7.sh
 bin/build-library.sh
 ```
 2. Implement the library e.g. a simple echo server (echo.cpp):
-```c++
+ ```c++
 #include "tcp-server.hpp"
 
 int main(int, char**){
