@@ -45,6 +45,10 @@ int main(int argc, char **argv){
 		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + server.routes_string + "}";
 	});
 
+	/*
+		USER
+	*/
+
 	server.route("GET", "/users", [&](JsonObject* json)->std::string{
 		return provider.communicate(All("users",
 			json->GetStr("token")));
@@ -74,6 +78,35 @@ int main(int argc, char **argv){
 			json->GetStr("username"),
 			json->GetStr("password")));
 	}, {{"username", STRING}, {"password", STRING}});
+
+	/*
+		BLOG
+	*/
+
+	server.route("GET", "/blog", [&](JsonObject* json)->std::string{
+		return provider.communicate(Where("posts",
+			json->GetStr("key"),
+			json->GetStr("value")));
+	}, {{"key", STRING}, {"value", STRING}});
+
+	server.route("POST", "/blog", [&](JsonObject* json)->std::string{
+		return provider.communicate(Insert("posts",
+			json->objectValues["values"],
+			json->GetStr("token")));
+	}, {{"values", ARRAY}, {"token", STRING}});
+
+	server.route("PUT", "/blog", [&](JsonObject* json)->std::string{
+		return provider.communicate(Update("posts",
+			json->GetStr("id"),
+			json->objectValues["values"],
+			json->GetStr("token")));
+	}, {{"id", STRING}, {"values", OBJECT}, {"token", STRING}});
+
+	/*
+		POI
+	*/
+
+	
 
 	server.start();
 }

@@ -82,16 +82,16 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 				}
 				switch(arg.type){
 				case ARG_STRING:
-					PRINT("     --" << arg.name << " <string:" << arg.name << '>')
+					PRINT("     --" << arg.name << " <string>")
 					for(auto& alt : arg.alts){
-						PRINT("  OR " << alt << " <string:" << arg.name << '>')
+						PRINT("  OR " << alt << " <string>")
 					}
 					PRINT("     (Default value: " << arg.string_value.get() << ")\n")
 					break;
 				case ARG_INTEGER:
-					PRINT("     --" << arg.name << " <integer:" << arg.name << '>')
+					PRINT("     --" << arg.name << " <integer>")
 					for(auto& alt : arg.alts){
-						PRINT("  OR " << alt << " <integer:" << arg.name << '>')
+						PRINT("  OR " << alt << " <integer")
 					}
 					PRINT("     (Default value: " << *arg.integer_value << ")\n")
 					break;

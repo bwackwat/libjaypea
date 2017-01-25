@@ -60,7 +60,7 @@ runcmd:
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
  - chmod +x {0}/bin/deploy.sh
- - {0}/deploy.sh {0} "{1}" {2} {3} {4}
+ - {0}/bin/deploy.sh {0} "{1}" {2} {3} {4}
 
 power_state:
    mode: reboot
@@ -101,4 +101,4 @@ rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers
 
 print '-----------------------------------------------------------------'
 
-print "DONE!"
+print "Deployed! Check your DigitalOcean dashboard for the new droplet."
