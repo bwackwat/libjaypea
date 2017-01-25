@@ -66,6 +66,7 @@ ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
 		return -2;
 	default:
 		ERROR("other SSL_read")
+                ERR_print_errors_fp(stdout);
 		return -1;
 	}
 	data[len] = 0;

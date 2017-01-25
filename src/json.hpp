@@ -9,7 +9,6 @@
 enum JsonType {
 	NOTYPE,
 	STRING,
-	NUMBER,
 	OBJECT,
 	ARRAY
 };
@@ -28,7 +27,6 @@ public:
 	static std::map<enum JsonType, std::string> typeString;
 
 	std::string stringValue;
-	double numberValue;
 	std::unordered_map<std::string, JsonObject*> objectValues;
 	std::vector<JsonObject*> arrayValues;
 

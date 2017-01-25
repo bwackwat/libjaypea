@@ -106,7 +106,24 @@ int main(int argc, char **argv){
 		POI
 	*/
 
-	
+	server.route("GET", "/poi", [&](JsonObject* json)->std::string{
+		return provider.communicate(Where("poi",
+			json->GetStr("key"),
+			json->GetStr("value")));
+	}, {{"key", STRING}, {"value", STRING}});
+
+	server.route("POST", "/poi", [&](JsonObject* json)->std::string{
+		return provider.communicate(Insert("poi",
+			json->objectValues["values"],
+			json->GetStr("token")));
+	}, {{"values", ARRAY}, {"token", STRING}});
+
+	server.route("PUT", "/poi", [&](JsonObject* json)->std::string{
+		return provider.communicate(Update("poi",
+			json->GetStr("id"),
+			json->objectValues["values"],
+			json->GetStr("token")));
+	}, {{"id", STRING}, {"values", OBJECT}, {"token", STRING}});
 
 	server.start();
 }

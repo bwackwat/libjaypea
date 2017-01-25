@@ -7,7 +7,7 @@
 #include "pgsql-model.hpp"
 #include "symmetric-tcp-server.hpp"
 
-static std::string hash_value_argond2d(std::string password){
+static std::string hash_value_argon2d(std::string password){
 	const uint32_t t_cost = 5;
 	const uint32_t m_cost = 1 << 16; //about 65MB
 	const uint32_t parallelism = 1; //TODO: can use std::thread::hardware_concurrency();?
@@ -161,10 +161,10 @@ int main(int argc, char** argv){
 						}
 					}
 					if(response == 0){
-						// TODO: Password protected tables hash values for column 2!
+						// TODO: Password protected tables hash values for column 1!
 						if(table->HasColumn("password")){
 							request->objectValues["values"]->arrayValues[1]->stringValue =
-								hash_value_argond2d(request->objectValues["values"]->arrayValues[1]->stringValue);
+								hash_value_argon2d(request->objectValues["values"]->arrayValues[1]->stringValue);
 						}
 						response = table->Insert(request->objectValues["values"]->arrayValues);
 					}
@@ -207,7 +207,7 @@ int main(int argc, char** argv){
 				if(table_name == "users"){
 					if(request->HasObj("username", STRING) &&
 					request->HasObj("password", STRING)){
-		      			JsonObject* token = table->Access("username", request->GetStr("username"), hash_value_argond2d(request->GetStr("password")));
+		      			JsonObject* token = table->Access("username", request->GetStr("username"), hash_value_argon2d(request->GetStr("password")));
 						if(token->objectValues.count("error")){
 							response = token;
 						}else{

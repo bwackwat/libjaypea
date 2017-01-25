@@ -14,7 +14,6 @@
 std::map<enum JsonType, std::string> JsonObject::typeString = {
 	{ NOTYPE, "No Json" },
 	{ STRING, "String" },
-	{ NUMBER, "Number" },
 	{ OBJECT, "Object" },
 	{ ARRAY, "Array" }
 };
@@ -181,8 +180,6 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 		return "";
 	case STRING:
 		return escape(this->stringValue);
-	case NUMBER:
-		return std::to_string(this->numberValue);
 	case OBJECT:
 		ss << '{';
 		if(pretty){
