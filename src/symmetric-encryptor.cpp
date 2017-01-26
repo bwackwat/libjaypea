@@ -57,9 +57,9 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 }
 
 std::string SymmetricEncryptor::encrypt(std::string data, int transaction){
-	byte salt[CryptoPP::AES::BLOCKSIZE];
-	this->random_pool.GenerateBlock(salt, CryptoPP::AES::BLOCKSIZE);
-	std::string salted(reinterpret_cast<const char*>(salt), CryptoPP::AES::BLOCKSIZE);
+	byte salt[CryptoPP::AES::MAX_KEYLENGTH];
+	this->random_pool.GenerateBlock(salt, CryptoPP::AES::MAX_KEYLENGTH);
+	std::string salted(reinterpret_cast<const char*>(salt), CryptoPP::AES::MAX_KEYLENGTH);
 	salted += static_cast<char>(transaction % 255);
 	salted += data;
 	std::string new_data;
@@ -82,11 +82,11 @@ std::string SymmetricEncryptor::decrypt(std::string data, int transaction){
 	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
 	CryptoPP::StringSource dec_source(data, true, base64_dec);
 
-	if(static_cast<unsigned char>(new_data[16]) != static_cast<unsigned char>(transaction % 255)){
-		PRINT("got " << static_cast<int>(new_data[16]) << " expected " << transaction)
+	if(static_cast<unsigned char>(new_data[CryptoPP::AES::MAX_KEYLENGTH]) != static_cast<unsigned char>(transaction % 255)){
+		PRINT("got " << static_cast<int>(new_data[CryptoPP::AES::MAX_KEYLENGTH]) << " expected " << transaction)
 		throw CryptoPP::Exception(CryptoPP::BERDecodeErr::INVALID_DATA_FORMAT, "Bad transaction number.");
 	}
-	new_data.erase(0, CryptoPP::AES::BLOCKSIZE + 1);
+	new_data.erase(0, CryptoPP::AES::MAX_KEYLENGTH + 1);
 	return new_data;
 }
 
@@ -94,8 +94,8 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/, 
 	// Might fix encryption buggies...
 	//std::string send_data = this->encrypt(data, data_length);
 	std::string send_data = this->encrypt(data, transaction);
-	PRINT("SDATA|" << data << '|')
 	ssize_t len;
+	PRINT("SDATA|" << send_data << '|')
 	if((len = write(fd, send_data.c_str(), send_data.length())) < 0){
 		ERROR("encryptor write")
 		return true;
