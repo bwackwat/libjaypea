@@ -403,7 +403,9 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 				it++;
 				new_value += '"';
 			}else{
-				new_value += *it;
+				if(*it != '\r'){
+					new_value += *it;
+				}
 			}
 			break;
 		case 2:

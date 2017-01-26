@@ -64,8 +64,6 @@ void HttpsApi::start(){
 		enum RequestResult r_type = Util::parse_http_api_request(data, &r_obj);
 		PRINT("JSON:" << r_obj.stringify(true))
 
-		PRINT("APLEAPL|" << r_obj.GetStr("Accept-Encoding") << '|')
-
 		std::string response_body = std::string();
 		std::string response = std::string();
 		std::string route = r_obj.GetStr("route");

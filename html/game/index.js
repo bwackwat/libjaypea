@@ -2,9 +2,13 @@ window.onload = function() {
 
 var status = document.getElementById("status");
 
+var msg;
+
 function connectionSuccess(e){
-	console.log("Success!");
-	console.log(e);
+	msg = {};
+	msg.username = prompt("Please enter your old or new username");
+	msg.secret = prompt("Please enter your old or new secret");
+	ws.send(JSON.stringify(msg));
 }
 
 function receivedPacket(e){
