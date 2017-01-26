@@ -22,7 +22,7 @@ function connectionError(e){
 	console.log(e);
 }
 
-var ws = new WebSocket("wss://" + window.location.hostname + ":11000/");
+var ws = new WebSocket("ws://" + window.location.hostname + ":11000/");
 ws.onopen = connectionSuccess;
 ws.onmessage = receivedPacket;
 ws.onclose = connectionClosed;

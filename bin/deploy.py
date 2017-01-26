@@ -87,7 +87,7 @@ for image in images["images"]:
 
 print '-----------------------------------------------------------------'
 
-rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers, json={
+newdroplet = rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers, json={
 	"name":raw_input("Enter a name for the droplet: "),
 	"region":"sfo1",
 	"size":"512mb",
@@ -99,6 +99,22 @@ rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers
 	"user_data":cloud_config
 }))
 
+#newid = newdroplet["droplet"]["id"]
+
 print '-----------------------------------------------------------------'
+
+#fips = json.loads(requests.get("https://api.digitalocean.com/v2/floating_ips?page=1&per_page=20", headers=headers).content)
+#for fip in fips["floating_ips"]:
+#	print "\nFloating IP:"
+#	print fip["ip"]
+#	print "Droplet: " + (fip["droplet"]["name"] if fip["droplet"] else "UNASSIGNED")
+
+#print '-----------------------------------------------------------------'
+
+#newfip = raw_input("If you want to assign the new droplet to a floating ip, enter the ip [n]: ") or "n";
+#if(newfip != "n"):
+#	rprint(requests.post("https://api.digitalocean.com/v2/floating_ips/" + newfip + " /actions", headers=headers, json={"type":"assign","droplet_id":newid}))
+
+#print '-----------------------------------------------------------------'
 
 print "Deployed! Check your DigitalOcean dashboard for the new droplet."

@@ -27,6 +27,13 @@ PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string priv
 
 	std::signal(SIGPIPE, SIG_IGN);
 
+	SSL_CTX_set_mode(this->ctx, SSL_OP_NO_SSLv3);
+
+	if(SSL_CTX_set_cipher_list(this->ctx, "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS") == 0){
+                ERR_print_errors_fp(stdout);
+		throw std::runtime_error(this->name + "SSL_CTX_set_cipher_list");
+	}
+
 //	PRINT("SSL Mode: " << SSL_CTX_set_mode(this->ctx, SSL_MODE_ENABLE_PARTIAL_WRITE))
 }
 

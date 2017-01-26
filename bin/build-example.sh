@@ -31,6 +31,7 @@ build chat-client
 
 build message-api
 build bwackwat "-lcryptopp"
+build wss-server "-lcryptopp"
 build http-redirecter
 build echo-server
 build tcp-client

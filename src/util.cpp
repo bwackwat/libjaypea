@@ -261,3 +261,170 @@ std::string Util::get_redirection_html(const std::string& hostname){
 		response_body;
 	return response;
 }
+
+enum RequestResult Util::parse_http_api_request(const char* request, JsonObject* request_obj){
+	const char* it = request;
+	bool exit_http_parse = false;
+
+	request_obj->objectValues["method"] = new JsonObject("GET");
+	request_obj->objectValues["route"] = new JsonObject(STRING);
+	request_obj->objectValues["protocol"] = new JsonObject("JPON");
+
+	if(!strict_compare_inequal(request, "GET /", 5)){
+		it += 5;
+	}else if(!strict_compare_inequal(request, "POST /", 6)){
+		request_obj->objectValues["method"]->stringValue = "POST";
+		it += 6;
+	}else if(!strict_compare_inequal(request, "PUT /", 5)){
+		request_obj->objectValues["method"]->stringValue = "PUT";
+		it += 5;
+	}else{
+		request_obj->parse(it);
+		// Your HTTP is just getting ignored.
+		return API;
+	}
+	
+	int state = 1;
+	std::string new_key = "";
+	std::string new_value = "/";
+
+
+	/*
+		1 = get route
+		2 = get route parameter key
+		3 = get route parameter value
+		4 = get protocol
+		5 = get header key
+		6 = get header value
+		7+ = finding newlines and carriage returns
+		8 = found \r\n\r\n, if api route, will parse json in request body
+	*/
+
+	for(; *it; ++it){
+		if(exit_http_parse){
+			break;
+		}
+		switch(*it){
+		case ' ':
+			if(state == 1){
+				if(new_value.length() == 0){
+					exit_http_parse = true;
+				}else{
+					request_obj->objectValues["route"]->stringValue = new_value;
+					state = 4;
+					new_value = "";
+				}
+				continue;
+			}else if(state == 2){
+				state = 4;
+				continue;
+			}else if(state == 3){
+				if(!request_obj->objectValues.count(new_key)){
+					request_obj->objectValues[new_key] = new JsonObject();
+				}
+				request_obj->objectValues[new_key]->type = NOTYPE;
+				request_obj->objectValues[new_key]->parse(new_value.c_str());
+				if(request_obj->objectValues[new_key]->type == NOTYPE){
+					request_obj->objectValues[new_key]->type = STRING;
+					request_obj->objectValues[new_key]->stringValue = new_value;
+				}
+				state = 4;
+				new_value = "";
+				continue;
+			}
+			break;
+		case '?':
+			if(state == 1){
+				request_obj->objectValues["route"]->stringValue = new_value;
+				new_key = "";
+				state = 2;
+				continue;
+			}
+			break;
+		case '=':
+			if(state == 2){
+				new_value = "";
+				state = 3;
+				continue;
+			}
+			break;
+		case '&':
+			if(state == 3){
+				if(!request_obj->objectValues.count(new_key)){
+					request_obj->objectValues[new_key] = new JsonObject();
+				}
+				request_obj->objectValues[new_key]->type = NOTYPE;
+				request_obj->objectValues[new_key]->parse(new_value.c_str());
+				if(request_obj->objectValues[new_key]->type == NOTYPE){
+					request_obj->objectValues[new_key]->type = STRING;
+					request_obj->objectValues[new_key]->stringValue = new_value;
+				}
+				new_key = "";
+				state = 2;
+				continue;
+			}
+			break;
+		case '\n':
+			if(state == 4){
+				request_obj->objectValues["protocol"]->stringValue = new_value;
+				new_key = "";
+				state = 5;
+				continue;
+			}else if(state == 5){
+				state = 7;
+			}else if(state == 6){
+				if(!request_obj->objectValues.count(new_key)){
+					request_obj->objectValues[new_key] = new JsonObject();
+				}
+				request_obj->objectValues[new_key]->type = STRING;
+				request_obj->objectValues[new_key]->stringValue = new_value;
+				new_key = "";
+				state = 5;
+				continue;
+			}
+			break;
+		case ':':
+			if(state == 5){
+				++it;
+				new_value = "";
+				state = 6;
+				continue;
+			}
+			break;
+		}
+		switch(state){
+		case 0:
+		case 1:
+		case 3:
+		case 4:
+		case 6:
+			if(*it == '%' && *(it + 1) == '2' && *(it + 1) == '2'){
+				it++;
+				it++;
+				new_value += '"';
+			}else{
+				new_value += *it;
+			}
+			break;
+		case 2:
+		case 5:
+			new_key += *it;
+			break;
+		default:
+			if(*it == '\r' || *it == '\n'){
+				state++;
+			}
+			if(state >= 8){
+				exit_http_parse = true;
+			}
+		}
+	}
+
+	if(request_obj->objectValues["route"]->stringValue.length() >= 4 &&
+	request_obj->objectValues["route"]->stringValue.substr(0, 4) == "/api"){
+		request_obj->parse(it);
+		return HTTP_API;
+	}
+
+	return HTTP;
+}

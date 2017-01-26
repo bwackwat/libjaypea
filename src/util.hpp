@@ -55,6 +55,12 @@ struct Argument {
 	bool* boolean_value;
 };
 
+enum RequestResult {
+	HTTP,
+	HTTP_API,
+	API
+};
+
 class Util{
 private:
 	static std::vector<struct Argument> arguments;
@@ -73,5 +79,7 @@ public:
 	static void set_non_blocking(int fd);
 
 	static std::string get_redirection_html(const std::string& hostname);
+
+	static enum RequestResult parse_http_api_request(const char* request, JsonObject* request_obj);
 };
 

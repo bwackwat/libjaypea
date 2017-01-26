@@ -24,12 +24,6 @@
 #define BUFFER_LIMIT 8192
 #define HTTP_404 "<h1>404 Not Found</h1>"
 
-enum RequestResult {
-	HTTP,
-	HTTP_API,
-	API
-};
-
 class Route{
 public:
 	std::function<std::string(JsonObject*)> function;
@@ -54,6 +48,4 @@ private:
 	std::string public_directory;
 
 	PrivateEpollServer* server;
-
-	enum RequestResult parse_request(const char* request, JsonObject* request_obj);
 };
