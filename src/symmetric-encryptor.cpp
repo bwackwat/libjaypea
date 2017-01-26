@@ -94,6 +94,7 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/, 
 	// Might fix encryption buggies...
 	//std::string send_data = this->encrypt(data, data_length);
 	std::string send_data = this->encrypt(data, transaction);
+	PRINT("SDATA|" << data << '|')
 	ssize_t len;
 	if((len = write(fd, send_data.c_str(), send_data.length())) < 0){
 		ERROR("encryptor write")
@@ -121,6 +122,7 @@ std::function<ssize_t(int, const char*, size_t)> callback, int transaction){
 		return -2;
 	}else{
 		data[len] = 0;
+		PRINT("RDATA|" << data << '|')
 		try{
 			// Might fix decryption buggies...
 			//recv_data = this->decrypt(std::string(data, len));
