@@ -1,3 +1,5 @@
+![Jay got pea.](/html/favicon.png?raw=true = 160x160)
+
 # libjaypea
 
 A C++11 networking library with examples.
