@@ -1,4 +1,4 @@
-<img src="/html/favicon.png" alt="Jay got pea." style="width:160px;height:160px;">
+<img src="/html/favicon.png" alt="Jay got pea." width=160px height=160px>
 
 # libjaypea
 
