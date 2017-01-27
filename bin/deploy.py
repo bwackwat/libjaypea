@@ -55,7 +55,6 @@ cloud_config = """
 #cloud-config
 
 runcmd:
- - useradd {2}
  - yum -y install git
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
