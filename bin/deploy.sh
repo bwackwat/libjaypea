@@ -9,6 +9,8 @@ if [ $# -lt 4 ]; then
 	exit
 fi
 
+useradd $3
+
 if ! [ -z $5 ]; then
 	echo "$5" | passwd "$3" --stdin
 fi
