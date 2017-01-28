@@ -18,7 +18,8 @@ PgSqlModel::PgSqlModel(std::string new_conn, std::string new_table, std::vector<
 :table(new_table), access_flags(new_access_flags), conn(new_conn), cols(new_cols){
 	this->num_insert_values = 0;
 	for(size_t i = 0; i < this->cols.size(); ++i){
-		if(!(this->cols[i]->flags & COL_AUTO)){
+		if(!(this->cols[i]->flags & COL_AUTO) &&
+		Util::strict_compare_inequal(this->cols[i]->name, "owner_id", 8)){
 			this->num_insert_values++;
 		}
 	}
@@ -75,14 +76,14 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	}
 	
 	pqxx::work txn(this->conn);
-	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + ';');
+	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + " ORDER BY created_on DESC;");
 	return this->ResultToJson(&res);
 }
 
 JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
 	pqxx::work txn(this->conn);
 	std::stringstream sql;
-	sql << "INSERT INTO " << this->table << "( " ;
+	sql << "INSERT INTO " << this->table << " (" ;
 	for(size_t i = 0; i < this->cols.size(); ++i){
 		if(i < this->cols.size() - 1 && !(this->cols[i + 1]->flags & COL_AUTO)){
 			sql << this->cols[i]->name << ", ";

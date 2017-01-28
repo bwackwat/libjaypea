@@ -147,7 +147,7 @@ void HttpsApi::start(){
 				if(response_body.empty()){
 					if(this->routemap[route]->requires_human){
 						if(!r_obj.HasObj("answer", STRING)){
-							response_body = "{\"result\":\"You need to answer the question: " + client_questions[fd]->q + "\"}";
+							response_body = "{\"error\":\"You need to answer the question: " + client_questions[fd]->q + "\"}";
 						}else{
 							for(auto sa : client_questions[fd]->a){
 								if(r_obj.GetStr("answer") == sa){

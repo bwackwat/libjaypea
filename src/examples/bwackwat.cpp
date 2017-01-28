@@ -64,7 +64,7 @@ int main(int argc, char **argv){
 	server.route("POST", "/user", [&](JsonObject* json)->std::string{	
 		return provider.communicate(Insert("users",
 			json->objectValues["values"]));
-	}, {{"values", ARRAY}}, true);
+	}, {{"values", ARRAY}}/*, true TODO ENABLE CAPTCHA LOL! */);
 	
 	server.route("PUT", "/user", [&](JsonObject* json)->std::string{	
 		return provider.communicate(Update("users",
@@ -84,10 +84,8 @@ int main(int argc, char **argv){
 	*/
 
 	server.route("GET", "/blog", [&](JsonObject* json)->std::string{
-		return provider.communicate(Where("posts",
-			json->GetStr("key"),
-			json->GetStr("value")));
-	}, {{"key", STRING}, {"value", STRING}});
+		return provider.communicate(Where("posts", "username", json->GetStr("username")));
+	}, {{"username", STRING}});
 
 	server.route("POST", "/blog", [&](JsonObject* json)->std::string{
 		return provider.communicate(Insert("posts",

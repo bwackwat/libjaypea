@@ -98,6 +98,7 @@ int main(int argc, char** argv){
 		JsonObject* request = new JsonObject();
 		request->parse(data);
 		JsonObject* response = 0;
+		PRINT(request->stringify(true))
 
 		if(request->objectValues.count("table") &&
 		request->objectValues.count("token") &&
@@ -136,9 +137,14 @@ int main(int argc, char** argv){
 						if(token.objectValues["username"]->stringValue != admin){
 							response = PgSqlModel::Error("You cannot gain access to this.");
 						}
+					}else if(table->access_flags & ACCESS_USER &&
+					request->objectValues["key"]->stringValue == "username"){
+						JsonObject* user = users->Where("username", request->GetStr("value"));
+						response = table->Where("owner_id", user->arrayValues[0]->GetStr("id"));
+						delete user;
 					}
 					if(response == 0){
-						response = table->Where(request->objectValues["key"]->stringValue, request->objectValues["value"]->stringValue);
+						response = table->Where(request->GetStr("key"), request->GetStr("value"));
 					}
 				}else{
 					response = PgSqlModel::Error("Missing \"key\" and/or \"value\" JSON strings.");
@@ -150,11 +156,12 @@ int main(int argc, char** argv){
 					}else if(table->access_flags & ACCESS_USER){
 						JsonObject token;
 						try{
-							token.parse(encryptor.decrypt(request->objectValues["token"]->stringValue).c_str());
+							token.parse(encryptor.decrypt(request->GetStr("token")).c_str());
+							PRINT(token.stringify(true))
 							// Since this table contains owner_id, get the correct id from the valid token.
 							request->objectValues["values"]->arrayValues.insert(
 								request->objectValues["values"]->arrayValues.begin(),
-								token.objectValues["id"]);
+								new JsonObject(token.GetStr("id")));
 						}catch(const std::exception& e){
 							PRINT(e.what())
 							response = PgSqlModel::Error("You cannot gain access to this.");
@@ -166,6 +173,7 @@ int main(int argc, char** argv){
 							request->objectValues["values"]->arrayValues[1]->stringValue =
 								hash_value_argon2d(request->objectValues["values"]->arrayValues[1]->stringValue);
 						}
+						PRINT(request->stringify(true))
 						response = table->Insert(request->objectValues["values"]->arrayValues);
 					}
 				}else{
@@ -181,7 +189,7 @@ int main(int argc, char** argv){
 							 PRINT("TOKEN: " + encryptor.decrypt(request->GetStr("token")));
 							if(table->access_flags & ACCESS_USER){
 								// You need to have a token with the same owner_id.
-								if(!table->IsOwner(request->objectValues["id"]->stringValue, token.objectValues["id"]->stringValue) &&
+								if(!table->IsOwner(request->GetStr("id"), token.GetStr("id")) &&
 								token.objectValues["username"]->stringValue != admin){
 									response = PgSqlModel::Error("You cannot gain access to this.");
 								}
@@ -216,6 +224,7 @@ int main(int argc, char** argv){
 							// token->objectValues["verify"] = new JsonObject(hash_value_sha256(password.substr(password.length() / 2)));
 						
 							response = new JsonObject(OBJECT);
+							response->objectValues["id"] = new JsonObject(token->GetStr("id"));
 							response->objectValues["token"] = new JsonObject(encryptor.encrypt(token->stringify()));
 							delete token;
 						}

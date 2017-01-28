@@ -3,39 +3,29 @@
 #include "util.hpp"
 #include "symmetric-encryptor.hpp"
 
-
 SymmetricEncryptor::SymmetricEncryptor(){
 	this->random_pool.GenerateBlock(this->key, CryptoPP::AES::MAX_KEYLENGTH);
 	this->random_pool.GenerateBlock(this->iv, CryptoPP::AES::BLOCKSIZE);
 }
 
 std::string SymmetricEncryptor::encrypt(std::string data){
-	byte salt[CryptoPP::AES::BLOCKSIZE];
-	this->random_pool.GenerateBlock(salt, CryptoPP::AES::BLOCKSIZE);
-	std::string salted(reinterpret_cast<const char*>(salt), CryptoPP::AES::BLOCKSIZE);
-	salted += data;
-	// Added salt.
-	
-	std::string token;
-	CryptoPP::StringSink* sink = new CryptoPP::StringSink(token);
+	std::string new_data;
+	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
 	CryptoPP::Base64Encoder* base64_enc = new CryptoPP::Base64Encoder(sink, false);
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption enc(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 	CryptoPP::StreamTransformationFilter* aes_enc = new CryptoPP::StreamTransformationFilter(enc, base64_enc);
-	CryptoPP::StringSource enc_source(salted, true, aes_enc);
-	return token;
+	CryptoPP::StringSource enc_source(data, true, aes_enc);
+	return new_data;
 }
 
-std::string SymmetricEncryptor::decrypt(std::string token){
-	std::string data;
-	CryptoPP::StringSink* sink = new CryptoPP::StringSink(data);
+std::string SymmetricEncryptor::decrypt(std::string data){
+	std::string new_data;
+	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption dec(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 	CryptoPP::StreamTransformationFilter* aes_dec = new CryptoPP::StreamTransformationFilter(dec, sink);
 	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
-	CryptoPP::StringSource dec_source(token, true, base64_dec);
-
-	// Ignore salt.
-	data.erase(0, CryptoPP::AES::BLOCKSIZE);
-	return data;
+	CryptoPP::StringSource dec_source(data, true, base64_dec);
+	return new_data;
 }
 
 SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
@@ -57,42 +47,25 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 }
 
 std::string SymmetricEncryptor::encrypt(std::string data, int transaction){
-	byte salt[CryptoPP::AES::MAX_KEYLENGTH];
-	this->random_pool.GenerateBlock(salt, CryptoPP::AES::MAX_KEYLENGTH);
-	std::string salted(reinterpret_cast<const char*>(salt), CryptoPP::AES::MAX_KEYLENGTH);
-	salted += static_cast<char>(transaction % 255);
-	salted += data;
-	std::string new_data;
+	byte salt[CryptoPP::AES::BLOCKSIZE];
+	this->random_pool.GenerateBlock(salt, CryptoPP::AES::BLOCKSIZE);
+	std::string salts(reinterpret_cast<const char*>(salt), CryptoPP::AES::BLOCKSIZE);
 
-	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
-	CryptoPP::Base64Encoder* base64_enc = new CryptoPP::Base64Encoder(sink, false);
-	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption enc(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
-	CryptoPP::StreamTransformationFilter* aes_enc = new CryptoPP::StreamTransformationFilter(enc, base64_enc);
-	CryptoPP::StringSource enc_source(salted, true, aes_enc);
-
-	return new_data;
+	return this->encrypt(static_cast<char>(transaction % 255) + salts + data);
 }
 
 std::string SymmetricEncryptor::decrypt(std::string data, int transaction){
-	std::string new_data;
+	std::string new_data = this->decrypt(data);
 
-	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
-	CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption dec(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
-	CryptoPP::StreamTransformationFilter* aes_dec = new CryptoPP::StreamTransformationFilter(dec, sink);
-	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
-	CryptoPP::StringSource dec_source(data, true, base64_dec);
-
-	if(static_cast<unsigned char>(new_data[CryptoPP::AES::MAX_KEYLENGTH]) != static_cast<unsigned char>(transaction % 255)){
-		PRINT("got " << static_cast<int>(new_data[CryptoPP::AES::MAX_KEYLENGTH]) << " expected " << transaction)
+	if(static_cast<unsigned char>(new_data[0]) != static_cast<unsigned char>(transaction % 255)){
+		PRINT("got " << static_cast<int>(new_data[0]) << " expected " << transaction)
 		throw CryptoPP::Exception(CryptoPP::BERDecodeErr::INVALID_DATA_FORMAT, "Bad transaction number.");
 	}
-	new_data.erase(0, CryptoPP::AES::MAX_KEYLENGTH + 1);
+	new_data.erase(0, CryptoPP::AES::BLOCKSIZE + 1);
 	return new_data;
 }
 
 bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/, int transaction){
-	// Might fix encryption buggies...
-	//std::string send_data = this->encrypt(data, data_length);
 	std::string send_data = this->encrypt(data, transaction);
 	ssize_t len;
 	PRINT("SDATA|" << send_data << '|')
@@ -124,8 +97,6 @@ std::function<ssize_t(int, const char*, size_t)> callback, int transaction){
 		data[len] = 0;
 		PRINT("RDATA|" << data << '|')
 		try{
-			// Might fix decryption buggies...
-			//recv_data = this->decrypt(std::string(data, len));
 			recv_data = this->decrypt(std::string(data), transaction);
 		}catch(const std::exception& e){
 			ERROR(e.what() << "\nImplied hacker, closing!")
