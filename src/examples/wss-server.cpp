@@ -51,21 +51,22 @@ static std::string parse_web_socket_frame(const char* request, ssize_t data_leng
 	std::stringstream message;
 
 	uint64_t len = request[1] & 0x7f;
+	uint64_t payload_length;
 	int offset = 2;
 
 	if(len <= 125){
-		f->payload_length = len;
-	}else if(length_field == 126){
-		f->payload_length = request[2] + (request[3] << 8);
+		payload_length = len;
+	}else if(len == 126){
+		payload_length = request[2] + (request[3] << 8);
 		offset += 2;
-	}else if(length_field == 127){
-		f->payload_length = request[2] + (request[3] << 8);
+	}else if(len == 127){
+		payload_length = request[2] + (request[3] << 8);
 		offset += 8;
 	}else{
 		ERROR("whack length field");
 	}
 
-	if(data_length < f->payload_length + offset){
+	if(data_length < payload_length + offset){
 		ERROR("incorrect or incomplete length field")
 	}
 

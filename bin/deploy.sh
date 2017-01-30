@@ -5,7 +5,7 @@ HTTPS=10443
 COMD=10000
 
 if [ $# -lt 4 ]; then
-	echo "Usage: <install dir> <comd key> <username> <hostname> <optional password>"
+	echo "Usage: <install dir> <comd key> <username> <hostname> <y or n> <optional password>"
 	exit
 fi
 
@@ -63,5 +63,9 @@ firewall-cmd --zone=public --permanent --add-forward-port=port=80:proto=tcp:topo
 firewall-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:toport=$HTTPS
 firewall-cmd --zone=public --permanent --add-port=$COMD/tcp
 firewall-cmd --reload
+
+# certbot certonly --standalone --tls-sni-01-port $HTTPS --domain $4
+# mv -f /etc/letsencrypt/live/$4/cert.pem $1/etc/ssl/ssl.crt
+# mv -f /etc/letsencrypt/live/$4/privkey.pem $1/etc/ssl/ssl.key
 
 chown -R $3:$3 $1

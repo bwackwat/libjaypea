@@ -18,7 +18,7 @@
  * @bug There lies a type of race condition within a single thread where a timeout and a read event can both trigger.
  * In some cases I believe this is harmless, in other cases I wouldn't be suprised if some memory leaks or other
  * unexpected behavior occurs. Need to research or reevaluate how epoll errors should be treated.
- * @bug @see EpollServer::start_event does nothing.
+ * @bug EpollServer::start_event does nothing.
  * @bug There is a condition within the kernel where not all data sent to write() is written.
  * This is completely unaccounted for.
  */
@@ -133,8 +133,6 @@ ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
 
 /**
  * @brief The base continuation function for accepting a connection.
- *
- * @param fd The recently accepted fd.
  *
  * @return true If the fd should actually be closed.
  *
@@ -366,7 +364,7 @@ void EpollServer::run_thread(unsigned int thread_id){
  * @brief Starts the server.
  *
  * @param returning If this is true, the function will return after spinning some threads.
- * @param new_num_threads Creates this many threads. If @param returning is true, the number of threads that start will not change.
+ * @param new_num_threads Creates this many threads. If *returning* is true, the number of threads that start will not change.
  *
  * E.g. server.run(true, 2), starts 2 threads, but continues.
  * server.run(false, 3) starts 3 threads, but one of those threads is *this* thread.

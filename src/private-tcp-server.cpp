@@ -4,14 +4,14 @@
 #include "private-tcp-server.hpp"
 
 /**
- * @implements EpollServer
+ * /implements EpollServer
  *
  * @brief This class has the same characteristics of EpollServer, yet uses OpenSSL private-public key encryption.
  *
  * @param certificate The path to the certificate chain file needed by OpenSSL.
  * @param private_key The path to the private key file needed by OpenSSL.
- * @param port @see EpollServer::EpollServer.
- * @param new_max_connections @see EpollServer::EpollServer.
+ * @param port See EpollServer::EpollServer.
+ * @param max_connections See EpollServer::EpollServer.
  *
  * Disables OpenSSL SSLv3.
  * Users the cipher list: "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS"
@@ -53,7 +53,7 @@ PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string priv
 /**
  * @brief Does an SSL_free before closing the socket.
  *
- * @params @see EpollServer::close_client
+ * See EpollServer::close_client
  */
 void PrivateEpollServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
 	SSL_free(this->client_ssl[*fd]);
@@ -64,7 +64,7 @@ void PrivateEpollServer::close_client(size_t index, int* fd, std::function<void(
 /**
  * @brief Uses SSL_write instead of a regular write.
  *
- * @params @see EpollServer::send
+ * See EpollServer::send
  */
 bool PrivateEpollServer::send(int fd, const char* data, size_t data_length){
 	int len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
@@ -85,7 +85,7 @@ bool PrivateEpollServer::send(int fd, const char* data, size_t data_length){
 /**
  * @brief Uses SSL_read instead of a regular read.
  *
- * @params @see EpollServer::recv
+ * See EpollServer::recv
  */
 ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
 	int len;
@@ -111,7 +111,7 @@ ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
 /**
  * @brief Importantly implements @see EpollServer::accept_continuation.
  *
- * @params @see EpollServer::accept_continuation
+ * See EpollServer::accept_continuation
  *
  * Completed the SSL handshake as defined by the SSL context.
  * If the SSL handshake fails, the the client did *not* successfully connect and is dumped.
@@ -137,7 +137,7 @@ bool PrivateEpollServer::accept_continuation(int* new_client_fd){
 	return false;
 }
 
-/// Simple cleans up the OpenSSL context.
+/// Simply cleans up the OpenSSL context.
 PrivateEpollServer::~PrivateEpollServer(){
 	SSL_CTX_free(this->ctx);
 	EVP_cleanup();
