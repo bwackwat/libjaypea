@@ -208,7 +208,10 @@ void EpollServer::run_thread(unsigned int thread_id){
 							break;
 						}else{
 							if(this->accept_continuation(&new_fd)){
-								close(new_fd);
+								PRINT("accept continuation failed.")
+								this->close_client(0, &new_fd, [&](size_t, int* fd){
+									close(*fd);
+								});
 							}else{
 								Util::set_non_blocking(new_fd);
 								new_event.events = EVENTS;

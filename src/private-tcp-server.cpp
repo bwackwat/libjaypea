@@ -8,29 +8,29 @@ PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string priv
 	SSL_library_init();
 	SSL_load_error_strings();
 
-        if((this->ctx = SSL_CTX_new(SSLv23_server_method())) == 0){
-                ERR_print_errors_fp(stdout);
+	if((this->ctx = SSL_CTX_new(SSLv23_server_method())) == 0){
+		ERR_print_errors_fp(stdout);
 		throw std::runtime_error(this->name + "SSL_CTX_new");
-        }
-        if(SSL_CTX_set_ecdh_auto(this->ctx, 1) == 0){
-                ERR_print_errors_fp(stdout);
+	}
+	if(SSL_CTX_set_ecdh_auto(this->ctx, 1) == 0){
+		ERR_print_errors_fp(stdout);
 		throw std::runtime_error(this->name + "SSL_CTX_set_ecdh_auto");
 	}
-        if(SSL_CTX_use_certificate_file(this->ctx, certificate.c_str(), SSL_FILETYPE_PEM) != 1){
-                ERR_print_errors_fp(stdout);
+	if(SSL_CTX_use_certificate_file(this->ctx, certificate.c_str(), SSL_FILETYPE_PEM) != 1){
+		ERR_print_errors_fp(stdout);
 		throw std::runtime_error(this->name + "SSL_CTX_use_certificate_file");
-        }
-        if(SSL_CTX_use_PrivateKey_file(this->ctx, private_key.c_str(), SSL_FILETYPE_PEM) != 1){
-                ERR_print_errors_fp(stdout);
+	}
+	if(SSL_CTX_use_PrivateKey_file(this->ctx, private_key.c_str(), SSL_FILETYPE_PEM) != 1){
+		ERR_print_errors_fp(stdout);
 		throw std::runtime_error(this->name + "SSL_CTX_use_PrivateKey_file");
-        }
+	}
 
 	std::signal(SIGPIPE, SIG_IGN);
 
-	SSL_CTX_set_mode(this->ctx, SSL_OP_NO_SSLv3);
+	SSL_CTX_set_options(this->ctx, SSL_OP_NO_SSLv3);
 
 	if(SSL_CTX_set_cipher_list(this->ctx, "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS") == 0){
-                ERR_print_errors_fp(stdout);
+     	ERR_print_errors_fp(stdout);
 		throw std::runtime_error(this->name + "SSL_CTX_set_cipher_list");
 	}
 
@@ -40,6 +40,7 @@ PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string priv
 // Basically does an SSL_free before closing the socket.
 void PrivateEpollServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
 	SSL_free(this->client_ssl[*fd]);
+	PRINT("SSL_free'd " << *fd)
 	callback(index, fd);
 }
 
