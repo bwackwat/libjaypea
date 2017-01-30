@@ -61,10 +61,10 @@ uint32_t Util::read_uint32_t(const char* data){
 }
 
 void Util::write_uint32_t(uint32_t value, char* data){
-	data[0] = value;
-	data[1] = value >> 8;
-	data[2] = value >> 16;
-	data[3] = value >> 24;
+	data[0] = static_cast<char>(value);
+	data[1] = static_cast<char>(value) >> 8;
+	data[2] = static_cast<char>(value) >> 16;
+	data[3] = static_cast<char>(value) >> 24;
 }
 
 void Util::parse_arguments(int argc, char** argv, std::string description){
@@ -301,7 +301,6 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 	int state = 1;
 	std::string new_key = "";
 	std::string new_value = "/";
-
 
 	/*
 		1 = get route

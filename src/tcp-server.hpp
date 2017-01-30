@@ -31,8 +31,8 @@ protected:
 	// Read from 0, write to 1.
 	int broadcast_pipe[2];
 	
-	/// Very cool reference to working epoll code. Unused (because timeouts are essential.)
-	virtual void run_thread_no_timeouts(unsigned int thread_id);
+	/// Reference to working epoll code. Unused (because timeouts are essential.)
+	/// virtual void run_thread_no_timeouts(unsigned int thread_id);
 	virtual void run_thread(unsigned int id);
 	virtual bool accept_continuation(int* new_client_fd);
 	virtual void close_client(int* fd, std::function<void(int*)> callback);

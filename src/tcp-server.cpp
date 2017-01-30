@@ -66,7 +66,6 @@ timeout(10){
 /**
  * @brief The base function for closing a client. Important for the PrivateEpollServer implementation.
  *
- * @param index Unused. Should be refactored out.
  * @param fd The fd that is closing.
  * @param callback The thread-specific callback. *I think* this is only necessary because of thread-specific variables.
  */
@@ -144,6 +143,7 @@ int EpollServer::broadcast_fd(){
 	return this->broadcast_pipe[1];
 }
 
+/*
 void EpollServer::run_thread_no_timeouts(unsigned int thread_id){
 	int num_fds, new_fd, the_fd, i, j, epoll_fd;
 	unsigned long num_connections = 0;
@@ -273,6 +273,7 @@ void EpollServer::run_thread_no_timeouts(unsigned int thread_id){
 		}
 	}
 }
+*/
 
 /// Sets the timeout. This is dynamic, yet not unique per connection.
 void EpollServer::set_timeout(time_t seconds){
@@ -425,7 +426,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				packet[len] = 0;
 				for(auto iter = client_to_timer_map.begin(); iter != client_to_timer_map.end(); ++iter){
 					// Throw away send errors?
-					if(this->send(iter->first, packet, len)){
+					if(this->send(iter->first, packet, static_cast<ssize_t>(len))){
 						ERROR("failed to broadcast to " << iter->first)
 					}
 				}
@@ -446,7 +447,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 						}else{
 							if(this->accept_continuation(&new_fd)){
 								PRINT("accept continuation failed.")
-								this->close_client(&new_fd, [&](size_t, int* fd){
+								this->close_client(&new_fd, [&](int* fd){
 									close(*fd);
 								});
 							}else{
@@ -547,8 +548,6 @@ void EpollServer::run(bool returning, unsigned int new_num_threads){
 	if(this->num_threads <= 0){
 		this->num_threads = 1;
 	}
-	thread_event_queues = new Queue<Event*>[this->num_threads];
-	thread_event_queue_mutexes = new std::mutex[this->num_threads];
 
 	unsigned int total = this->num_threads;
 	if(!returning){

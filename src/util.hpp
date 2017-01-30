@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <string.h>
 
 #include "json.hpp"
