@@ -426,7 +426,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				packet[len] = 0;
 				for(auto iter = client_to_timer_map.begin(); iter != client_to_timer_map.end(); ++iter){
 					// Throw away send errors?
-					if(this->send(iter->first, packet, static_cast<ssize_t>(len))){
+					if(this->send(iter->first, packet, static_cast<size_t>(len))){
 						ERROR("failed to broadcast to " << iter->first)
 					}
 				}
@@ -522,7 +522,6 @@ void EpollServer::run_thread(unsigned int thread_id){
 				}else if(len == PACKET_LIMIT){
 					ERROR("OVERFLOAT more to read uh oh!")
 				}else{
-					this->read_counter[the_fd]++;
 					client_events[i].events = EVENTS;
 					client_events[i].data.fd = the_fd;
 					if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, the_fd, &client_events[i]) < 0){

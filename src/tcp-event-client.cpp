@@ -23,7 +23,7 @@
 #include <arpa/inet.h>
 
 #include "util.hpp"
-#include "tcp-client.hpp"
+#include "tcp-event-client.hpp"
 
 void EventClient::add(Connection* conn){
 	this->connections.push_back(conn);
@@ -113,8 +113,6 @@ void EventClient::run(std::function<ssize_t(int, const char*, size_t)> new_on_re
 			case CONNECTED:
 				if((len = this->recv(connection->fd, packet, PACKET_LIMIT)) < 0){
 					this->close_client(connection);
-				}else if(len > 0){
-					this->read_counter[connection->fd]++;
 				}
 				running = true;
 				break;

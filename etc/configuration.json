@@ -1,7 +1,7 @@
 {
 	"hostname": "localhost",
 	"public_directory": "html/",
-	"port": "10000",
+	"port": "4096",
 	"postgresql_connection": "host=localhost dbname=test user=bwackwat password=abc123",
 	"ssl_certificate": "etc/ssl/ssl.crt",
 	"ssl_private_key":"etc/ssl/ssl.key",

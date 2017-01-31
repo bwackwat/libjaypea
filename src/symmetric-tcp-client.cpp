@@ -39,14 +39,14 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 
 		std::function<ssize_t(int, const char*, size_t)> set_response_callback = [&](int, const char* data, size_t data_length)->ssize_t{
 			response_string = std::string(data);
-			return data_length;
+			return static_cast<ssize_t>(data_length);
 		};
 
 		ssize_t len;
-		if(this->encryptor.send(this->fd, request, length, this->writes++)){
+		if(this->encryptor.send(this->fd, request, length, &this->writes)){
 			ERROR("send")
 			this->connected = false;
-		}else if((len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, set_response_callback, this->reads++)) <= 0){
+		}else if((len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, set_response_callback, &this->reads)) <= 0){
 			ERROR("recv")
 			this->connected = false;
 		}

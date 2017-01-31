@@ -54,10 +54,11 @@ static std::string get_exe_path()
 }
 
 uint32_t Util::read_uint32_t(const char* data){
-	return static_cast<uint32_t>(data[0]) << 24 |
-		static_cast<uint32_t>(data[1]) << 16 |
-		static_cast<uint32_t>(data[2]) << 8 |
-		static_cast<uint32_t>(data[3]);
+	return static_cast<uint32_t>(
+		data[3] << 24 |
+		data[2] << 16 |
+		data[1] << 8 |
+		data[0]);
 }
 
 void Util::write_uint32_t(uint32_t value, char* data){

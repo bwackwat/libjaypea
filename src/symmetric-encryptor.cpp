@@ -65,7 +65,88 @@ std::string SymmetricEncryptor::decrypt(std::string data, int transaction){
 	return new_data;
 }
 
-bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/, int transaction){
+bool SymmetricEncryptor::send(int fd, const char* data, size_t /* data_length */, int* transaction){
+	std::string send_data = this->encrypt(data, *transaction);
+	*transaction += 1;
+	char block_size[4] = {0, 0, 0, 0};
+	Util::write_uint32_t(static_cast<uint32_t>(send_data.length()), block_size);
+	ssize_t len;
+
+	PRINT("SDATA|" << send_data.length() << '|' <<  static_cast<uint32_t>(send_data.length()))
+	if((len = write(fd, block_size, 4)) < 0){
+		ERROR("encryptor write")
+		return true;
+	}else if(len != 4){
+		ERROR("encryptor didn't write all")
+		return true;
+	}
+
+	PRINT("SDATA|" << send_data << '|')
+	if((len = write(fd, send_data.c_str(), send_data.length())) < 0){
+		ERROR("encryptor write block")
+		return true;
+	}else if(len != static_cast<ssize_t>(send_data.length())){
+		ERROR("encryptor didn't write all block")
+		return true;
+	}
+	return false;
+}
+
+ssize_t SymmetricEncryptor::recv(int fd, char* data, size_t /* data_length */,
+std::function<ssize_t(int, const char*, ssize_t)> callback, int* transaction){
+	ssize_t len;
+	uint32_t block_size;
+	std::string recv_data;
+	
+	if((len = read(fd, data, 4)) < 0){
+		if(errno != EWOULDBLOCK){
+			perror("encryptor read");
+			ERROR("encryptor read " << fd)
+			return -1;
+		}
+		return 0;
+	}else if(len == 0){
+		ERROR("encryptor read zero")
+		return -2;
+	}else if(len != 4){
+		ERROR("couldn't read block size?" << len)
+		return -3;
+	}
+	data[4] = 0;
+	block_size = Util::read_uint32_t(data);
+	PRINT("RDATA|" << data << '|' << block_size)
+
+	while(true){
+		if((len = read(fd, data, static_cast<size_t>(block_size))) < 0){
+			if(errno != EWOULDBLOCK){
+				perror("encryptor read block");
+				ERROR("encryptor read block " << fd << '|' << block_size)
+				return -1;
+			}
+			continue;
+		}else if(len == 0){
+			ERROR("encryptor read zero block")
+			return -2;
+		}else if(len != static_cast<size_t>(block_size)){
+			ERROR("couldn't read block size block?" << len << '|' << block_size)
+			return -3;
+		}
+
+		data[len] = 0;
+		PRINT("RDATA|" << data << '|')
+		try{
+			recv_data = this->decrypt(std::string(data), *transaction);
+			*transaction += 1;
+		}catch(const std::exception& e){
+			ERROR(e.what() << "\nImplied hacker, closing!")
+			return -4;
+		}
+		return callback(fd, recv_data.c_str(), static_cast<ssize_t>(recv_data.length()));
+	}
+}
+
+/*
+bool SymmetricEncryptor::send(int fd, const char* data, size_t, int transaction){
 	std::string send_data = this->encrypt(data, transaction);
 	ssize_t len;
 	PRINT("SDATA|" << send_data << '|')
@@ -77,7 +158,7 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/, 
 		return true;
 	}
 	return false;
-}
+}*/
 
 /**
  * 1. Reads uint32_t for the size of the encrypted block.
@@ -85,9 +166,9 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /*data_length*/, 
  * 3. Decrypts the block.
  * 4. Starts back at 1, and tries to read another uint32_t in case many messages merged.
  * 
- * Are TCP messages merging a consequence of EPOLLONESHOT? Even if it is, I still prefer it.
+ * Are TCP messages merging a consequence of EPOLLONESHOT? Even if they are, I still prefer it.
  */
-ssize_t SymmetricEncryptor::recv(int fd, char* data, size_t data_length,
+/*ssize_t SymmetricEncryptor::recv(int fd, char* data, size_t data_length,
 std::function<ssize_t(int, const char*, size_t)> callback, int transaction){
 	ssize_t len;
 	std::string recv_data;
@@ -116,4 +197,4 @@ std::function<ssize_t(int, const char*, size_t)> callback, int transaction){
 		std::strcpy(data, recv_data.c_str());
 		return static_cast<ssize_t>(recv_data.length());
 	}
-}
+}*/
