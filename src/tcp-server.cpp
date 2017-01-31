@@ -2,6 +2,26 @@
 #include "stack.hpp"
 #include "tcp-server.hpp"
 
+/**
+ * @brief A TCP epoll-based, IPv4 server constructor.
+ * @param port The port number the server's socket will bind to.
+ * @param new_max_connections The maximum number of connections *each thread* will handle.
+ * Also the listen backlog.
+ * @param new_name An arbitrary name for debugging purposes.
+ *
+ * This is the essential networking server code. Architecturally, each thread calls epoll_wait() and
+ * waits for either a locked server fd to accept a new connection, a connected fd to indicate there is data to read,
+ * or for a connected fd to timeout. Each thread manages its own set of connected fds, timeout fds, and
+ * is able to accept new connections because epoll_wait is thread safe for reused fds *and* there is a mutex.
+ * @see EpollServer::accept_mutex
+ *
+ * @bug There lies a type of race condition within a single thread where a timeout and a read event can both trigger.
+ * In some cases I believe this is harmless, in other cases I wouldn't be suprised if some memory leaks or other
+ * unexpected behavior occurs. Need to research or reevaluate how epoll errors should be treated.
+ * @bug @see EpollServer::start_event does nothing.
+ * @bug There is a condition within the kernel where not all data sent to write() is written.
+ * This is completely unaccounted for.
+ */
 EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
 :name(new_name),
 max_connections(new_max_connections),
@@ -12,8 +32,8 @@ running(true){
 	}
 	Util::set_non_blocking(this->server_fd);
 /*
-	For this class, I am unsure about what this is genuinely useful for...
-	However, it has been useful in the past and I have read it as "good practice."
+	The setsockopt() call below is unnecessary, but allows for quicker development.
+	With this, the server can be stopped and restarted on the same port immediately.
 */
 	int opt = 1;
 	if(setsockopt(this->server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt)) < 0){
@@ -36,6 +56,13 @@ running(true){
 	PRINT(this->name << " listening on " << port)
 }
 
+/**
+ * @brief *UNIMPLEMENTED* Initiates an event for all connected fds across threads.
+ *
+ * @param event The event to queue.
+ *
+ * Each thread has a queue to check for events from. A work in progress.
+ */
 void EpollServer::start_event(Event* event){
 	for(unsigned int i = 0; i < this->num_threads; ++i){
 		this->thread_event_queue_mutexes[i].lock();
@@ -44,10 +71,26 @@ void EpollServer::start_event(Event* event){
 	}
 }
 
+/**
+ * @brief The base function for closing a client. Important for the PrivateEpollServer implementation.
+ *
+ * @param index Unused. Should be refactored out.
+ * @param fd The fd that is closing.
+ * @param callback The thread-specific callback. *I think* this is only necessary because of thread-specific variables.
+ */
 void EpollServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
 	callback(index, fd);
 }
 
+/**
+ * @brief The base send function that should be used by all implementers.
+ *
+ * @param fd The fd to write to.
+ * @param data the data to write.
+ * @param data_length the length of the data that *should* be written.
+ *
+ * @return true on error.
+ */
 bool EpollServer::send(int fd, const char* data, size_t data_length){
 	ssize_t len;
 	if((len = write(fd, data, data_length)) < 0){
@@ -62,6 +105,15 @@ bool EpollServer::send(int fd, const char* data, size_t data_length){
 	return false;
 }
 
+/**
+ * @brief The base receive function that @see EpollServer::run_thread calls.
+ *
+ * @param fd The fd which has data to read.
+ * @param data The character array data will be read to.
+ * @param data_length The number of bytes read.
+ *
+ * @return Negative on error, zero on nothing to read, and positive for successful read.
+ */
 ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
 	ssize_t len;
 	if((len = read(fd, data, data_length)) < 0){
@@ -79,10 +131,24 @@ ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
 	}
 }
 
+/**
+ * @brief The base continuation function for accepting a connection.
+ *
+ * @param fd The recently accepted fd.
+ *
+ * @return true If the fd should actually be closed.
+ *
+ * This is only *necessary* for @see PrivateEpollServer::accept_continuation.
+ */
 bool EpollServer::accept_continuation(int*){
 	return false;
 }
 
+/**
+ * @brief The essential threaded epoll server function. Starts via std::thread.
+ *
+ * @param thread_id The id of the thread. Necessary for potential events.
+ */
 void EpollServer::run_thread(unsigned int thread_id){
 	int num_fds, num_timeouts, new_fd, the_fd, timer_fd, i, j, epoll_fd, timeout_epoll_fd;
 	unsigned long num_connections = 0;
@@ -296,6 +362,15 @@ void EpollServer::run_thread(unsigned int thread_id){
 	}
 }
 
+/**
+ * @brief Starts the server.
+ *
+ * @param returning If this is true, the function will return after spinning some threads.
+ * @param new_num_threads Creates this many threads. If @param returning is true, the number of threads that start will not change.
+ *
+ * E.g. server.run(true, 2), starts 2 threads, but continues.
+ * server.run(false, 3) starts 3 threads, but one of those threads is *this* thread.
+ */
 void EpollServer::run(bool returning, unsigned int new_num_threads){
 	this->num_threads = new_num_threads;
 	if(this->num_threads <= 0){

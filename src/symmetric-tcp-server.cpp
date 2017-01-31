@@ -4,6 +4,18 @@
 #include "util.hpp"
 #include "symmetric-tcp-server.hpp"
 
+/**
+ * @implements EpollServer
+ *
+ * @brief This class has the same characteristics of EpollServer, yet uses AES256 bit symmetric key encryption.
+ *
+ * @param keyfile The path to the keyfile made standard by @see SymmetricEncryptor.
+ * @param port @see EpollServer::EpollServer.
+ * @param new_max_connections @see EpollServer::EpollServer.
+ *
+ * This class encrypts written data and decrypts read data via @see SymmetricEpollServer::encryptor,
+ * and keeps track of the number of writes and reads for transaction-based security.
+ */
 SymmetricEpollServer::SymmetricEpollServer(std::string keyfile, uint16_t port, size_t new_max_connections)
 :EpollServer(port, new_max_connections, "SymmetricEpollServer"),
 encryptor(keyfile){}

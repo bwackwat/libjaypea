@@ -58,7 +58,12 @@ public:
 
 	virtual void start_event(Event* event);
 
+	/// When a connection has successfully been made, this is called.
 	std::function<void(int)> on_connect;
+
+	/// When a connection has read some data, this is called.
 	std::function<ssize_t(int, const char*, ssize_t)> on_read;
+
+	/// When a previously successfully made connection has been closed, this is called.
 	std::function<void(int)> on_disconnect;
 };

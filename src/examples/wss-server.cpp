@@ -47,86 +47,39 @@ public:
 	}
 };
 
+static std::string parse_web_socket_frame(const char* request, ssize_t data_length){
+	std::stringstream message;
 
-class WebSocketFrame{
-public:
-	uint8_t opcode;
-	uint8_t fin;
-	uint8_t masked;
-	int payload_len;
-};
+	uint64_t len = request[1] & 0x7f;
+	int offset = 2;
 
-static WebSocketFrame* parse_web_socket_frame(const uint8_t* request){
-	WebSocketFrame* f = new WebSocketFrame();
-	f->opcode = request[0] & 0x0F;
-	f->opcode = (request[0] >> 7) & 0x01;
-	f->opcode = (request[1] >> 7) & 0x01;
-	
-	return f;
-}
-
-/*
-	if(in_length < 3) return INCOMPLETE_FRAME;
-
-	unsigned char msg_opcode = in_buffer[0] & 0x0F;
-	unsigned char msg_fin = (in_buffer[0] >> 7) & 0x01;
-	unsigned char msg_masked = (in_buffer[1] >> 7) & 0x01;
-
-	// *** message decoding 
-
-	int payload_length = 0;
-	int pos = 2;
-	int length_field = in_buffer[1] & (~0x80);
-	unsigned int mask = 0;
-
-	//printf("IN:"); for(int i=0; i<20; i++) printf("%02x ",buffer[i]); printf("\n");
-
-	if(length_field <= 125) {
-		payload_length = length_field;
-	}
-	else if(length_field == 126) { //msglen is 16bit!
-		payload_length = in_buffer[2] + (in_buffer[3]<<8);
-		pos += 2;
-	}
-	else if(length_field == 127) { //msglen is 64bit!
-		payload_length = in_buffer[2] + (in_buffer[3]<<8); 
-		pos += 8;
-	}
-	//printf("PAYLOAD_LEN: %08x\n", payload_length);
-	if(in_length < payload_length+pos) {
-		return INCOMPLETE_FRAME;
+	if(len <= 125){
+		f->payload_length = len;
+	}else if(length_field == 126){
+		f->payload_length = request[2] + (request[3] << 8);
+		offset += 2;
+	}else if(length_field == 127){
+		f->payload_length = request[2] + (request[3] << 8);
+		offset += 8;
+	}else{
+		ERROR("whack length field");
 	}
 
-	if(msg_masked) {
-		mask = *((unsigned int*)(in_buffer+pos));
-		//printf("MASK: %08x\n", mask);
-		pos += 4;
+	if(data_length < f->payload_length + offset){
+		ERROR("incorrect or incomplete length field")
+	}
 
-		// unmask data:
-		unsigned char* c = in_buffer+pos;
-		for(int i=0; i<payload_length; i++) {
-			c[i] = c[i] ^ ((unsigned char*)(&mask))[i%4];
+	if(request[1] & 0x80){
+		int mask = *static_cast<unsigned int*>(request + offset);
+		offset += 4;
+
+		for(const char* it = request + offset; it < data_length; ++ it){
+			message << *it ^ static_cast<unsigned char*>(&mask)[i % 4];
 		}
 	}
-	
-	if(payload_length > out_size) {
-		//TODO: if output buffer is too small -- ERROR or resize(free and allocate bigger one) the buffer ?
-	}
 
-	memcpy((void*)out_buffer, (void*)(in_buffer+pos), payload_length);
-	out_buffer[payload_length] = 0;
-	*out_length = payload_length+1;
-	
-	//printf("TEXT: %s\n", out_buffer);
-
-	if(msg_opcode == 0x0) return (msg_fin)?TEXT_FRAME:INCOMPLETE_TEXT_FRAME; // continuation frame ?
-	if(msg_opcode == 0x1) return (msg_fin)?TEXT_FRAME:INCOMPLETE_TEXT_FRAME;
-	if(msg_opcode == 0x2) return (msg_fin)?BINARY_FRAME:INCOMPLETE_BINARY_FRAME;
-	if(msg_opcode == 0x9) return PING_FRAME;
-	if(msg_opcode == 0xA) return PONG_FRAME;
-
-	return ERROR_FRAME;
-*/
+	return message.str();
+}
 
 int main(){
 	std::unordered_map<std::string, Player*> player_data;
@@ -162,7 +115,8 @@ int main(){
 			}
 		}else if(client_state[fd] == LOGGING){
 			PRINT("RECV: " << data)
-			WebSocketFrame* frame = parse_web_socket_frame(reinterpret_cast<const uint8_t*>(data));
+			std::string message = parse_web_socket_frame(data, data_length);
+			PRINT("MSG: " << message)
 		}else{
 			PRINT("RECV: " << data)
 		}
