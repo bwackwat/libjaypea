@@ -73,9 +73,12 @@ public:
 	static void define_argument(std::string name, int* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, bool* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 
+	static uint32_t read_uint32_t(const char* data);
+	static void write_uint32_t(uint32_t value, char* data);
+
 	static void parse_arguments(int argc, char** argv, std::string description);
 
-	static bool strict_compare_inequal(const char* forst, const char* second, int count = -1);
+	static bool strict_compare_inequal(const char* first, const char* second, int count = -1);
 	static void set_non_blocking(int fd);
 
 	static std::string get_redirection_html(const std::string& hostname);

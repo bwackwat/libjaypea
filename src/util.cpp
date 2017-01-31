@@ -53,6 +53,20 @@ static std::string get_exe_path()
 	exit(1);
 }
 
+uint32_t Util::read_uint32_t(const char* data){
+	return static_cast<uint32_t>(data[0]) << 24 |
+		static_cast<uint32_t>(data[1]) << 16 |
+		static_cast<uint32_t>(data[2]) << 8 |
+		static_cast<uint32_t>(data[3]);
+}
+
+void Util::write_uint32_t(uint32_t value, char* data){
+	data[0] = value;
+	data[1] = value >> 8;
+	data[2] = value >> 16;
+	data[3] = value >> 24;
+}
+
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
 
@@ -239,7 +253,7 @@ void Util::set_non_blocking(int fd){
 }
 
 std::string Util::get_redirection_html(const std::string& hostname){
-	std::string response_body = "<!DOCTYPE html><html>\n"
+	std::string response_body = "<!doctype html><html>\n"
 		"<head>\n"
 		"<title>301 Moved Permanently</title>\n"
 		"</head>\n"

@@ -25,12 +25,19 @@
 EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
 :name(new_name),
 max_connections(new_max_connections),
-running(true){
+running(true),
+timeout(10){
 	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		perror("socket");
 		throw std::runtime_error(this->name + " socket");
 	}
 	Util::set_non_blocking(this->server_fd);
+
+	if(pipe2(this->broadcast_pipe, O_DIRECT | O_NONBLOCK) < 0){
+		perror("pipe2");
+		throw std::runtime_error(this->name + " pipe2");
+	}
+
 /*
 	The setsockopt() call below is unnecessary, but allows for quicker development.
 	With this, the server can be stopped and restarted on the same port immediately.
@@ -57,29 +64,14 @@ running(true){
 }
 
 /**
- * @brief *UNIMPLEMENTED* Initiates an event for all connected fds across threads.
- *
- * @param event The event to queue.
- *
- * Each thread has a queue to check for events from. A work in progress.
- */
-void EpollServer::start_event(Event* event){
-	for(unsigned int i = 0; i < this->num_threads; ++i){
-		this->thread_event_queue_mutexes[i].lock();
-		this->thread_event_queues[i].enqueue(event);
-		this->thread_event_queue_mutexes[i].unlock();
-	}
-}
-
-/**
  * @brief The base function for closing a client. Important for the PrivateEpollServer implementation.
  *
  * @param index Unused. Should be refactored out.
  * @param fd The fd that is closing.
  * @param callback The thread-specific callback. *I think* this is only necessary because of thread-specific variables.
  */
-void EpollServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
-	callback(index, fd);
+void EpollServer::close_client(int* fd, std::function<void(int*)> callback){
+	callback(fd);
 }
 
 /**
@@ -143,24 +135,24 @@ bool EpollServer::accept_continuation(int*){
 }
 
 /**
- * @brief The essential threaded epoll server function. Starts via std::thread.
+ * Protects any messing with the broadcasting pipe.
+ * Use this to broadcast some data to all connected fds!
  *
- * @param thread_id The id of the thread. Necessary for potential events.
+ * @return The write-end of an internal broadcasting pipe, where epoll uses the read-end.
  */
-void EpollServer::run_thread(unsigned int thread_id){
-	int num_fds, num_timeouts, new_fd, the_fd, timer_fd, i, j, epoll_fd, timeout_epoll_fd;
+int EpollServer::broadcast_fd(){
+	return this->broadcast_pipe[1];
+}
+
+void EpollServer::run_thread_no_timeouts(unsigned int thread_id){
+	int num_fds, new_fd, the_fd, i, j, epoll_fd;
 	unsigned long num_connections = 0;
 	char packet[PACKET_LIMIT];
 	ssize_t len;
-	struct itimerspec timer_spec;
 
 	struct epoll_event new_event;
-	struct epoll_event* client_events = new struct epoll_event[this->max_connections + 2];
-						// + 2 for server_fd and timeout_epoll_fd
-	struct epoll_event* timeout_events = new struct epoll_event[this->max_connections];
-	
-	std::unordered_map<int /* timer fd */, int /* client fd */> timer_to_client_map;
-	std::unordered_map<int /* client fd */, int /* timer fd */> client_to_timer_map;
+	struct epoll_event* client_events = new struct epoll_event[this->max_connections + 1];
+						// + 1 for server_fd
 
 	// Broken pipes will make SSL_write (or any write, actually) return with an error instead of interrupting the program.
 	signal(SIGPIPE, SIG_IGN);
@@ -176,10 +168,161 @@ void EpollServer::run_thread(unsigned int thread_id){
 		throw std::runtime_error(this->name + " epoll_ctl");
 	}
 
+	std::function<void(int*)> close_client_callback = [&](int* fd){
+		if(close(*fd) < 0){
+			perror("close");
+		}
+		PRINT(*fd << " done on " << thread_id)
+		if(this->on_disconnect != nullptr){
+			this->on_disconnect(*fd);
+		}
+		if(num_connections >= this->max_connections){
+			new_event.events = EVENTS;
+			new_event.data.fd = this->server_fd;
+			if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, this->server_fd, &new_event) < 0){
+				perror("epoll_ctl add server");
+			}
+		}
+		num_connections--;
+	};
+
+	while(this->running){
+		if((num_fds = epoll_wait(epoll_fd, client_events, static_cast<int>(this->max_connections + 2), -1)) < 0){
+			if(errno == EINTR){
+				continue;
+			}
+			perror("epoll_wait");
+			this->running = false;
+			continue;
+		}
+		for(i = 0; i < num_fds; ++i){
+			the_fd = client_events[i].data.fd;
+			if(client_events[i].events & EPOLLERR){
+				std::cout << "EPOLLERR ";
+			}else if(client_events[i].events & EPOLLHUP){
+				std::cout << "EPOLLHUP ";
+			}else if(!(client_events[i].events & EPOLLIN)){
+				std::cout << "NOT EPOLLIN? ";
+			}
+			if((client_events[i].events & EPOLLERR) || 
+			(client_events[i].events & EPOLLHUP) || 
+			(!(client_events[i].events & EPOLLIN))){
+				this->close_client(&the_fd, close_client_callback);
+				continue;
+			}
+			if(the_fd == this->server_fd){
+				if(this->accept_mutex.try_lock()){
+					while(num_connections < this->max_connections){
+						if((new_fd = accept(this->server_fd, 0, 0)) < 0){
+							if(errno != EWOULDBLOCK && errno != EAGAIN){
+								perror("accept");
+								running = false;
+							}
+							break;
+						}else{
+							if(this->accept_continuation(&new_fd)){
+								PRINT("accept continuation failed.")
+								this->close_client(&new_fd, [&](int* fd){
+									close(*fd);
+								});
+							}else{
+								Util::set_non_blocking(new_fd);
+								new_event.events = EVENTS;
+								new_event.data.fd = new_fd;
+								if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, new_fd, &new_event) < 0){
+									perror("epoll_ctl add client");
+									close(new_fd);
+								}else{
+									this->read_counter[new_fd] = 0;
+									this->write_counter[new_fd] = 0;
+									if(this->on_connect != nullptr){
+										this->on_connect(new_fd);
+									}
+									num_connections++;
+								}
+							}
+						}
+					}
+					if(num_connections < this->max_connections){
+						client_events[i].events = EVENTS;
+						client_events[i].data.fd = this->server_fd;
+						if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, this->server_fd, &client_events[i]) < 0){
+							perror("epoll_ctl mod server");
+						}
+					}else{
+						if(epoll_ctl(epoll_fd, EPOLL_CTL_DEL, this->server_fd, &client_events[i]) < 0){
+							perror("epoll_ctl del server");
+						}
+					}
+					this->accept_mutex.unlock();
+				}
+			}else{
+				if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
+					this->close_client(&the_fd, close_client_callback);
+				}else if(len == PACKET_LIMIT){
+					ERROR("OVERFLOAT more to read uh oh!")
+				}else{
+					this->read_counter[the_fd]++;
+					client_events[i].events = EVENTS;
+					client_events[i].data.fd = the_fd;
+					if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, the_fd, &client_events[i]) < 0){
+					 	perror("epoll_ctl mod client");
+					}
+				}
+			}
+		}
+	}
+}
+
+/// Sets the timeout. This is dynamic, yet not unique per connection.
+void EpollServer::set_timeout(time_t seconds){
+	this->timeout = seconds;
+}
+
+/**
+ * @brief The essential threaded epoll server function. Starts via std::thread.
+ *
+ * @param thread_id The id of the thread. Necessary for potential events.
+ */
+void EpollServer::run_thread(unsigned int thread_id){
+	int num_fds, num_timeouts, new_fd, the_fd, timer_fd, i, j, epoll_fd, timeout_epoll_fd;
+	unsigned long num_connections = 0;
+	char packet[PACKET_LIMIT];
+	ssize_t len;
+	struct itimerspec timer_spec;
+
+	struct epoll_event new_event;
+	struct epoll_event* client_events = new struct epoll_event[this->max_connections + 3];
+						// + 1 for server_fd
+						// + 1 for timeout_epoll_fd
+						// + 1 for broadcast_pipe[0]
+	struct epoll_event* timeout_events = new struct epoll_event[this->max_connections];
+	
+	std::unordered_map<int /* timer fd */, int /* client fd */> timer_to_client_map;
+	std::unordered_map<int /* client fd */, int /* timer fd */> client_to_timer_map;
+
+	// Broken pipes will make SSL_write (or any write, actually) return with an error instead of interrupting the program.
+	signal(SIGPIPE, SIG_IGN);
+
+	if((epoll_fd = epoll_create1(0)) < 0){
+		perror("epoll_create1");
+		throw std::runtime_error(this->name + " epoll_create1");
+	}
+
+	// Add server_fd
+	new_event.events = EVENTS;
+	new_event.data.fd = this->server_fd;
+	if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, this->server_fd, &new_event) < 0){
+		perror("epoll_ctl");
+		throw std::runtime_error(this->name + " epoll_ctl");
+	}
+
 	if((timeout_epoll_fd = epoll_create1(0)) < 0){
 		perror("epoll_create1 timeout");
 		throw std::runtime_error(this->name + " epoll_create1 timeout");
 	}
+
+	// Add timeout_epoll_fd
 	new_event.events = EVENTS;
 	new_event.data.fd = timeout_epoll_fd;
 	if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timeout_epoll_fd, &new_event) < 0){
@@ -187,7 +330,15 @@ void EpollServer::run_thread(unsigned int thread_id){
 		throw std::runtime_error(this->name + " epoll_ctl timeout");
 	}
 
-	std::function<void(size_t, int*)> close_client_callback = [&](size_t, int* fd){
+	// Add broadcast_pipe[0]
+	new_event.events = EVENTS;
+	new_event.data.fd = this->broadcast_pipe[0];
+	if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, this->broadcast_pipe[0], &new_event) < 0){
+		perror("epoll_ctl timeout broadcast");
+		throw std::runtime_error(this->name + " epoll_ctl broadcast");
+	}
+
+	std::function<void(int*)> close_client_callback = [&](int* fd){
 		if(close(*fd) < 0){
 			perror("close");
 		}
@@ -233,7 +384,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				if(close(timer_fd) < 0){
 					perror("close timer_fd on error");
 				}
-				this->close_client(0, &the_fd, close_client_callback);
+				this->close_client(&the_fd, close_client_callback);
 				continue;
 			}
 			if(the_fd == timeout_epoll_fd){
@@ -251,7 +402,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 							perror("close timer_fd on timeout");
 							continue;
 						}
-						this->close_client(0, &new_fd, close_client_callback);
+						this->close_client(&new_fd, close_client_callback);
 					}
 				}else{
 					ERROR("NO TIMEOUTS WHY DID EVENT FIRE?")
@@ -260,6 +411,28 @@ void EpollServer::run_thread(unsigned int thread_id){
 				client_events[i].data.fd = timeout_epoll_fd;
 				if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, timeout_epoll_fd, &client_events[i]) < 0){
 					perror("epoll_ctl mod timeout");
+				}
+			}else if(the_fd == this->broadcast_pipe[0]){
+				/*
+					This is an implementation of broadcasting within epoll.	The read-end of EpollServer::broadcast_pipe is added to epoll,
+					so when	an implementation calls EpollServer::send(EpollServer::broadcast_fd(), data, data_length)
+					(which writes to broadcast_pipe[1]), each thread will receive a new event landing here. Data
+					is first read from the read end of the pipe, and then written to each currently tracked client fd. Broadcasted.
+				*/
+				if((len = read(this->broadcast_pipe[0], packet, PACKET_LIMIT)) <= 0){
+						ERROR("I really hope this doesn't happen.")
+				}
+				packet[len] = 0;
+				for(auto iter = client_to_timer_map.begin(); iter != client_to_timer_map.end(); ++iter){
+					// Throw away send errors?
+					if(this->send(iter->first, packet, len)){
+						ERROR("failed to broadcast to " << iter->first)
+					}
+				}
+				client_events[i].events = EVENTS;
+				client_events[i].data.fd = this->broadcast_pipe[0];
+				if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, this->broadcast_pipe[0], &client_events[i]) < 0){
+					perror("epoll_ctl mod broadcast");
 				}
 			}else if(the_fd == this->server_fd){
 				if(this->accept_mutex.try_lock()){
@@ -273,7 +446,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 						}else{
 							if(this->accept_continuation(&new_fd)){
 								PRINT("accept continuation failed.")
-								this->close_client(0, &new_fd, [&](size_t, int* fd){
+								this->close_client(&new_fd, [&](size_t, int* fd){
 									close(*fd);
 								});
 							}else{
@@ -287,9 +460,9 @@ void EpollServer::run_thread(unsigned int thread_id){
 									if((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) < 0){
 										perror("timerfd_create");
 									}else{
-										timer_spec.it_interval.tv_sec = 10;
+										timer_spec.it_interval.tv_sec = 0;
 										timer_spec.it_interval.tv_nsec = 0;
-										timer_spec.it_value.tv_sec = 10;
+										timer_spec.it_value.tv_sec = this->timeout;
 										timer_spec.it_value.tv_nsec = 0;
 										//PRINT("TIME " << timer_fd)
 										if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
@@ -330,9 +503,9 @@ void EpollServer::run_thread(unsigned int thread_id){
 				}
 			}else{
 				timer_fd = client_to_timer_map[the_fd];
-				timer_spec.it_interval.tv_sec = 10;
+				timer_spec.it_interval.tv_sec = 0;
 				timer_spec.it_interval.tv_nsec = 0;
-				timer_spec.it_value.tv_sec = 10;
+				timer_spec.it_value.tv_sec = this->timeout;
 				timer_spec.it_value.tv_nsec = 0;
 				if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
 					perror("timerfd_settime update");
@@ -344,7 +517,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 					if(close(timer_fd) < 0){
 						perror("close timer_fd");
 					}
-					this->close_client(0, &the_fd, close_client_callback);
+					this->close_client(&the_fd, close_client_callback);
 				}else if(len == PACKET_LIMIT){
 					ERROR("OVERFLOAT more to read uh oh!")
 				}else{

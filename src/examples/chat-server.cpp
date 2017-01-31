@@ -58,13 +58,17 @@ int main(){
 			return -1;
 		}
 
-		server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
+		if(server.send(server.broadcast_fd(), message.c_str(), message.length())){
+			ERROR("broadcast failed")
+		}
 		return static_cast<ssize_t>(data_length);
 	};
 
 	server.on_disconnect = [&](int fd){
 		message = client_data[fd] + " has disconnected.";
-		server.start_event(new Event(BROADCAST, message.c_str(), message.length()));
+		if(server.send(server.broadcast_fd(), message.c_str(), message.length())){
+			ERROR("broadcast disconnect failed")
+		}
 	};
 
 	server.run(false, 1);

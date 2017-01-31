@@ -55,7 +55,7 @@ PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string priv
  *
  * See EpollServer::close_client
  */
-void PrivateEpollServer::close_client(size_t index, int* fd, std::function<void(size_t, int*)> callback){
+void PrivateEpollServer::close_client(int* fd, std::function<void(int*)> callback){
 	SSL_free(this->client_ssl[*fd]);
 	PRINT("SSL_free'd " << *fd)
 	callback(index, fd);
