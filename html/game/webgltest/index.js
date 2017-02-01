@@ -10,6 +10,12 @@ function setupTextCanvas(text, width, height) {
     textCanvas.textBaseline = "middle";
     textCanvas.strokeStyle = "blue";
     textCanvas.fillStyle = "red";
+
+    textCanvas.beginPath();
+    textCanvas.rect(0, 0, textCanvas.canvas.width, textCanvas.canvas.height);
+    textCanvas.fillStyle = "pink";
+    textCanvas.fill();
+
     textCanvas.clearRect(0, 0, textCanvas.canvas.width, textCanvas.canvas.height);
     textCanvas.fillText(text, width / 2, height / 2);
     textCanvas.strokeText(text, width / 2, height / 2);
@@ -81,6 +87,8 @@ for(var y = -1.0, cell_height = 2.0 / grid_height; y <= 1.0; y += cell_height){
     grid_vertices.push(y);
     grid_vertices.push(0.0);
 }
+
+////////////////////////////////////////////////////////////// Load buffers
 
 var vertex_buffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
@@ -156,18 +164,20 @@ gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
 gl.bindTexture(gl.TEXTURE_2D, null);
 
+//////////////////////////////////////////////// Create shader programs
+
 var vertCode =
 'attribute vec3 coordinates;' +
-'void main(void) {' +
-   ' gl_Position = vec4(coordinates, 1.0);' +
+'void main(void){' +
+    'gl_Position = vec4(coordinates, 1.0);' +
 '}';
 var vertShader = gl.createShader(gl.VERTEX_SHADER);
 gl.shaderSource(vertShader, vertCode);
 gl.compileShader(vertShader);
 
 var fragCode =
-'void main(void) {' +
-   'gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);' +
+'void main(void){' +
+    'gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);' +
 '}';
 var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
 gl.shaderSource(fragShader, fragCode);
@@ -177,7 +187,39 @@ var shaderProgram = gl.createProgram();
 gl.attachShader(shaderProgram, vertShader);
 gl.attachShader(shaderProgram, fragShader);
 gl.linkProgram(shaderProgram);
-gl.useProgram(shaderProgram);
+
+//////////// Texture shader program
+
+var texVertCode =
+'attribute vec3 aVertexPosition;' +
+'attribute vec2 aTextureCoord;' +
+'uniform mat4 uMVMatrix;' +
+'uniform mat4 uPMatrix;' +
+'varying highp vec2 vTextureCoord;' +
+'void main(void){' +
+    'gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);' +
+    'vTextureCoord = aTextureCoord;' +
+'}';
+var texVertShader = gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(texVertShader, texVertCode);
+gl.compileShader(texVertShader);
+
+var texFragCode =
+'varying highp vec2 vTextureCoord;' +
+'uniform sampler2D uSampler;' +
+'void main(void){' +
+    'gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));' +
+'}';
+var texFragShader = gl.createShader(gl.FRAGMENT_SHADER);
+gl.shaderSource(texFragShader, texFragCode);
+gl.compileShader(texFragShader);
+
+var texShaderProgram = gl.createProgram();
+gl.attachShader(texShaderProgram, texVertShader);
+gl.attachShader(texShaderProgram, texFragShader);
+gl.linkProgram(texShaderProgram);
+
+////////////////////////////////////////////// Start the "app"
 
 function checkState(){
     if(state == PICK){
@@ -199,9 +241,10 @@ function render(){
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     if(state == PICK){
+        gl.bindBuffer(gl.ARRAY_BUFFER, left_arrow_buffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, arrow_index_buffer);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, left_arrow_buffer);
+        gl.useProgram(shaderProgram);
 
         var coord = gl.getAttribLocation(shaderProgram, "coordinates");
         gl.vertexAttribPointer(coord, 3, gl.FLOAT, false, 0, 0);
@@ -230,16 +273,27 @@ function render(){
         gl.bindTexture(gl.TEXTURE_2D, textTexture);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, continue_index_buffer);
 
-        var coord = gl.getAttribLocation(shaderProgram, "coordinates");
+        var coord = gl.getAttribLocation(texShaderProgram, "aVertexPosition");
         gl.vertexAttribPointer(coord, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(coord);
+
+        var coord = gl.getAttribLocation(texShaderProgram, "aTextureCoord");
+        gl.vertexAttribPointer(coord, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(coord);
+
+        gl.useProgram(texShaderProgram);
+
+        gl.uniform1i(gl.getUniformLocation(texShaderProgram, 'uSampler'), 0);
 
         gl.drawElements(gl.TRIANGLES, continue_indices.length, gl.UNSIGNED_SHORT, 0);
     }else{
         gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+        
         var coord = gl.getAttribLocation(shaderProgram, "coordinates");
         gl.vertexAttribPointer(coord, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(coord);
+
+        gl.useProgram(shaderProgram);
 
         gl.drawArrays(gl.LINES, 0, grid_vertices.length / 3);
     }

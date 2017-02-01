@@ -59,7 +59,7 @@ int main(){
 		}
 
 		if(server.send(server.broadcast_fd(), message.c_str(), message.length())){
-			ERROR("broadcast failed")
+			ERROR("write to broadcast fd failed")
 		}
 		return static_cast<ssize_t>(data_length);
 	};
@@ -67,7 +67,7 @@ int main(){
 	server.on_disconnect = [&](int fd){
 		message = client_data[fd] + " has disconnected.";
 		if(server.send(server.broadcast_fd(), message.c_str(), message.length())){
-			ERROR("broadcast disconnect failed")
+			ERROR("write to broadcast fd disconnect failed")
 		}
 	};
 
