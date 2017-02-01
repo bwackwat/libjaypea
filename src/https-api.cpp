@@ -3,7 +3,7 @@
 #include "https-api.hpp"
 
 HttpsApi::HttpsApi(std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t https_port)
-:public_directory(new_public_directory),
+:file_cache_remaining_bytes(30 * 1024 * 1024 /* 30MB file cache */), public_directory(new_public_directory),
 server(new PrivateEpollServer(ssl_certificate, ssl_private_key, https_port, 10))
 {}
 
@@ -18,7 +18,6 @@ struct Question{
 	std::string q;
 	std::vector<std::string> a;
 };
-
 static struct Question questions[6] = {
 	{"What is the basic color of the sky?", {"blue"}},
 	{"What is the basic color of grass?", {"green"}},
@@ -27,15 +26,12 @@ static struct Question questions[6] = {
 	{"What is the last name of the current president?", {"trump"}},
 	{"How many planets are in the solar system?", {"8", "9"}}
 };
-
 static std::random_device rd;
 static std::mt19937 mt(rd());
 static std::uniform_int_distribution<size_t> dist(0, 5);
-
 static struct Question* get_question(){
 	return &questions[dist(mt)];
 }
-
 static std::unordered_map<int, struct Question*> client_questions;
 
 void HttpsApi::start(){
@@ -97,6 +93,87 @@ void HttpsApi::start(){
 					return -1;
 				}
 				PRINT("DELI:" << response)
+
+/*
+				if(this->file_cache.count(clean_route)){
+					// Send the file from the cache.
+					CachedFile* cached_file = file_cache[clean_route];
+
+					size_t buffer_size = BUFFER_LIMIT;
+					size_t remainder = cached_file.data_length % BUFFER_LIMIT;
+					int offset = 0;
+					while(buffer_size == BUFFER_LIMIT){
+						if(offset + buffer_size > cached_file.data_length){
+							// Send final bytes.
+							buffer_size = cached_file.data_length % BUFFER_LIMIT;
+						}
+						if(this->server->send(fd, cached_file->data + offset, buffer_size)){
+							return -1;
+						}
+						offset += buffer_size;
+					}
+				}else if(this->file_cache_remaining_bytes > route_stat.st_size){
+					// Stick the file into the cache AND send it
+					CachedFile* cached_file = new CachedFile();
+					cached_file->data-length = route_stat.st_size;
+					cached_file->data = new char[route_state.st_size];
+					int offset = 0;
+					this->file_cache[clean_route] = cached_file;
+
+					int file_fd;
+					ssize_t len;
+					char buffer[BUFFER_LIMIT];
+					if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
+						ERROR("open file")
+						return 0;
+					}
+					while(file_fd > 0){
+						if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
+							ERROR("read file")
+							return 0;
+						}
+						buffer[len] = 0;
+						// Only different line (copy into memory)
+						std::memcpy(cached_file->data + offset, buffer, len);
+						if(this->server->send(fd, buffer, static_cast<size_t>(len))){
+							return -1;
+						}
+						if(len < BUFFER_LIMIT){
+							break;
+						}
+					}
+					if(close(file_fd) < 0){
+						ERROR("close file")
+						return 0;
+					}
+				}else{
+					// Send the file read-buffer style
+					int file_fd;
+					ssize_t len;
+					char buffer[BUFFER_LIMIT];
+					if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
+						ERROR("open file")
+						return 0;
+					}
+					while(file_fd > 0){
+						if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
+							ERROR("read file")
+							return 0;
+						}
+						buffer[len] = 0;
+						if(this->server->send(fd, buffer, static_cast<size_t>(len))){
+							return -1;
+						}
+						if(len < BUFFER_LIMIT){
+							break;
+						}
+					}
+					if(close(file_fd) < 0){
+						ERROR("close file")
+						return 0;
+					}
+				}
+*/
 
 				int file_fd;
 				ssize_t len;

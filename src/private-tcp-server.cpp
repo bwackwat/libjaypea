@@ -40,10 +40,18 @@ PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string priv
 
 	std::signal(SIGPIPE, SIG_IGN);
 
+	// Hell yeah, use ECDH.
+	if(!SSL_CTX_set_ecdh_auto(this->ctx, 1)){
+		ERR_print_errors_fp(stdout);
+		throw std::runtime_error(this->name + "SSL_CTX_set_ecdh_auto");
+	}
+
+	// SSLv3 is insecure via poodles.
 	SSL_CTX_set_options(this->ctx, SSL_OP_NO_SSLv3);
 
-	if(SSL_CTX_set_cipher_list(this->ctx, "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS") == 0){
-     	ERR_print_errors_fp(stdout);
+	// "Good" cipher list from the interweb.
+	if(!SSL_CTX_set_cipher_list(this->ctx, "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS")){
+		ERR_print_errors_fp(stdout);
 		throw std::runtime_error(this->name + "SSL_CTX_set_cipher_list");
 	}
 
@@ -101,7 +109,7 @@ ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
 		return -2;
 	default:
 		ERROR("other SSL_read")
-                ERR_print_errors_fp(stdout);
+		ERR_print_errors_fp(stdout);
 		return -1;
 	}
 	data[len] = 0;
