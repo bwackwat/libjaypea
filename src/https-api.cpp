@@ -112,6 +112,7 @@ void HttpsApi::start(){
 						}
 						offset += buffer_size;
 					}
+					PRINT("FILE CACHED")
 				}else if(this->file_cache_remaining_bytes > route_stat.st_size){
 					// Stick the file into the cache AND send it
 					CachedFile* cached_file = new CachedFile();
@@ -146,6 +147,7 @@ void HttpsApi::start(){
 						ERROR("close file")
 						return 0;
 					}
+					PRINT("FILE DONE AND CACHED")
 				}else{
 					// Send the file read-buffer style
 					int file_fd;
@@ -172,6 +174,7 @@ void HttpsApi::start(){
 						ERROR("close file")
 						return 0;
 					}
+					PRINT("FILE DONE")
 				}
 */
 

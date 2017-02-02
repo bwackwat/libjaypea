@@ -35,6 +35,12 @@ public:
 	{}
 };
 
+class CachedFile{
+public:
+	char* data;
+	size_t data_length;
+};
+
 class HttpsApi{
 public:
 	JsonObject* routes_object;
@@ -44,6 +50,9 @@ public:
 	void route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(), bool requires_human = false);
 	void start();
 private:
+	std::unordered_map<std::string, CachedFile*> file_cache;
+	int file_cache_remaining_bytes;
+
 	std::unordered_map<std::string, Route*> routemap;
 	std::string public_directory;
 
