@@ -70,7 +70,7 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /* data_length */
 	*transaction += 1;
 	
 	char block_size[4] = {0, 0, 0, 0};
-	*(reinterpret_cast<uint32_t*>(block_size)) = send_data.length();
+	*(reinterpret_cast<uint32_t*>(block_size)) = static_cast<uint32_t>(send_data.length());
 	
 	//Util::write_size_t(send_data.length(), block_size);
 	ssize_t len;
@@ -131,7 +131,7 @@ std::function<ssize_t(int, const char*, ssize_t)> callback, int* transaction){
 		}else if(len == 0){
 			ERROR("encryptor read zero block")
 			return -2;
-		}else if(len != block_size){
+		}else if(len != static_cast<ssize_t>(block_size)){
 			ERROR("couldn't read block size block?" << len << '|' << block_size)
 			return -3;
 		}

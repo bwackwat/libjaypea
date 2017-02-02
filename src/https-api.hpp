@@ -52,6 +52,7 @@ public:
 private:
 	std::unordered_map<std::string, CachedFile*> file_cache;
 	int file_cache_remaining_bytes;
+	std::mutex file_cache_mutex;
 
 	std::unordered_map<std::string, Route*> routemap;
 	std::string public_directory;

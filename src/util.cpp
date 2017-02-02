@@ -51,7 +51,7 @@ static std::string get_exe_path(){
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
 	exit(1);
 }
-
+/*
 size_t Util::read_size_t(const char* data){
 	return static_cast<size_t>(
 		static_cast<unsigned char>(data[0]) +
@@ -66,6 +66,7 @@ void Util::write_size_t(size_t value, char* data){
 	data[2] = static_cast<unsigned char>(value) >> 16;
 	data[3] = static_cast<unsigned char>(value) >> 24;
 }
+*/
 
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});

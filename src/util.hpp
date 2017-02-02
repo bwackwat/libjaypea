@@ -74,8 +74,10 @@ public:
 	static void define_argument(std::string name, int* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, bool* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 
+/*
 	static size_t read_size_t(const char* data);
 	static void write_size_t(size_t value, char* data);
+*/
 
 	static void parse_arguments(int argc, char** argv, std::string description);
 
