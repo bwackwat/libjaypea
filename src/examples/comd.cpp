@@ -86,7 +86,7 @@ int main(int argc, char** argv){
 	int shell_client_fd;
 	char packet[PACKET_LIMIT];
 	ssize_t len;
-	int port = 3424;
+	int port;
 	std::string keyfile = "etc/keyfile";
 
 	Util::define_argument("port", &port, {"-p"});

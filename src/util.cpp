@@ -37,8 +37,7 @@ void Util::define_argument(std::string name, bool* value, std::vector<std::strin
 	arguments.push_back({name, alts, callback, required, ARG_BOOLEAN, std::ref(name), 0, value});
 }
 
-static std::string get_exe_path()
-{
+static std::string get_exe_path(){
 	char result[128];
 	ssize_t count = readlink( "/proc/self/exe", result, 128);
 	return std::string(result, (count > 0) ? static_cast<size_t>(count) : 0);
@@ -55,17 +54,17 @@ static std::string get_exe_path()
 
 size_t Util::read_size_t(const char* data){
 	return static_cast<size_t>(
-		data[0] +
-		(data[1] << 8) + 
-		(data[2] << 16) + 
-		(data[3] << 24));
+		static_cast<unsigned char>(data[0]) +
+		(static_cast<unsigned char>(data[1]) << 8) + 
+		(static_cast<unsigned char>(data[2]) << 16) + 
+		(static_cast<unsigned char>(data[3]) << 24));
 }
 
 void Util::write_size_t(size_t value, char* data){
-	data[0] = static_cast<char>(value);
-	data[1] = static_cast<char>(value) >> 8;
-	data[2] = static_cast<char>(value) >> 16;
-	data[3] = static_cast<char>(value) >> 24;
+	data[0] = static_cast<unsigned char>(value);
+	data[1] = static_cast<unsigned char>(value) >> 8;
+	data[2] = static_cast<unsigned char>(value) >> 16;
+	data[3] = static_cast<unsigned char>(value) >> 24;
 }
 
 void Util::parse_arguments(int argc, char** argv, std::string description){
