@@ -69,10 +69,10 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /* data_length */
 	std::string send_data = this->encrypt(data, *transaction);
 	*transaction += 1;
 	char block_size[4] = {0, 0, 0, 0};
-	Util::write_uint32_t(static_cast<uint32_t>(send_data.length()), block_size);
+	Util::write_size_t(send_data.length(), block_size);
 	ssize_t len;
 
-	PRINT("SDATA|" << send_data.length() << '|' <<  static_cast<uint32_t>(send_data.length()))
+	PRINT("SDATA|" << send_data.length() << '|' <<  block_size)
 	if((len = write(fd, block_size, 4)) < 0){
 		ERROR("encryptor write")
 		return true;
@@ -95,7 +95,7 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /* data_length */
 ssize_t SymmetricEncryptor::recv(int fd, char* data, size_t /* data_length */,
 std::function<ssize_t(int, const char*, ssize_t)> callback, int* transaction){
 	ssize_t len;
-	uint32_t block_size;
+	size_t block_size;
 	std::string recv_data;
 	
 	if((len = read(fd, data, 4)) < 0){
@@ -113,11 +113,11 @@ std::function<ssize_t(int, const char*, ssize_t)> callback, int* transaction){
 		return -3;
 	}
 	data[4] = 0;
-	block_size = Util::read_uint32_t(data);
+	block_size = Util::read_size_t(data);
 	PRINT("RDATA|" << data << '|' << block_size)
 
 	while(true){
-		if((len = read(fd, data, static_cast<size_t>(block_size))) < 0){
+		if((len = read(fd, data, block_size)) < 0){
 			if(errno != EWOULDBLOCK){
 				perror("encryptor read block");
 				ERROR("encryptor read block " << fd << '|' << block_size)
@@ -127,7 +127,7 @@ std::function<ssize_t(int, const char*, ssize_t)> callback, int* transaction){
 		}else if(len == 0){
 			ERROR("encryptor read zero block")
 			return -2;
-		}else if(len != static_cast<size_t>(block_size)){
+		}else if(len != block_size){
 			ERROR("couldn't read block size block?" << len << '|' << block_size)
 			return -3;
 		}

@@ -7,6 +7,11 @@
 #include "cryptopp/filters.h"
 #include "cryptopp/cryptlib.h"
 
+union Size{
+	size_t size;
+	char chars[4];
+};
+
 class SymmetricEncryptor{
 private:
 	CryptoPP::AutoSeededRandomPool random_pool;

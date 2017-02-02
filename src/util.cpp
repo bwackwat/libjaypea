@@ -53,15 +53,15 @@ static std::string get_exe_path()
 	exit(1);
 }
 
-uint32_t Util::read_uint32_t(const char* data){
-	return static_cast<uint32_t>(
-		data[3] << 24 |
-		data[2] << 16 |
-		data[1] << 8 |
-		data[0]);
+size_t Util::read_size_t(const char* data){
+	return static_cast<size_t>(
+		data[0] +
+		(data[1] << 8) + 
+		(data[2] << 16) + 
+		(data[3] << 24));
 }
 
-void Util::write_uint32_t(uint32_t value, char* data){
+void Util::write_size_t(size_t value, char* data){
 	data[0] = static_cast<char>(value);
 	data[1] = static_cast<char>(value) >> 8;
 	data[2] = static_cast<char>(value) >> 16;
