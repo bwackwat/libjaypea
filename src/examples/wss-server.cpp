@@ -5,7 +5,7 @@
 
 #include "json.hpp"
 #include "util.hpp"
-#include "tcp-server.hpp"
+#include "private-tcp-server.hpp"
 
 #define WSS_MAGIC_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
@@ -30,8 +30,7 @@ static std::string wss_handshake_response(std::string key){
 
 enum ClientState {
 	CONNECTING,
-	LOGGING,
-	PLAYING
+	EXCHANGING
 };
 
 class Player{
@@ -50,20 +49,19 @@ public:
 static std::string parse_web_socket_frame(const char* request, ssize_t data_length){
 	std::stringstream message;
 
-	uint64_t len = request[1] & 0x7f;
+	uint64_t len = request[1] & 0x7F;
 	uint64_t payload_length;
-	int offset = 2;
+	size_t offset = 2;
 
-	if(len <= 125){
-		payload_length = len;
-	}else if(len == 126){
+	if(len == 126){
 		payload_length = request[2] + (request[3] << 8);
 		offset += 2;
 	}else if(len == 127){
 		payload_length = request[2] + (request[3] << 8);
 		offset += 8;
 	}else{
-		ERROR("whack length field");
+		ERROR("whack length field " << len);
+		payload_length = len;
 	}
 
 	if(data_length < payload_length + offset){
@@ -71,23 +69,73 @@ static std::string parse_web_socket_frame(const char* request, ssize_t data_leng
 	}
 
 	if(request[1] & 0x80){
-		int mask = *static_cast<unsigned int*>(request + offset);
+		char mask[4];
+		std::memcpy(mask, request + offset, 4);
 		offset += 4;
 
-		for(const char* it = request + offset; it < data_length; ++ it){
-			message << *it ^ static_cast<unsigned char*>(&mask)[i % 4];
+		int i = 0;
+		for(const char* it = request + offset; *it; ++it){
+			message << (static_cast<unsigned char>(*it) ^ mask[i++ % 4]);
 		}
+	}else{
+		
 	}
 
 	return message.str();
 }
 
-int main(){
+/*
+
+static std::string create_web_socket_frame(char* data, ssize_t data_length){
+	int pos = 0;
+	int size = data_length; 
+	buffer[pos++] = (unsigned char)frame_type; // text frame
+
+	if(size <= 125) {
+		buffer[pos++] = size;
+	}
+	else if(size <= 65535) {
+		buffer[pos++] = 126; //16 bit length follows
+		
+		buffer[pos++] = (size >> 8) & 0xFF; // leftmost first
+		buffer[pos++] = size & 0xFF;
+	}
+	else { // >2^16-1 (65535)
+		buffer[pos++] = 127; //64 bit length follows
+		
+		// write 8 bytes length (significant first)
+		
+		// since msg_length is int it can be no longer than 4 bytes = 2^32-1
+		// padd zeroes for the first 4 bytes
+		for(int i=3; i>=0; i--) {
+			buffer[pos++] = 0;
+		}
+		// write the actual 32bit msg_length in the next 4 bytes
+		for(int i=3; i>=0; i--) {
+			buffer[pos++] = ((size >> 8*i) & 0xFF);
+		}
+	}
+	memcpy((void*)(buffer+pos), msg, size);
+	return (size+pos);
+}
+
+*/
+
+int main(int argc, char** argv){
+	std::string ssl_certificate;
+	std::string ssl_private_key;
+	int port;
+
+	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
+	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
+	Util::define_argument("port", &port, {"-p"});
+	Util::parse_arguments(argc, argv, "This is an Secure WebSo	cketServer");
+	
 	std::unordered_map<std::string, Player*> player_data;
 	std::unordered_map<int /* fd */, std::string /* logged in handle */> client_player;
 	std::unordered_map<int /* fd */, enum ClientState> client_state;
 
-	EpollServer server(11000, 10);
+	PrivateEpollServer server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(port), 10);
 
 //	PRINT(hash_key_sha1(std::string("dGhlIHNhbXBsZSBub25jZQ==") + WSS_MAGIC_GUID))
 
@@ -96,8 +144,8 @@ int main(){
 	};
 
 	server.on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
+		PRINT("RECV: " << data)
 		if(client_state[fd] == CONNECTING){
-			PRINT("RECV: " << data)
 			JsonObject r_obj(OBJECT);
 			Util::parse_http_api_request(data, &r_obj);
 			PRINT("JPON: " << r_obj.stringify(true))
@@ -109,17 +157,19 @@ int main(){
 				}
 
 				PRINT("DELI: " << response)
-				client_state[fd] = LOGGING;
+				client_state[fd] = EXCHANGING;
 			}else{
 				PRINT("Bad websocket request.")
 				return -1;
 			}
-		}else if(client_state[fd] == LOGGING){
-			PRINT("RECV: " << data)
+		}else if(client_state[fd] == EXCHANGING){
 			std::string message = parse_web_socket_frame(data, data_length);
+			if(server.send(fd, message.c_str(), message.length())){
+				return -1;
+			}
 			PRINT("MSG: " << message)
 		}else{
-			PRINT("RECV: " << data)
+			PRINT("NEVER")
 		}
 		return data_length;
 	};

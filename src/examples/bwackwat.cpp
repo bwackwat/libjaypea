@@ -37,7 +37,7 @@ int main(int argc, char **argv){
 	Util::define_argument("https", &https_port);
 	Util::parse_arguments(argc, argv, "This is an HTTPS JSON API which hold routes for bwackwat.com by interfacing with a PostgreSQL provider.");
 
-	SymmetricTcpClient provider(database_ip, 10000, keyfile);
+	SymmetricTcpClient provider(database_ip, 20000, keyfile);
 
 	HttpsApi server(public_directory, ssl_certificate, ssl_private_key, static_cast<uint16_t>(https_port));
 

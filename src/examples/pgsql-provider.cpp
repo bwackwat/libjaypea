@@ -89,7 +89,7 @@ int main(int argc, char** argv){
 		{posts->table, posts}
 	};
 	
-	SymmetricEpollServer server(keyfile, 10000, 1);
+	SymmetricEpollServer server(keyfile, 20000, 1);
 	
 	SymmetricEncryptor encryptor;
 

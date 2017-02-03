@@ -23,17 +23,14 @@ bool Util::verbose;
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	PRINT("DEFAULT SET " << name << " = " << value)
 	arguments.push_back({name, alts, callback, required, ARG_STRING, std::ref(value), 0, 0});
 }
 
 void Util::define_argument(std::string name, int* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	PRINT("DEFAULT SET " << name << " = " << *value)
 	arguments.push_back({name, alts, callback, required, ARG_INTEGER, std::ref(name), value, 0});
 }
 
 void Util::define_argument(std::string name, bool* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	PRINT("DEFAULT SET " << name << " = " << *value)
 	arguments.push_back({name, alts, callback, required, ARG_BOOLEAN, std::ref(name), 0, value});
 }
 
@@ -438,6 +435,11 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 
 	if(request_obj->objectValues["route"]->stringValue.length() >= 4 &&
 	request_obj->objectValues["route"]->stringValue.substr(0, 4) == "/api"){
+		if(request_obj->HasObj("Content-Length", STRING) &&
+		std::strlen(it) != static_cast<unsigned long>(std::stol(request_obj->GetStr("Content-Length")))){
+			return JSON;
+		}
+		
 		request_obj->parse(it);
 		return HTTP_API;
 	}

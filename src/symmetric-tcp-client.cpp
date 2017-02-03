@@ -20,40 +20,32 @@ std::string SymmetricTcpClient::communicate(std::string request){
 std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 	char response[PACKET_LIMIT];
 	std::string response_string;
+	ssize_t len;
+	
+	int i = 0;
+	while(!this->connected){
+		this->connected = this->reconnect();
+		if(i++ >= 5){
+			return std::string();
+		}
+	}
+	
+	if(this->encryptor.send(this->fd, request, length, &this->writes)){
+		ERROR("send")
+		this->connected = false;
+		return std::string();
+	}
 
-	this->comm_mutex.lock();
+	std::function<ssize_t(int, const char*, size_t)> set_response_callback = [&](int, const char* data, size_t data_length)->ssize_t{
+		response_string = std::string(data);
+		return static_cast<ssize_t>(data_length);
+	};
 
 	do{
-		PRINT("RECON LOOP")
-
-		if(!this->connected){
-			unsigned char i = 0;
-			while(!this->connected){
-				this->connected = this->reconnect();
-				if(i++ > 10){
-					this->comm_mutex.unlock();
-					return std::string();
-				}
-			}
+		if((len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, set_response_callback, &this->reads)) < 0){
+			return std::string();
 		}
-
-		std::function<ssize_t(int, const char*, size_t)> set_response_callback = [&](int, const char* data, size_t data_length)->ssize_t{
-			response_string = std::string(data);
-			return static_cast<ssize_t>(data_length);
-		};
-
-		ssize_t len;
-		if(this->encryptor.send(this->fd, request, length, &this->writes)){
-			ERROR("send")
-			this->connected = false;
-		}else if((len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, set_response_callback, &this->reads)) <= 0){
-			ERROR("recv")
-			this->connected = false;
-		}
-
-	}while(!this->connected);
-
-	this->comm_mutex.unlock();
+	}while(len == 0);
 
 	return response_string;
 }

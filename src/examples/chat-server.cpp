@@ -15,7 +15,12 @@ static const char* clean(std::string string){
 	return cleaned.str().c_str();
 }
 
-int main(){
+int main(int argc, char** argv){
+	int port;
+
+	Util::define_argument("port", &port, {"-p"});
+	Util::parse_arguments(argc, argv, "Chat server");
+
 	JsonObject packet_data(OBJECT);
 	packet_data.objectValues["type"] = new JsonObject(std::string());
 	packet_data.objectValues["message"] = new JsonObject(std::string());
@@ -23,7 +28,7 @@ int main(){
 	std::string message;
 
 	std::unordered_map<int, std::string> client_data;
-	EpollServer server(10000, 100);
+	EpollServer server(static_cast<uint16_t>(port), 100);
 
 	server.on_connect = [&](int fd){
 		client_data[fd] = std::string();

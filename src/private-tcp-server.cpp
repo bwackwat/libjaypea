@@ -67,8 +67,8 @@ PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string priv
  * See EpollServer::close_client
  */
 void PrivateEpollServer::close_client(int* fd, std::function<void(int*)> callback){
-	SSL_free(this->client_ssl[*fd]);
 	PRINT("SSL_free'd " << *fd)
+	SSL_free(this->client_ssl[*fd]);
 	callback(fd);
 }
 
@@ -94,11 +94,13 @@ bool PrivateEpollServer::send(int fd, const char* data, size_t data_length){
 }
 
 /**
- * @brief Uses SSL_read instead of a regular read.
+ * @brief This is nessary for HTTPS multi-part requests.
+ * Google chrome requires this funtionality to piece together POST headers and body.
  *
  * See EpollServer::recv
  */
-ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
+ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length,
+std::function<ssize_t(int, char*, size_t)> callback){
 	int len;
 	len = SSL_read(this->client_ssl[fd], data, static_cast<int>(data_length));
 	switch(SSL_get_error(this->client_ssl[fd], len)){
@@ -116,7 +118,16 @@ ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
 		return -1;
 	}
 	data[len] = 0;
-	return this->on_read(fd, data, static_cast<ssize_t>(len));
+	return callback(fd, data, static_cast<size_t>(len));
+}
+
+/**
+ * @brief Uses SSL_read instead of a regular read.
+ *
+ * See EpollServer::recv
+ */
+ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
+	return this->recv(fd, data, data_length, this->on_read);
 }
 
 /**

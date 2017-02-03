@@ -55,13 +55,34 @@ void HttpsApi::start(){
 	};
 
 	this->server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
-		PRINT(data)
+		PRINT("RECV:" << data)
+		
 		JsonObject r_obj(OBJECT);
 		enum RequestResult r_type = Util::parse_http_api_request(data, &r_obj);
-		PRINT("JSON:" << r_obj.stringify(true))
 
 		std::string response_body = std::string();
 		std::string response = std::string();
+		
+		if(r_type == JSON){
+			char json_data[PACKET_LIMIT];
+			
+			auto get_body_callback = [&](int, const char*, size_t dl)->ssize_t{
+				PRINT("GOT JSON:" << json_data);
+				return static_cast<ssize_t>(dl);
+			};
+			
+			if(this->server->recv(fd, json_data, PACKET_LIMIT, get_body_callback) <= 0){
+				PRINT("FAILED TO GET JSON POST BODY");
+				return -1;
+			}
+			
+			r_obj.parse(json_data);
+			
+			r_type = HTTP_API;
+		}
+		
+		PRINT("JSON:" << r_obj.stringify(true))
+		
 		std::string route = r_obj.GetStr("route");
 		
 		if(r_type == HTTP){
@@ -205,12 +226,13 @@ void HttpsApi::start(){
 					route += '/';
 				}
 			}
-			PRINT("APIR:" << route)
+
+			PRINT((r_type == API ? "APIR:" : "HTTPAPIR") << route)
 
 			if(this->routemap.count(route)){
 				for(auto iter = this->routemap[route]->requires.begin(); iter != this->routemap[route]->requires.end(); ++iter){
 					if(!r_obj.HasObj(iter->first, iter->second)){
-						response_body = "{\"error\":\"'" + iter->first + "' requries a " + JsonObject::typeString[iter->second] + ".\"}";
+						response_body = "{\"error\":\"'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".\"}";
 						break;
 					}
 				}
@@ -244,13 +266,13 @@ void HttpsApi::start(){
 			}
 		}
 		
-		if(!response_body.empty()){
+		if(!response_body.empty() && r_type != HTTP){
 			if(r_type == API){
 				if(this->server->send(fd, response_body.c_str(), response_body.length())){
 					return -1;
 				}
 				PRINT("DELI:" << response_body)
-			}else{
+			}else{			
 				response = response_header + "Content-Length: " + std::to_string(response_body.length()) + "\n\n" + response_body;
 				if(this->server->send(fd, response.c_str(), response.length())){
 					return -1;
