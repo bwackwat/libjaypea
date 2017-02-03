@@ -23,17 +23,11 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 	ssize_t len;
 	
 	int i = 0;
-	while(!this->connected){
+	while(!this->connected || this->encryptor.send(this->fd, request, length, &this->writes)){
 		this->connected = this->reconnect();
 		if(i++ >= 5){
 			return std::string();
 		}
-	}
-	
-	if(this->encryptor.send(this->fd, request, length, &this->writes)){
-		ERROR("send")
-		this->connected = false;
-		return std::string();
 	}
 
 	std::function<ssize_t(int, const char*, size_t)> set_response_callback = [&](int, const char* data, size_t data_length)->ssize_t{

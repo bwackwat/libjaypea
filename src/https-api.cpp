@@ -266,7 +266,7 @@ void HttpsApi::start(){
 			}
 		}
 		
-		if(!response_body.empty() && r_type != HTTP){
+		if(!response_body.empty() && r_type != JSON){
 			if(r_type == API){
 				if(this->server->send(fd, response_body.c_str(), response_body.length())){
 					return -1;
