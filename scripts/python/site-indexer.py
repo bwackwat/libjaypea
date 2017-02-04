@@ -22,6 +22,7 @@ index_html_template = "<html>" \
                       "</html>"
 
 if(raw_input("rm -rf " + root_dir + "index/ ? [y]: ") or "y" != "y"):
+	print "Exiting"
 	sys.exit(1)
 
 if os.path.exists(root_dir + "index/"):

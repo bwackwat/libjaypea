@@ -2,7 +2,7 @@
 
 dir=$(pwd)
 
-mkdir -p $dir/build
+mkdir -p $dir/binaries
 
 argc=$#
 argv=($@)
@@ -35,8 +35,8 @@ esac
 
 libs="-lpthread -lssl -lcryptopp"
 
-compiler="clang++ -std=c++11 -I$dir/src -ljaypea -lcryptopp -lpqxx $warn $extra" 
+compiler="clang++ -std=c++11 -I$dir/cpp-source -ljaypea -lcryptopp -lpqxx $warn $extra" 
 
-libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/src \
+libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \
-$dir/src/*.cpp -o /lib64/libjaypea.so"
+$dir/cpp-source/*.cpp -o /lib64/libjaypea.so"

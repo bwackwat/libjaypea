@@ -2,17 +2,19 @@
 
 # libjaypea
 
-Limited to "Linux" environments. Scripts are tested and used on CentOS 7.
+Libjaypea is a TCP networking library, with the goal of being able to assemble distrbuted systems with custom communication channels.
 
-Uses:
-* Lots of C.
+## Environment Dependencies
+
+* RedHat Linux; scripts tested for/on CentOS 7.
+* epoll
 * CryptoPP for symmetric key encryption.
 * OpenSSL for private key encryption.
 * libpqxx for PostgreSQL integration.
-* DigitalOcean API for quick deployments.
+* DigitalOcean API Key for quick deployments.
 
 ## Documentation
 
-* [C++ Server Implementation Example](doc/server-implementation.md)
-* [Example Programs](doc/example-programs.md)
-* [TODO Notes/History](doc/todo.md)
+* [C++ Server Implementation Example](documentation/server-implementation.md)
+* [Example Programs](documentation/example-programs.md)
+* [TODO Notes/History](documentation/todo.md)

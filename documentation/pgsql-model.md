@@ -7,6 +7,7 @@ This object-relational mapping repository generates crispy queries.
 * PostgreSQL driver support.
   * Simple "WHERE" querying method.
   * Simple "INSERT" querying method.
+  * Simple "INSERT" querying method.
 
 ## Goals
 

@@ -1,23 +1,18 @@
-# modern-web-monad
+# HttpsApi
 
 An HTTPS server with a built-in JSON API for modern web applications in simple Linux environments.
 
 ## Features
 
-* Forks an HTTP server which simply redirects all traffic to the HTTPS site.
-* Requests are parsed for:
+* Requests are parsed and munged into JSON from:
   * A URL route, e.g. "/api/user".
   * A URL method, e.g. "POST".
+  * A protocol, e.g. "HTTP/1.1".
   * HTTP headers, e.g. {"Content-Type":"application/json"}
-  * URL Parameters, e.g. "/api/user?username=bwackwat&content=yay". These parameters are merged with any JSON in the request body.
+  * URL Parameters, e.g. "/api/user?username=bwackwat&content=yay".
   * JSON in the request body.
 * OpenSSL security.
-* Multi-process epoll HTTPS server.
+* Multi-threaded epoll HTTPS server.
 * ```configuration.json``` provides some easy configuration.
 * JSON API routes have non-nestable required fields.
 * HTTP Requests are safely read buffered across OpenSSL.
-
-## TODO
-
-* Buffer overflows? I doubt it ;)
-* Flamegraph this thing.

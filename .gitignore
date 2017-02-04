@@ -1,4 +1,3 @@
-build/*
-*.log
-keyfile.deploy
-start.sh
+logs/*
+binaries/*
+artifacts/*

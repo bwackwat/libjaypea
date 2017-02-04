@@ -2,12 +2,12 @@
 
 cd $(dirname "${BASH_SOURCE[0]}")/../
 
-source bin/build-prefix.sh
+source scripts/build-prefix.sh
 
 function build {
 	if [ $argc -eq 0 ] || [[ "$1" = *"$argv"* ]]; then
 		echo "building $1"
-		eval "$compiler $2 $dir/src/examples/$1.cpp -o $dir/build/$1"
+		eval "$compiler $2 $dir/cpp-source/examples/$1.cpp -o $dir/binaries/$1"
 	fi
 }
 

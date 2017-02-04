@@ -18,15 +18,16 @@ def rprint(response):
 	print json.dumps(response_json, indent=4)
 	return response_json
 
-# rprint(requests.get("https://api.digitalocean.com/v2/droplets", headers=headers))
-# rprint(requests.get("https://api.digitalocean.com/v2/actions", headers=headers))
+newuser = raw_input("Enter a username for the deployment: ")
+if not newuser:
+	print "Please provide a username."
+	sys.exit(1)
 
-newuser = raw_input("Enter a username for the deployment [admin]: ") or "admin"
 newpass = ""
 if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
 	newpass = raw_input("Password: ")
 
-newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/web]: ") or "/opt/web"
+newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/libjaypea]: ") or "/opt/libjaypea"
 newhost = raw_input("Enter a hostname [bwackwat.com]: ") or "bwackwat.com"
 newkey = raw_input("Enter a new 96 byte key for comd (enjoy writing a sentence) [pads random letters]: \n")
 
@@ -34,13 +35,13 @@ newkeylen = len(newkey)
 if newkeylen < 96:
 	newkey += ''.join(random.choice(string.ascii_letters) for x in range(96 - newkeylen))
 	print "Appended " + str(96 - newkeylen) + " characters to the key."
-with open(scriptdir + "/../keyfile.deploy", "w") as f:
+with open(scriptdir + "/../../artifacts/" + newuser + ".deploy.keyfile", "w") as f:
 	f.write(newkey)
-print "Key is written to keyfile.deploy and will be used with cloud-init."
+print "Key is written to " + newuser + ".deploy.keyfile (in this directory) and will be used with cloud-init."
 
 print '-----------------------------------------------------------------'
 
-with open(scriptdir + "/deploy.sh") as f:
+with open(scriptdir + "/../deploy.sh") as f:
 	print f.read()
 
 print '-----------------------------------------------------------------'
@@ -58,8 +59,8 @@ runcmd:
  - yum -y install git
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
- - chmod +x {0}/bin/deploy.sh
- - {0}/bin/deploy.sh {0} "{1}" {2} {3} {4}
+ - chmod +x {0}/scripts/deploy.sh
+ - {0}/scripts/deploy.sh {0} "{1}" {2} {3} {4}
 
 power_state:
    mode: reboot
