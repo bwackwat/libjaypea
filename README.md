@@ -13,6 +13,17 @@ Uses:
 * libpqxx for PostgreSQL integration.
 * DigitalOcean API for quick deployments.
 
+## Building
+
+* Build the docker image:
+```
+docker build -t libjaypea .
+```
+* Run the docker container:
+```
+docker run libjaypea
+```
+
 ## Implementation Example
 
 * Execute some commands to load and build the library:
@@ -85,3 +96,9 @@ In order of coolness.
 13. http-redirecter. Redirects HTTP traffic. Good practice.
 14. json-test. Tests JSON parsing.
 15. queue-test. Tests the queue implementation.
+
+## TODO
+* improve the readme: simpler, shorter, with a clear build strategy
+* make the docker container actually run the thing
+* make travis testing actually do rest calls to the container
+ * a better strategy may be to compile the cpp code, ignoring the container, implementing unit tests
