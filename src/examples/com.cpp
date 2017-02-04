@@ -84,7 +84,7 @@ static int ttyraw(int fd){
 		return -1;
 	}
 	new_term = old_term;
-	new_term.c_lflag &= ~(ICANON);
+	new_term.c_lflag &= static_cast<unsigned int>(~(ICANON));
 	if(tcsetattr(fd, TCSANOW, &new_term) < 0){
 		ERROR("tcsetattr")
 		return -1;

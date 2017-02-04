@@ -23,11 +23,11 @@ static int ttyraw(int fd){
 	}
 	newtermios = oldtermios;
 
-	newtermios.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-	newtermios.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-	newtermios.c_cflag &= ~(CSIZE | PARENB);
+	newtermios.c_lflag &= static_cast<unsigned int>(~(ECHO | ICANON | IEXTEN | ISIG));
+	newtermios.c_iflag &= static_cast<unsigned int>(~(BRKINT | ICRNL | INPCK | ISTRIP | IXON));
+	newtermios.c_cflag &= static_cast<unsigned int>(~(CSIZE | PARENB));
 	newtermios.c_cflag |= CS8;
-	newtermios.c_oflag &= ~(OPOST);
+	newtermios.c_oflag &= static_cast<unsigned int>(~(OPOST));
 	newtermios.c_cc[VMIN] = 1;
 	newtermios.c_cc[VTIME] = 0;
 

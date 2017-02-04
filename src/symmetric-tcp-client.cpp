@@ -19,15 +19,21 @@ std::string SymmetricTcpClient::communicate(std::string request){
 
 std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 	char response[PACKET_LIMIT];
-	std::string response_string;
+	std::string response_string = std::string();
 	ssize_t len;
 	
-	int i = 0;
-	while(!this->connected || this->encryptor.send(this->fd, request, length, &this->writes)){
-		this->connected = this->reconnect();
-		if(i++ >= 5){
-			return std::string();
+	if(!this->connected){
+		PRINT("SymmetricTcpClient reconnecting.")
+		if(!(this->connected = this->reconnect())){
+			return response_string;
 		}
+		PRINT("SymmetricTcpClient reconnected.")
+	}
+	
+	if(this->encryptor.send(this->fd, request, length, &this->writes)){
+		this->connected = false;
+		ERROR("SymmetricTcpClient send")
+		return response_string;
 	}
 
 	std::function<ssize_t(int, const char*, size_t)> set_response_callback = [&](int, const char* data, size_t data_length)->ssize_t{
@@ -37,7 +43,9 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 
 	do{
 		if((len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, set_response_callback, &this->reads)) < 0){
-			return std::string();
+			this->connected = false;
+			ERROR("SymmetricTcpClient recv")
+			return response_string;
 		}
 	}while(len == 0);
 

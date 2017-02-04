@@ -250,6 +250,12 @@ void Util::set_non_blocking(int fd){
 	fcntl(fd, F_SETFL, flags);
 }
 
+void Util::set_blocking(int fd){
+	int flags = fcntl(fd, F_GETFL, 0);
+	flags &= (~O_NONBLOCK);
+	fcntl(fd, F_SETFL, flags);
+}
+
 std::string Util::get_redirection_html(const std::string& hostname){
 	std::string response_body = "<!doctype html><html>\n"
 		"<head>\n"

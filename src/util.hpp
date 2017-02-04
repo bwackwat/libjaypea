@@ -83,6 +83,7 @@ public:
 
 	static bool strict_compare_inequal(const char* first, const char* second, int count = -1);
 	static void set_non_blocking(int fd);
+	static void set_blocking(int fd);
 
 	static std::string get_redirection_html(const std::string& hostname);
 
