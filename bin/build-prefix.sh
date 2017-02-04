@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# Allows listen backlog to be much larger.
-# sysctl -w net.core.somaxconn=65535
-# echo -e "\nnet.core.somaxconn=65535" >> /etc/sysctl.conf
-
 dir=$(pwd)
 
 mkdir -p $dir/build
@@ -25,7 +21,8 @@ case "${argv[@]}" in
 		argv=( "${argv[@]/"PROD"}" )
 		;;
 	*"DEBUG"*)
-		extra="-O0 -D DO_DEBUG"
+		echo "DEBUG MODE"
+		extra="-O0 -DLIBJAYPEA_DEBUG"
 	
 		((argc-=1))
 		argv=( "${argv[@]/"DEBUG"}" )

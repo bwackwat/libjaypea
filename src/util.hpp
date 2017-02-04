@@ -26,17 +26,13 @@
 #define CONNECTIONS_LIMIT 2048
 #define FILE_PART_LIMIT 1024
 
-//#define PRINT(msg) std::cout << msg << std::endl;
-//#define ERROR(msg) std::cout << "Uh oh, " << msg << " error." << std::endl;
+#define PRINT(msg) std::cout << msg << std::endl;
+#define ERROR(msg) std::cout << "Uh oh, " << msg << " error." << std::endl;
 
-#if defined(DO_DEBUG)
-	#define PRINT(msg) std::cout << msg << std::endl;
-	#define ERROR(msg) std::cout << "Uh oh, " << msg << " error." << std::endl;
+#if defined(LIBJAYPEA_DEBUG)
 	#define DEBUG(msg) std::cout << msg << std::endl;
 	#define DEBUG_SLEEP(sec) sleep(sec);
 #else
-	#define PRINT(msg)
-	#define ERROR(msg)
 	#define DEBUG(msg)
 	#define DEBUG_SLEEP(sec)
 #endif
