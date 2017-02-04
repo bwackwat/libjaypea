@@ -3,7 +3,7 @@
 In order of coolness.
 
 1. [bwackwat](https://bwackwat.com/). Hopefully this example will replace NGINX running on bwackwat.com...
-2. [comd/com](doc/comd.md). An AES encrypted server and client. The server provides access to a shell, the client sends commands to that remote shell. Like sshd/ssh.
+2. [comd/com](comd.md). An AES encrypted server and client. The server provides access to a shell, the client sends commands to that remote shell. Like sshd/ssh.
 3. [message-api](doc/modern-web-monad.md). An HTTPS JSON API.
 4. pgsql-provider. A secure database abstraction layer using pgsql-model as an ORM.
 5. [pgsql-model-test](doc/pgsql-model.md). A simple class to query a PostgreSQL database in a common way.
