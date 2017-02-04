@@ -1,11 +1,11 @@
-# Implementation Example
+# (Simple) Server Implementation Example
 
-* Execute some commands to load and build the library:
+* Execute some BASH commands to download and build the library:
 ```
 git clone https://github.com/bwackwat/libjaypea
 cd libjaypea
-bin/setup-centos7.sh
-bin/build-library.sh
+./bin/setup-centos7.sh
+./bin/build-library.sh
 ```
 * Implement the library e.g. a simple echo server (echo.cpp):
 ```c++
@@ -28,13 +28,13 @@ int main(int, char**){
 ```
 * Build your code:
 ```
-bin/build-with-library.sh
+./bin/build-with-library.sh
 > Usage: <relative path to cpp file> <executable name> <optional additional libraries/compiler flags>
-bin/build-with-library.sh echo.cpp echo
+./bin/build-with-library.sh echo.cpp echo
 ```
 * Run your code:
 ```
-build/echo
+./build/echo
 ```
 
 ## Example Explanation
