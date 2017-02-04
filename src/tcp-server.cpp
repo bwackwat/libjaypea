@@ -291,6 +291,8 @@ void EpollServer::run_thread(unsigned int thread_id){
 	char packet[PACKET_LIMIT];
 	ssize_t len;
 	struct itimerspec timer_spec;
+	
+	//struct timeval recv_timeout;
 
 	struct epoll_event new_event;
 	struct epoll_event* client_events = new struct epoll_event[this->max_connections + 3];
@@ -479,6 +481,13 @@ void EpollServer::run_thread(unsigned int thread_id){
 											}
 										}
 									}
+									/*
+									I found some docs that said this should work (and thus replace all these timerfds), but it doesn't?
+									recv_timeout.tv_sec = 10;
+									recv_timeout.tv_usec = 0;
+									if(setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&recv_timeout), sizeof(struct timeval)) < 0){
+										perror("setsockopt new connection timeout");
+									}*/
 									this->read_counter[new_fd] = 0;
 									this->write_counter[new_fd] = 0;
 									if(this->on_connect != nullptr){
@@ -521,6 +530,8 @@ void EpollServer::run_thread(unsigned int thread_id){
 					this->close_client(&the_fd, close_client_callback);
 				}else if(len == PACKET_LIMIT){
 					ERROR("OVERFLOAT more to read uh oh!")
+				}else if(len == 0){
+					PRINT("RECEIVE ZERO?!")
 				}else{
 					client_events[i].events = EVENTS;
 					client_events[i].data.fd = the_fd;

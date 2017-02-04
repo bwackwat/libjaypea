@@ -49,6 +49,7 @@ public:
 	HttpsApi(std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t https_port = 443);
 	void route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(), bool requires_human = false);
 	void start();
+	void set_file_cache_size(int megabytes);
 private:
 	std::unordered_map<std::string, CachedFile*> file_cache;
 	int file_cache_remaining_bytes;
