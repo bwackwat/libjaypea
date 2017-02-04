@@ -31,7 +31,7 @@ PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string priv
 		throw std::runtime_error(this->name + "SSL_CTX_set_ecdh_auto");
 	}
 
-	if(SSL_CTX_use_certificate_file(this->ctx, certificate.c_str(), SSL_FILETYPE_PEM) != 1){
+	if(SSL_CTX_use_certificate_chain_file(this->ctx, certificate.c_str()) != 1){
 		ERR_print_errors_fp(stdout);
 		throw std::runtime_error(this->name + "SSL_CTX_use_certificate_file");
 	}

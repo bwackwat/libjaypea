@@ -11,21 +11,32 @@ mkdir -p $dir/build
 argc=$#
 argv=($@)
 
-extra="-O0"
-case "${argv[@]}" in *"PROD"*)
-	extra="-O3 -fsanitize=thread -fsanitize=undefined \
-	-D_FORTIFY_SOURCE=2 -fstack-protector-all "
-	
-	((argc-=1))
-	argv=( "${argv[@]/"PROD"}" )
-esac
-
-libs="-lpthread -lssl -lcryptopp"
-
 warn="-Wformat -Wformat-security -Werror=format-security \
 -Weverything -Wpedantic -Wconversion \
 -Wno-c++98-compat -Wno-padded \
 -Wno-exit-time-destructors -Wno-global-constructors "
+
+case "${argv[@]}" in
+	 *"PROD"*)
+		extra="-O3 -fsanitize=thread -fsanitize=undefined \
+		-D_FORTIFY_SOURCE=2 -fstack-protector-all "
+	
+		((argc-=1))
+		argv=( "${argv[@]/"PROD"}" )
+		;;
+	*"DEBUG"*)
+		extra="-O0 -D DO_DEBUG"
+	
+		((argc-=1))
+		argv=( "${argv[@]/"DEBUG"}" )
+		;;
+	*)
+		extra="-O0"
+		warn="$warn -Wno-unused-parameter -Wno-unused-exception-parameter \
+		-Wno-unused-variable "
+esac
+
+libs="-lpthread -lssl -lcryptopp"
 
 compiler="clang++ -std=c++11 -I$dir/src -ljaypea -lcryptopp -lpqxx $warn $extra" 
 
