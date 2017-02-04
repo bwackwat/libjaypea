@@ -1,22 +1,5 @@
 #!/bin/bash
 
-yum makecache fast
-yum -y -q upgrade
-
-yum -y -q install epel-release git deltarpm
-
-yum -y -q install clang fail2ban rkhunter certbot gcc-c++ libpqxx-devel
-yum -y -q install libstdc++-static libstdc++ cryptopp cryptopp-devel openssl openssl-devel
-yum -y -q install firewalld
-
-systemctl enable fail2ban
-systemctl restart fail2ban
-systemctl enable firewalld
-systemctl restart firewalld
-
-rkhunter --update
-rkhunter --propupd
-
 if [ ! -d "/opt/argon2" ]; then
 	mkdir -p /opt/argon2
         git clone https://github.com/P-H-C/phc-winner-argon2.git /opt/argon2 || exit 1
