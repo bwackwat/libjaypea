@@ -1,4 +1,4 @@
-# (Simple) Server Implementation Example
+Simple Server Implementation Example
 
 * Execute some BASH commands to download and build the library:
 ```
