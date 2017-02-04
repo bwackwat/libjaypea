@@ -65,7 +65,7 @@ firewall-cmd --zone=public --permanent --add-port=$COMD/tcp
 firewall-cmd --reload
 
 # certbot certonly --standalone --tls-sni-01-port $HTTPS --domain $4
-# mv -f /etc/letsencrypt/live/$4/fullchain.pem $1/etc/ssl/ssl.crt
-# mv -f /etc/letsencrypt/live/$4/privkey.pem $1/etc/ssl/ssl.key
+# cp /etc/letsencrypt/live/$4/fullchain.pem $1/etc/ssl/ssl.crt
+# cp /etc/letsencrypt/live/$4/privkey.pem $1/etc/ssl/ssl.key
 
 chown -R $3:$3 $1
