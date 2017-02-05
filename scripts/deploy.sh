@@ -17,6 +17,7 @@ fi
 cd $1
 
 mkdir -p $1/logs
+mkdir -p $1/artifacts
 
 chmod +x $1/scripts/setup-centos7.sh
 $1/scripts/setup-centos7.sh 2>&1 | tee $1/logs/setup-centos7.log
