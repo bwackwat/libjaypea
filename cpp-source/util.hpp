@@ -21,7 +21,7 @@
 
 #include "json.hpp"
 
-#define CONFIG_PATH "etc/configuration.json"
+#define CONFIG_PATH "extras/configuration.json"
 #define PACKET_LIMIT 2048
 #define CONNECTIONS_LIMIT 2048
 #define FILE_PART_LIMIT 1024

@@ -87,7 +87,7 @@ int main(int argc, char** argv){
 	char packet[PACKET_LIMIT];
 	ssize_t len;
 	int port;
-	std::string keyfile = "etc/keyfile";
+	std::string keyfile;
 
 	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("keyfile", keyfile, {"-k"});
