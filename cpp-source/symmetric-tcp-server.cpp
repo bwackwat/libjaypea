@@ -20,6 +20,10 @@ SymmetricEpollServer::SymmetricEpollServer(std::string keyfile, uint16_t port, s
 :EpollServer(port, new_max_connections, "SymmetricEpollServer"),
 encryptor(keyfile){}
 
+bool SymmetricEpollServer::send(int fd, std::string msg){
+	return this->encryptor.send(fd, msg.c_str(), msg.length(), &this->write_counter[fd]);
+}
+
 bool SymmetricEpollServer::send(int fd, const char* data, size_t data_length){
 	return this->encryptor.send(fd, data, data_length, &this->write_counter[fd]);
 }
