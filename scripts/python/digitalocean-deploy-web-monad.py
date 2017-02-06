@@ -77,7 +77,7 @@ if(raw_input("Cloud init good to go? [y]: ") or "y" != "y"):
 
 print '-----------------------------------------------------------------'
 
-images = json.loads(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers).content)
+images = rprint(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers))
 for image in images["images"]:
 	if image["distribution"] == "CentOS":
 		print "\nCentOS Image"

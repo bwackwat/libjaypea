@@ -4,15 +4,15 @@ int main(int argc, char **argv){
 	std::string public_directory;
 	std::string ssl_certificate;
 	std::string ssl_private_key;
-	int https_port = 443;
+	int port = 443;
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
-	Util::define_argument("https", &https_port);
+	Util::define_argument("port", &port, {"-p"});
 	Util::parse_arguments(argc, argv, "This serves files over HTTPS , and JSON (with or without HTTP headers) through an API.");
 
-	HttpsApi server(public_directory, ssl_certificate, ssl_private_key, static_cast<uint16_t>(https_port));
+	HttpsApi server(public_directory, ssl_certificate, ssl_private_key, static_cast<uint16_t>(port));
 
 	server.route("GET", "/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + server.routes_string + "}";

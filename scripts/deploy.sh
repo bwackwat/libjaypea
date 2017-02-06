@@ -45,14 +45,14 @@ $1/binaries/comd \
 
 $1/binaries/http-redirecter \
 --hostname $4 \
---http $HTTP \
+--port $HTTP \
 > $1/logs/http-redirecter.log 2>&1 &
 
 $1/binaries/message-api \
 --public_directory $1/public-html \
 --ssl_certificate $1/extras/self-signed-ssl/ssl.crt \
 --ssl_private_key $1/extras/self-signed-ssl/ssl.key \
---https $HTTPS \
+--port $HTTPS \
 > $1/logs/message-api.log 2>&1 &
 EOF
 

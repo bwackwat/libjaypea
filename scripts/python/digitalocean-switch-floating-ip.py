@@ -19,10 +19,10 @@ def rprint(response):
 droplets = json.loads(requests.get("https://api.digitalocean.com/v2/droplets", headers=headers).content)
 for droplet in droplets["droplets"]:
 	print "\nDroplet:"
-	print droplet["name"]
-	print droplet["size_slug"]
-	print droplet["disk"]
-	print droplet["id"]
+	print "Name: " + droplet["name"]
+	print "Memory: " + droplet["size_slug"]
+	print "Disk size (GB?): " + droplet["disk"]
+	print "Id: " + droplet["id"]
 
 print '-----------------------------------------------------------------'
 	

@@ -1,0 +1,77 @@
+{
+	"service-definitions":[{
+		"name": "comd",
+		"port": "10000",
+		"keyfile": "artifacts/deploy.keyfile"
+	},{
+		"name": "http-redirecter",
+		"port": "10080",
+		"hostname": "test.bwackwat.com"
+	},{
+		"binary": "message-api",
+		"port": "10443",
+		"public_directory": "public-html",
+		"ssl_certificate": "extras/self-signed-ssl/ssl.crt",
+		"ssl_private_key": "extras/self-signed-ssl/ssl.key"
+	},{
+		"binary": "bwackwat",
+		"port": "10443",
+		"public_directory": "affable-escapade",
+		"ssl_certificate": "extras/self-signed-ssl/ssl.crt",
+		"ssl_private_key": "extras/self-signed-ssl/ssl.key",
+		"database_ip": "localhost",
+		"keyfile": "database.keyfile",
+	}]
+	"live-nodes": [{
+			"hostname": "test.bwackwat.com",
+			"node": "libjaypea-default"
+		},{
+			"hostname": "bwackwat.com",
+			"node": "bwackwat-production"
+		}],
+	"nodes": [{
+		"name": "libjaypea-default",
+		"services": [{
+				"binary": "comd",
+				"configuration": {
+					"port": "10000",
+					"keyfile": "artifacts/deploy.keyfile"
+				}
+			},{
+				"binary": "http-redirecter",
+				"configuration": {
+					"port": "10080",
+					"hostname": "test.bwackwat.com"
+				}
+			},{
+				"binary": "message-api",
+				"configuration": {
+					"port": "10443",
+					"public_directory": "public-html",
+					"ssl_certificate": "extras/self-signed-ssl/ssl.crt",
+					"ssl_private_key": "extras/self-signed-ssl/ssl.key"
+				}
+			}]
+		},{
+		"name": "bwackwat-production",
+		"services": [{
+				"binary": "comd",
+				"configuration": {
+					"port": "10000",
+					"keyfile": "artifacts/deploy.keyfile"
+				}
+			},{
+				"binary": "http-redirecter",
+				"configuration": {
+					"port": "10080",
+					"hostname": "test.bwackwat.com"
+				}
+			},{
+				"binary": "bwackwat",
+				"configuration": {
+					"port": "10443",
+					"public_directory": "public-html",
+					"ssl_certificate": "extras/self-signed-ssl/ssl.crt",
+					"ssl_private_key": "extras/self-signed-ssl/ssl.key"
+				}
+			}]
