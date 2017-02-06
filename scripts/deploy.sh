@@ -3,6 +3,7 @@
 HTTP=10080
 HTTPS=10443
 COMD=10000
+DIST=10001
 
 if [ $# -lt 4 ]; then
 	echo "Usage: <install dir> <comd key> <username> <hostname> <y or n> <optional password>"
@@ -29,31 +30,21 @@ chmod +x $1/scripts/build-example.sh
 
 echo "$2" >> $1/artifacts/deploy.keyfile
 
+touch $1/artifacts/start-distribution.sh
+chmod +x $1/artifacts/start-distribution.sh
+
 cat <<EOF >> $1/artifacts/start.sh 
 #!/bin/bash
 
-$1/scripts/build-example.sh comd PROD > $1/logs/build-comd.log 2>&1
+$1/scripts/build-example.sh distributed-server PROD > $1/logs/build-distributed-server.log 2>&1
 
-$1/scripts/build-example.sh http-redirecter PROD > $1/logs/build-http-redirecter.log 2>&1
-
-$1/scripts/build-example.sh message-api PROD > $1/logs/build-message-api.log 2>&1
-
-$1/binaries/comd \
---port $COMD \
+$1/binaries/distributed-server \
+--port $DIST \
 --keyfile $1/artifacts/deploy.keyfile \
-> $1/logs/comd.log 2>&1 &
+--distribution $1/artifacts/distribution.json
 
-$1/binaries/http-redirecter \
---hostname $4 \
---port $HTTP \
-> $1/logs/http-redirecter.log 2>&1 &
+$1/artifacts/start-distribution.sh
 
-$1/binaries/message-api \
---public_directory $1/public-html \
---ssl_certificate $1/extras/self-signed-ssl/ssl.crt \
---ssl_private_key $1/extras/self-signed-ssl/ssl.key \
---port $HTTPS \
-> $1/logs/message-api.log 2>&1 &
 EOF
 
 chmod +x $1/artifacts/start.sh
@@ -64,6 +55,7 @@ firewall-cmd --zone=public --permanent --add-masquerade
 firewall-cmd --zone=public --permanent --add-forward-port=port=80:proto=tcp:toport=$HTTP
 firewall-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:toport=$HTTPS
 firewall-cmd --zone=public --permanent --add-port=$COMD/tcp
+firewall-cmd --zone=public --permanent --add-port=$DIST/tcp
 firewall-cmd --reload
 
 # certbot certonly --standalone --tls-sni-01-port $HTTPS --domain $4

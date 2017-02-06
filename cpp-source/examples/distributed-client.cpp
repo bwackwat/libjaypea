@@ -41,31 +41,55 @@ static bool stdin_available(){
 }
 
 int main(int argc, char** argv){
-	enum ComdState state = VERIFY_IDENTITY;
-	enum ComdRoutine routine = SHELL;
-	int shell_client_fd;
-	ssize_t len;
-	char packet[PACKET_LIMIT];
-
-	std::string ip_address;
-	bool use_ip = false;
-	std::string hostname;
-	int port;
+	int port = 20000;
 	std::string keyfile;
-	std::string file_path;
+	std::string distribution_path = "extras/distribution-example.json";
 
-	Util::define_argument("hostname", hostname, {"-hn"});
-	Util::define_argument("ip_address", ip_address, {"-ip"}, [&](){
-		use_ip = true;});
-	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("keyfile", keyfile, {"-k"});
-	Util::define_argument("send-file", file_path, {"-sf"}, [&](){
-		routine = SEND_FILE;});
-	Util::define_argument("recv-file", file_path, {"-rf"}, [&](){
-		routine = RECV_FILE;});
-	Util::parse_arguments(argc, argv, "This is a secure client for comd, supporting remote shell, send file, and receive file routines.");
+	Util::define_argument("distribution_file", distribution_path, {"-df"});
+	Util::parse_arguments(argc, argv, "This is a client for managing distributed servers.");
+
+	std::ifstream distribution_file(distribution_path);
+	if(!distribution_file.is_open()){
+		PRINT("Could not open distribution file.")
+		return 1;
+	}
+	
+	std::string distribution_data((std::istreambuf_iterator<char>(config_file)), (std::istreambuf_iterator<char>()));
+	JsonObject distribution;
+	distribution.parse(distribution_data.c_str());
+	PRINT(distribution.stringify(true));
 
 	SymmetricEventClient client(keyfile);
+	
+	if(!distribution.HasObj("service-definitions", ARRAY)){
+		PRINT("Distribution JSON: Missing \"service-definitions\" array.")
+		return 1;
+	}
+	if(!distribution.HasObj("node-definitions", ARRAY)){
+		PRINT("Distribution JSON: Missing \"node-definitions\" object.")
+		return 1;
+	}
+	if(!distribution.HasObj("live-nodes", ARRAY)){
+		PRINT("Distribution JSON: Missing \"live-nodes\" object.")
+		return 1;
+	}
+	for(auto node : distribution.objectValues["live-nodes"]->arrayValues){
+		if(!node.HasObj("node", STRING){
+			PRINT("Distribution JSON: A live-node is missing \"node\" string.")
+			return 1;
+		}
+		if(node->HasObject("hostname", STRING)){
+			client.add(new Connection(node->GetStr("hostname"), static_cast<uint16_t>(port)));
+		}else if(node->HasObj("ip_address", STRING)){
+			client.add(new Connection(static_cast<uint16_t>(port), node.GetStr("ip_address"));
+		}else{
+			PRINT("Distribution JSON: A live-node is missing both \"hostname\" and alternative \"ip_address\" strings.")
+			return 1;
+		}
+	}
+	
+	for(auto iter = this->routemap.begin(); iter != this->routemap.end(); ++iter){
 
 	if(!use_ip){
 		client.add(new Connection(hostname, static_cast<uint16_t>(port)));

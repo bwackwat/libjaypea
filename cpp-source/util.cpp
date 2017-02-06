@@ -19,7 +19,8 @@
 
 std::vector<struct Argument> Util::arguments;
 
-bool Util::verbose;
+bool Util::verbose = false;
+std::string Util::config_path = "extras/configuration.json";
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
@@ -65,8 +66,21 @@ void Util::write_size_t(size_t value, char* data){
 }
 */
 
+void Util::write_file(std::string filename, std::string content){
+	std::ofstream file(filename);
+	if(!file.is_open()){
+		throw std::runtime_error("Could not write " + filename);
+	}
+	file << content;
+	file.close();
+}
+
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
+	bool custom_configuration = false;
+	define_argument("configuration_file", config_path, {"-cf"}, [&](){
+		custom_configuration = true;
+	});
 
 	std::signal(SIGSEGV, trace_segfault);
 
@@ -121,10 +135,12 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		}
 	}
 
-	std::string root_path = get_exe_path();
-	root_path = root_path.substr(0, root_path.find_last_of('/'));
-	root_path = root_path.substr(0, root_path.find_last_of('/')) + '/';
-	std::string config_path = root_path + CONFIG_PATH;
+	if(!custom_configuration){
+		std::string root_path = get_exe_path();
+		root_path = root_path.substr(0, root_path.find_last_of('/'));
+		root_path = root_path.substr(0, root_path.find_last_of('/')) + '/';
+		config_path = root_path + config_path;
+	}
 	std::ifstream config_file(config_path);
 	if(config_file.is_open()){
 		std::string config_data((std::istreambuf_iterator<char>(config_file)),
