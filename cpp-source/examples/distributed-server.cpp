@@ -11,7 +11,7 @@ int main(int argc, char** argv){
 	Util::define_argument("keyfile", keyfile, {"-k"});
 	Util::define_argument("distribution", distribution, {"-d"});
 	Util::parse_arguments(argc, argv, "This server manages others of its kind.")
-	
+
 	std::ifstream distribution_file(distribution);
 	if(!distribution_file.is_open()){
 		PRINT("Missing distribution file.")
@@ -27,9 +27,16 @@ int main(int argc, char** argv){
 	
 	enum NodeState{
 		VERIFYING,
-		UPDATING
+		GET_ROUTINE,
+		HEALTH_CHECK,
+		SHELL,
+		RECV_FILE,
+		SEND_FILE,
+		GET_CONFIG,
+		UPDATE_CONFIG
 	};
 	enum NodeState state;
+	
 	
 	SymmetricTcpServer server(keyfile, port, 1);
 	std::string password;
@@ -43,18 +50,33 @@ int main(int argc, char** argv){
 		if(state == VERIFYING){
 			if(password.empty()){
 				password = data;
-				if(server.send(fd, "Please update the distribution file.")){
-					PRINT("send error 1")
-					return -1;
+				if(configuration_string.empty()){
+					if(server.send(fd, "Password has been set, please update the configuration.")){
+						PRINT("send error 1")
+						return -1;
+					}
+					state == INITIALIZE_CONFIG;
+					return data_length;
 				}
 			}else if(!Util::strict_compare_inequal(data, password.c_str(), password.length())){
+				PRINT("Someone failed to verify their connection to this server!!!"
 				return -1;
 			}
-			if(server.send(fd, distribution_string){
-				PRINT("send error")
-				return -1;
+			if(configuration_string.empty()){
+				if(server.send(fd, "Configuration has not been set!"){
+					PRINT("send error")
+					return -1;
+				}
+				state = GET_ROUTINE;
+				return data_length;
+			}else{
+				if(server.send(fd, distribution_object.stringify(true))){
+					PRINT("send error")
+					return -1;
+				}
+				state = GET_ROUTINE;
+				return data_length;
 			}
-			state = COLLECTING;
-			return data_length;
-		}else if(state == COLLECTING){
-				
+		}else if(state == GET_ROUTINE){
+			if(!Util::strict_compare_inequal(data, health_check.c_str(), health_check.length())){
+				if(
