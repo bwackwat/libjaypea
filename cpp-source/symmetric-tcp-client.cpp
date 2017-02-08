@@ -1,6 +1,10 @@
 #include "symmetric-tcp-client.hpp"
 
-SymmetricTcpClient::SymmetricTcpClient(std::string ip_address, uint16_t port, std::string keyfile)
+SymmetricTcpClient::SymmetricTcpClient(std::string hostname, uint16_t port, std::string keyfile)
+:SimpleTcpClient(hostname, port),
+encryptor(keyfile){}
+
+SymmetricTcpClient::SymmetricTcpClient(const char* ip_address, uint16_t port, std::string keyfile)
 :SimpleTcpClient(ip_address, port),
 encryptor(keyfile){}
 

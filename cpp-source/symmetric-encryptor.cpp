@@ -8,6 +8,18 @@ SymmetricEncryptor::SymmetricEncryptor(){
 	this->random_pool.GenerateBlock(this->iv, CryptoPP::AES::BLOCKSIZE);
 }
 
+std::string SymmetricEncryptor::get_sha256_hash(std::string data){
+        std::string hash;
+        CryptoPP::SHA256 hasher;
+
+        CryptoPP::StringSource source(data, true,
+                new CryptoPP::HashFilter(hasher,
+                new CryptoPP::Base64Encoder(
+                new CryptoPP::StringSink(hash))));
+
+        return hash;
+}
+
 std::string SymmetricEncryptor::encrypt(std::string data){
 	std::string new_data;
 	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
@@ -15,16 +27,28 @@ std::string SymmetricEncryptor::encrypt(std::string data){
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption enc(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 	CryptoPP::StreamTransformationFilter* aes_enc = new CryptoPP::StreamTransformationFilter(enc, base64_enc);
 	CryptoPP::StringSource enc_source(data, true, aes_enc);
-	return new_data;
+
+	std::string hashed_cyphertext = this->get_sha256_hash(new_data + std::string(reinterpret_cast<const char*>(this->key), CryptoPP::AES::MAX_KEYLENGTH));
+	// SHA256 produces 64 BASE32 bytes, BASE64 45 bytes.
+	if(hashed_cyphertext.length() != 45){
+		PRINT("SHA256 in BASE64 length not 45 bytes?" << hashed_cyphertext.length())
+	}
+	return hashed_cyphertext + new_data;
 }
 
 std::string SymmetricEncryptor::decrypt(std::string data){
+	std::string cyphertext = data.substr(45);
+	std::string hash = data.substr(0, 45);
+	if(hash != this->get_sha256_hash(cyphertext + std::string(reinterpret_cast<const char*>(this->key), CryptoPP::AES::MAX_KEYLENGTH))){
+		throw std::runtime_error("Bad hash, yikes!");
+	}
+
 	std::string new_data;
 	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption dec(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 	CryptoPP::StreamTransformationFilter* aes_dec = new CryptoPP::StreamTransformationFilter(dec, sink);
 	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
-	CryptoPP::StringSource dec_source(data, true, base64_dec);
+	CryptoPP::StringSource dec_source(cyphertext, true, base64_dec);
 	return new_data;
 }
 
@@ -95,7 +119,7 @@ bool SymmetricEncryptor::send(int fd, const char* data, size_t /* data_length */
 	return false;
 }
 
-ssize_t SymmetricEncryptor::recv(int fd, char* data, size_t /* data_length */,
+ssize_t SymmetricEncryptor::recv(int fd, char* data, size_t data_length,
 std::function<ssize_t(int, const char*, ssize_t)> callback, int* transaction){
 	ssize_t len;
 	size_t block_size;
@@ -119,6 +143,10 @@ std::function<ssize_t(int, const char*, ssize_t)> callback, int* transaction){
 	block_size = *(reinterpret_cast<uint32_t*>(size_data));
 	//block_size = Util::read_size_t(data);
 	DEBUG("RDATA|" << size_data << '|' << block_size)
+	if(block_size >= data_length){
+		PRINT("Received too large of a packet!")
+		return -1;
+	}
 
 	while(true){
 		if((len = read(fd, data, block_size)) < 0){

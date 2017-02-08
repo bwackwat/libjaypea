@@ -17,6 +17,8 @@ private:
 	CryptoPP::AutoSeededRandomPool random_pool;
 	byte key[CryptoPP::AES::MAX_KEYLENGTH];
 	byte iv[CryptoPP::AES::BLOCKSIZE];
+
+	static std::string get_sha256_hash(std::string data);
 public:
 	SymmetricEncryptor();
 	SymmetricEncryptor(std::string keyfile);

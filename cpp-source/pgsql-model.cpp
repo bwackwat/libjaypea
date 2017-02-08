@@ -168,20 +168,6 @@ JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, J
 	}
 }
 
-/*
-static std::string hash_value_sha256(std::string token){
-	std::string digest;
-	CryptoPP::SHA256 hash;
-
-	CryptoPP::StringSource source(token, true,
-		new CryptoPP::HashFilter(hash,
-		new CryptoPP::Base64Encoder(
-		new CryptoPP::StringSink(digest))));
-
-	return digest;
-}
-*/
-
 JsonObject* PgSqlModel::Access(const std::string& key, const std::string& value, const std::string& password){
 	try{
 		pqxx::work txn(this->conn);

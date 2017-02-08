@@ -79,6 +79,9 @@ public:
 	static void write_size_t(size_t value, char* data);
 */
 
+
+	static void write_file(std::string filename, std::string content);
+
 	static void parse_arguments(int argc, char** argv, std::string description);
 
 	static bool strict_compare_inequal(const char* first, const char* second, int count = -1);

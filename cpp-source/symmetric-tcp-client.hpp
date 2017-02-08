@@ -8,7 +8,8 @@
 
 class SymmetricTcpClient : public SimpleTcpClient{
 public:
-	SymmetricTcpClient(std::string ip_address, uint16_t port, std::string keyfile);
+	SymmetricTcpClient(std::string hostname, uint16_t port, std::string keyfile);
+	SymmetricTcpClient(const char* ip_address, uint16_t port, std::string keyfile);
 
 	bool reconnect();
 	std::string communicate(std::string request);

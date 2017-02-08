@@ -37,10 +37,8 @@ int main(int argc, char** argv){
 	};
 	enum NodeState state;
 	
-	
 	SymmetricTcpServer server(keyfile, port, 1);
 	std::string password;
-	//std::unordered_map<std::string, SymmetricTcpClient *> node_clients;
 	
 	server.on_connect = [&](int){
 		state = VERIFYING;

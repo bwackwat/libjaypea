@@ -1,6 +1,7 @@
 #include <string>
 #include <cstring>
 #include <iostream>
+#include <fstream>
 #include <csignal>
 
 #include <stdio.h>
@@ -21,30 +22,14 @@
 
 #include "util.hpp"
 #include "comd-util.hpp"
-#include "symmetric-event-client.hpp"
-
-static bool stdin_available(){
-	struct timeval tv;
-	fd_set fds;
-	tv.tv_sec = 0;
-	tv.tv_usec = 0;
-	FD_ZERO(&fds);
-	FD_SET(STDIN_FILENO, &fds);
-	select(STDIN_FILENO + 1, &fds, 0, 0, &tv);
-	return (FD_ISSET(0, &fds));
-}
-
-[[noreturn]] static void sigcatch(int sig){
-	PRINT("caught " << sig << " signal!")
-	ttyreset(STDIN_FILENO);
-	exit(0);
-}
+#include "symmetric-tcp-client.hpp"
 
 int main(int argc, char** argv){
 	int port = 20000;
 	std::string keyfile;
 	std::string distribution_path = "extras/distribution-example.json";
 
+	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("keyfile", keyfile, {"-k"});
 	Util::define_argument("distribution_file", distribution_path, {"-df"});
 	Util::parse_arguments(argc, argv, "This is a client for managing distributed servers.");
@@ -54,13 +39,13 @@ int main(int argc, char** argv){
 		PRINT("Could not open distribution file.")
 		return 1;
 	}
-	
-	std::string distribution_data((std::istreambuf_iterator<char>(config_file)), (std::istreambuf_iterator<char>()));
+	std::string distribution_data((std::istreambuf_iterator<char>(distribution_file)), (std::istreambuf_iterator<char>()));
 	JsonObject distribution;
 	distribution.parse(distribution_data.c_str());
+	PRINT("LOADED DISTRIBUTION DEFINITIONS FILE:")
 	PRINT(distribution.stringify(true));
 
-	SymmetricEventClient client(keyfile);
+	std::unordered_map<std::string, SymmetricTcpClient*> clients;
 	
 	if(!distribution.HasObj("service-definitions", ARRAY)){
 		PRINT("Distribution JSON: Missing \"service-definitions\" array.")
@@ -75,122 +60,122 @@ int main(int argc, char** argv){
 		return 1;
 	}
 	for(auto node : distribution.objectValues["live-nodes"]->arrayValues){
-		if(!node.HasObj("node", STRING){
+		if(!node->HasObj("node", STRING)){
 			PRINT("Distribution JSON: A live-node is missing \"node\" string.")
 			return 1;
 		}
-		if(node->HasObject("hostname", STRING)){
-			client.add(new Connection(node->GetStr("hostname"), static_cast<uint16_t>(port)));
+		
+		if(node->HasObj("hostname", STRING)){
+			clients[node->GetStr("hostname")] = new SymmetricTcpClient(node->GetStr("hostname"), static_cast<uint16_t>(port), keyfile);
 		}else if(node->HasObj("ip_address", STRING)){
-			client.add(new Connection(static_cast<uint16_t>(port), node.GetStr("ip_address"));
+			clients[node->GetStr("ip_address")] = new SymmetricTcpClient(node->GetStr("ip_address").c_str(), static_cast<uint16_t>(port), keyfile);
 		}else{
 			PRINT("Distribution JSON: A live-node is missing both \"hostname\" and alternative \"ip_address\" strings.")
 			return 1;
 		}
 	}
-	
-	for(auto iter = this->routemap.begin(); iter != this->routemap.end(); ++iter){
 
-	if(!use_ip){
-		client.add(new Connection(hostname, static_cast<uint16_t>(port)));
-	}else if(!ip_address.empty()){
-		client.add(new Connection(static_cast<uint16_t>(port), ip_address));
-	}else{
-		PRINT("You must provide either a hostname or an ip_address!")
-		return 1;
-	}
+	PRINT("CAREFUL! YOU'RE USING A SENSITIVE TOOL.")
 
 	std::string password;
 	std::cout << "Enter the password for the distribution: ";
 	std::getline(std::cin, password);
 
-	client.on_connect = [&](int fd){
-		if(client.send(fd, password)){
-			ERROR("client send password")
-			return true;
+	std::string commands = "Commands:\n"
+		"\thelp\n"
+		"\tPrints this.\n\n"
+		"\tservers\n"
+		"\tLists the servers (from " + distribution_path + ".)\n\n"
+		"\tuse <hostname or ip_address>\n"
+		"\tSend commands to a SINGLE server.\n\n"
+		"\tbroadcast\n"
+		"\tSend commands to ALL servers.\n\n"
+		"\tget\n"
+		"\tGet the configuration.\n\n"
+		"\tset\n"
+		"\tWill set the server configuration(s) based on the loaded distribution file.\n"
+		"\tThe command will first reveal the changes to be made and ask for a confirmation.\n\n"
+		"\tshell\n"
+		"\tWill start the remote shell(s), and commands will be sent to it.\n\n"
+		"\texit\n"
+		"\tWill exit the remote shell(s), or will exit the client entirely.\n\n";
+	std::string HELP = "help";
+	std::string SERVERS = "servers";
+	std::string USE = "use ";
+	std::string BROADCAST = "broadcast";
+	std::string GET = "get";
+	std::string SET = "set";
+	std::string SHELL = "shell";
+	std::string EXIT = "exit";
+
+	std::string selected_client;
+	std::string request;
+
+	std::function<void(const std::string&, std::string&)> send =
+	[&](const std::string& client, std::string& message){
+		std::string response = clients[client]->communicate(message);
+		if(response.empty()){
+			PRINT(client << ": Disconnected!")
+		}else{
+			PRINT(client << ": " << response)
 		}
-		return false;
 	};
 
-	client.run([&](int fd, const char* data, ssize_t data_length)->ssize_t{
-		switch(state){
-		case VERIFY_IDENTITY:
-			PRINT(data)
-			if(client.send(fd, ROUTINES[routine].c_str(), ROUTINES[routine].length())){
-				return -1;
+	std::function<void(std::string&)> broadcast = [&](std::string& message){
+		for(auto iter = clients.begin(); iter != clients.end(); ++iter){
+			if(!iter->second->connected){
+				send(iter->first, password);
 			}
-			state = SELECT_ROUTINE;
-			break;
-		case SELECT_ROUTINE:
-			PRINT(data)
-			switch(routine){
-			case SHELL:
-				std::cout << "\n\r" << hostname << " > " << std::flush;
+			send(iter->first, message);
+		}
+	};
 
-				Util::set_non_blocking(STDIN_FILENO);
+	PRINT(commands)
 
-				std::signal(SIGINT, sigcatch);
-				std::signal(SIGQUIT, sigcatch);
-				std::signal(SIGTERM, sigcatch);
+	while(true){
+		if(selected_client.empty()){
+			std::cout << "Broadcast: ";
+		}else{
+			std::cout << selected_client << " :";
+		}
 
-				/*
-				 * Major bug note:
-				 * When using "fd" within the lambda, the int "fd" inside would corrupt to an
-				 * apparently random number like 32767 (near the fd limit). This is some form
-				 * of a complex overflow bug, due to the fact that the "fd" originally
-				 * passed into the on_read std::function within tcp-event-client is coming
-				 * from a class pointer!
-				 *
-				 * Compare that to comd where "fd" does get directly passed into the lambda,
-				 * but no issues arise because it is coming from an int member data (not a
-				 * contrived class pointer). The exact reason for why a class pointer's variable
-				 * caused such unsung havoc is unknown, yet likely has to do with a shifting
-				 * underlyign stack of pointers, and the int is accesses by referece here...
-				 */
-				shell_client_fd = fd;
-				client.on_event_loop = [&](){
-					if(!stdin_available()){
-						return false;
-					}
-					if((len = read(STDIN_FILENO, packet, PACKET_LIMIT)) < 0){
-						if(errno != EWOULDBLOCK){
-							ERROR("stdin read")
-							return true;
-						}
-					}else if(len == 0){
-						ERROR("stdin read zero");
-						return true;
-					}else{
-						packet[len] = 0;
-						if(client.send(shell_client_fd, packet, static_cast<size_t>(len))){
-							return true;
-						}
-					}
-					return false;
-				};
-				break;
-			case SEND_FILE:
-				//TODO send file name
-				break;
-			case RECV_FILE:
-				//TODO write ok packet???
-				break;
+		std::getline(std::cin, request);
+
+		if(request == HELP){
+			PRINT(commands)
+		}else if(request == SERVERS){
+			for(auto iter = clients.begin(); iter != clients.end(); ++iter){
+				std::cout << iter->first;
+				if(iter->second->connected){
+					PRINT(": Connected")
+				}else{
+					PRINT(": Disconnected")
+				}
 			}
-			state = EXCHANGE_PACKETS;
+		}else if(request.length() > 4 && request.substr(0, 4) == USE){
+			if(clients.count(request.substr(4))){
+				selected_client = request.substr(4);
+			}else{
+				PRINT("Invalid hostname or ip_address.")
+			}
+		}else if(request == BROADCAST){
+			selected_client = std::string();
+		}else if(request == GET){
+			if(selected_client.empty()){
+				broadcast(GET);
+			}else{
+				send(selected_client, GET);
+			}
+		}else if(request == SET){
+			PRINT("ARE YOU SURE LOL?")
+		}else if(request == SHELL){
+			PRINT("SHELL STARTED ON")
+		}else if(request == EXIT){
 			break;
-		case EXCHANGE_PACKETS:
-			std::cout << data;
-			std::cout << '\r' << hostname << " > " << std::flush;
-			break;
-		}
-		return data_length;
-	});
-
-	if(routine == SHELL){
-		if(ttyreset(STDIN_FILENO) < 0){
-			ERROR("ttyreset")
-		}
+		}	
 	}
+
+	PRINT("DONE!")
 
 	return 0;
 }
