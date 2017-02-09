@@ -14,6 +14,7 @@ warn="-Wformat -Wformat-security -Werror=format-security \
 
 case "${argv[@]}" in
 	 *"PROD"*)
+		echo "PRODUCTION MODE"
 		extra="-O3 -fsanitize=thread -fsanitize=undefined \
 		-D_FORTIFY_SOURCE=2 -fstack-protector-all "
 	

@@ -1,43 +1,23 @@
-#include "symmetric-tcp-server.hpp"
-#include "symmetric-tcp-client.hpp"
+#include "util.hpp"
 #include "json.hpp"
+#include "distributed-util.hpp"
+#include "symmetric-tcp-server.hpp"
 
 int main(int argc, char** argv){
 	int port = 10001;
 	std::string keyfile;
-	std::string distribution;
 	
 	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("keyfile", keyfile, {"-k"});
-	Util::define_argument("distribution", distribution, {"-d"});
-	Util::parse_arguments(argc, argv, "This server manages others of its kind.")
-
-	std::ifstream distribution_file(distribution);
-	if(!distribution_file.is_open()){
-		PRINT("Missing distribution file.")
-		return 1;
-	}
+	Util::parse_arguments(argc, argv, "This server manages others of its kind.");
 	
-	std::string distribution_data((std::istreambuf_iterator<char>(config_file)), (std::istreambuf_iterator<char>()));
-	JsonObject distribution_object;
-	distribution_object.parse(distribution_data.c_str());
-	std::string distribution_string = distribution_object.stringify();
+	SymmetricEpollServer server(keyfile, static_cast<uint16_t>(port), 1);
 	
-	PRINT(distribution_object.stringify(false));
-	
-	enum NodeState{
+	enum ServerState{
 		VERIFYING,
-		GET_ROUTINE,
-		HEALTH_CHECK,
-		SHELL,
-		RECV_FILE,
-		SEND_FILE,
-		GET_CONFIG,
-		UPDATE_CONFIG
-	};
-	enum NodeState state;
+		EXCHANGING
+	} state;
 	
-	SymmetricTcpServer server(keyfile, port, 1);
 	std::string password;
 	
 	server.on_connect = [&](int){
@@ -45,36 +25,57 @@ int main(int argc, char** argv){
 	};
 
 	server.on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
+		PRINT("RECV:" << data)
 		if(state == VERIFYING){
 			if(password.empty()){
-				password = data;
-				if(configuration_string.empty()){
-					if(server.send(fd, "Password has been set, please update the configuration.")){
-						PRINT("send error 1")
-						return -1;
-					}
-					state == INITIALIZE_CONFIG;
-					return data_length;
+				password = std::string(data);
+				if(server.send(fd, "Password has been set, please set the configuration.")){
+					PRINT("send error 1")
+					return -1;
 				}
-			}else if(!Util::strict_compare_inequal(data, password.c_str(), password.length())){
-				PRINT("Someone failed to verify their connection to this server!!!"
+			}else if(Util::strict_compare_inequal(data, password.c_str(), static_cast<int>(password.length()))){
+				PRINT("Someone failed to verify their connection to this server!")
+				return -1;
+			}else if(server.send(fd, "Password accepted.")){
+				PRINT("send error 2")
 				return -1;
 			}
-			if(configuration_string.empty()){
-				if(server.send(fd, "Configuration has not been set!"){
-					PRINT("send error")
+			state = EXCHANGING;
+			return data_length;
+		}else{
+			if(data == GET){
+				if(server.send(fd, "GET")){
+					PRINT("send error 2")
 					return -1;
 				}
-				state = GET_ROUTINE;
-				return data_length;
+			}else if(data == SET){
+				if(server.send(fd, "SET")){
+					PRINT("send error 2")
+					return -1;
+				}
+			}else if(data == SHELL){
+				if(server.send(fd, "Shell entered.")){
+					PRINT("send error 2")
+					return -1;
+				}
+			}else if(data == EXIT){
+				if(server.send(fd, "Shell is done.")){
+					PRINT("send error 2")
+					return -1;
+				}
 			}else{
-				if(server.send(fd, distribution_object.stringify(true))){
-					PRINT("send error")
+				if(server.send(fd, "Shell is done.")){
+					PRINT("send error 2")
 					return -1;
 				}
-				state = GET_ROUTINE;
-				return data_length;
 			}
-		}else if(state == GET_ROUTINE){
-			if(!Util::strict_compare_inequal(data, health_check.c_str(), health_check.length())){
-				if(
+		}
+		return data_length;
+	};
+	
+	server.run(false, 1);
+	
+	// This should only return on reboot, necessary for written configuration to activate.
+	
+	return 0;
+}

@@ -13,7 +13,7 @@ requests(0){
 	}
 	this->remote_address = *reinterpret_cast<struct in_addr*>(host->h_addr);
 
-	this->reconnect();
+	this->connected = this->reconnect();
 }
 
 SimpleTcpClient::SimpleTcpClient(struct in_addr new_remote_address, uint16_t new_port, bool new_verbose)
@@ -22,7 +22,7 @@ name("SimpleTcpClient"),
 verbose(new_verbose),
 remote_address(new_remote_address),
 requests(0){
-	this->reconnect();
+	this->connected = this->reconnect();
 }
 
 SimpleTcpClient::SimpleTcpClient(const char* ip_address, uint16_t new_port, bool new_verbose)
@@ -79,7 +79,6 @@ bool SimpleTcpClient::reconnect(){
 			}
 			// No errors, successful connect.
 		}else{
-			perror("reconnect timeout");
 			return false;
 		}
 	}

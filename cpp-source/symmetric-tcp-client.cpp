@@ -27,11 +27,9 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 	ssize_t len;
 	
 	if(!this->connected){
-		PRINT("SymmetricTcpClient reconnecting.")
 		if(!(this->connected = this->reconnect())){
 			return response_string;
 		}
-		PRINT("SymmetricTcpClient reconnected.")
 	}
 	
 	if(this->encryptor.send(this->fd, request, length, &this->writes)){

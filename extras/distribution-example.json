@@ -27,7 +27,7 @@
 		"services": [
 			"comd",
 			"http-redirecter",
-			"message-api
+			"message-api"
 		]
 	},{
 		"name": "bwackwat-production",
@@ -36,12 +36,17 @@
 			"http-redirecter",
 			"bwackwat"
 		]
+	},{
+		"name": "localhost-test",
+		"services": [
+			"http-redirecter"
+		]
 	}],	
 	"live-nodes": [{
-		"hostname": "test.bwackwat.com",
-		"node": "libjaypea-default"
-	},{
 		"hostname": "bwackwat.com",
 		"node": "bwackwat-production"
+	},{
+		"hostname": "localhost",
+		"node": "localhost-test"
 	}],
 }
