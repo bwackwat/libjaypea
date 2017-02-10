@@ -1,8 +1,8 @@
 #!/bin/bash
 
-HTTP=10080
-HTTPS=10443
-COMD=10000
+#HTTP=10080
+#HTTPS=10443
+#COMD=10000
 DIST=10001
 
 if [ $# -lt 4 ]; then
@@ -30,8 +30,8 @@ chmod +x $1/scripts/build-example.sh
 
 echo "$2" >> $1/artifacts/deploy.keyfile
 
-touch $1/artifacts/start-distribution.sh
-chmod +x $1/artifacts/start-distribution.sh
+touch $1/artifacts/start-services.sh
+chmod +x $1/artifacts/start-services.sh
 
 cat <<EOF >> $1/artifacts/start.sh 
 #!/bin/bash
@@ -40,10 +40,9 @@ $1/scripts/build-example.sh distributed-server PROD > $1/logs/build-distributed-
 
 $1/binaries/distributed-server \
 --port $DIST \
---keyfile $1/artifacts/deploy.keyfile \
---distribution $1/artifacts/distribution.json
+--keyfile $1/artifacts/deploy.keyfile
 
-$1/artifacts/start-distribution.sh
+$1/artifacts/start-services.sh
 
 EOF
 
@@ -51,10 +50,10 @@ chmod +x $1/artifacts/start.sh
 
 echo -e "\n@reboot $3 $1/artifacts/start.sh" >> /etc/crontab
 
-firewall-cmd --zone=public --permanent --add-masquerade
-firewall-cmd --zone=public --permanent --add-forward-port=port=80:proto=tcp:toport=$HTTP
-firewall-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:toport=$HTTPS
-firewall-cmd --zone=public --permanent --add-port=$COMD/tcp
+#firewall-cmd --zone=public --permanent --add-masquerade
+#firewall-cmd --zone=public --permanent --add-forward-port=port=80:proto=tcp:toport=$HTTP
+#firewall-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:toport=$HTTPS
+#firewall-cmd --zone=public --permanent --add-port=$COMD/tcp
 firewall-cmd --zone=public --permanent --add-port=$DIST/tcp
 firewall-cmd --reload
 

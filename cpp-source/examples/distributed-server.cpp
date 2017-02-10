@@ -79,7 +79,7 @@ public:
 };
 
 int main(int argc, char** argv){
-	int port = 10001;
+	int port;
 	std::string keyfile;
 	std::string services_path = "artifacts/services.json";
 	

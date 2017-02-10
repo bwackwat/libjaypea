@@ -58,7 +58,7 @@ cloud_config = """
 runcmd:
  - yum -y install git
  - mkdir -p {0}
- - git clone https://github.com/bwackwat/libjaypea {0}
+ - git clone -b distribution-work https://github.com/bwackwat/libjaypea {0}
  - chmod +x {0}/scripts/deploy.sh
  - {0}/scripts/deploy.sh {0} "{1}" {2} {3} {4}
 
