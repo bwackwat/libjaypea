@@ -26,9 +26,9 @@
 #define FILE_PART_LIMIT 1024
 
 #define PRINT(msg) std::cout << msg << std::endl;
-#define ERROR(msg) std::cout << "Uh oh, " << msg << " error." << std::endl;
+#define ERROR(msg) std::cerr << "Uh oh, " << msg << " error." << std::endl;
 
-#if defined(LIBJAYPEA_DEBUG)
+#if defined(_DO_DEBUG)
 	#define DEBUG(msg) std::cout << msg << std::endl;
 	#define DEBUG_SLEEP(sec) sleep(sec);
 #else
@@ -68,6 +68,7 @@ private:
 public:
 	static bool verbose;
 	static std::string config_path;
+	static std::string libjaypea_path;
 	static JsonObject config_object;
 
 	static void define_argument(std::string name, std::string& value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);

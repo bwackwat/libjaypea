@@ -200,7 +200,13 @@ int main(int argc, char** argv){
 					PRINT(iter->first << ": Disconnected")
 					continue;
 				}
-				std::string temp_services = host_services[iter->first]->stringify(false);
+				// TODO: Rethink this. It sets hostname unqiuely.
+				for(auto service : host_services[iter->first]->arrayValues){
+					if(service->HasObj("hostname", STRING)){
+						service->objectValues["hostname"]->stringValue = iter->first;
+					}
+				}
+				std::string temp_services = host_services[iter->first]->stringify(true) + "\n";
 				send_to(iter->first, temp_services);
 			}
 		}else if(request == SHELL){

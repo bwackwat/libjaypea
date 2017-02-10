@@ -21,6 +21,9 @@ std::vector<struct Argument> Util::arguments;
 
 bool Util::verbose = false;
 std::string Util::config_path = "extras/configuration.json";
+
+std::string Util::libjaypea_path;
+
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
@@ -82,6 +85,11 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		custom_configuration = true;
 	});
 
+	libjaypea_path = get_exe_path();
+	libjaypea_path = libjaypea_path.substr(0, libjaypea_path.find_last_of('/'));
+	libjaypea_path = libjaypea_path.substr(0, libjaypea_path.find_last_of('/')) + '/';
+	PRINT("libjaypea: " << libjaypea_path)
+
 	std::signal(SIGSEGV, trace_segfault);
 
 	PRINT("------------------------------------------------------")
@@ -136,10 +144,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 	}
 
 	if(!custom_configuration){
-		std::string root_path = get_exe_path();
-		root_path = root_path.substr(0, root_path.find_last_of('/'));
-		root_path = root_path.substr(0, root_path.find_last_of('/')) + '/';
-		config_path = root_path + config_path;
+		config_path = libjaypea_path + config_path;
 	}
 	std::ifstream config_file(config_path);
 	if(config_file.is_open()){

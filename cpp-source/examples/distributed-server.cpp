@@ -174,9 +174,9 @@ int main(int argc, char** argv){
 			std::stringstream start_services_bash;
 			start_services_bash << "#!/bin/bash\n\n";
 			for(auto service : services.arrayValues){
-				std::string service_configuration_path = "artifacts/" + service->GetStr("name") + ".configuration.json";
+				std::string service_configuration_path = Util::libjaypea_path + "artifacts/" + service->GetStr("name") + ".configuration.json";
 				Util::write_file(service_configuration_path, service->stringify(true));
-				start_services_bash << "binaries/" << service->GetStr("name") << " --configuration_file " << service_configuration_path << " > artifacts/" << service->GetStr("name") << ".log 2>&1 &\n\n";
+				start_services_bash << Util::libjaypea_path << "binaries/" << service->GetStr("name") << " --configuration_file " << service_configuration_path << " > " << Util::libjaypea_path << "artifacts/" << service->GetStr("name") << ".log 2>&1 &\n\n";
 			}
 			Util::write_file("artifacts/start-services.sh", start_services_bash.str());
 			state = GET_ROUTINE;

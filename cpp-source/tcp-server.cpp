@@ -273,6 +273,9 @@ void EpollServer::run_thread(unsigned int thread_id){
 							perror("close timer_fd on timeout");
 							continue;
 						}
+						if(epoll_ctl(epoll_fd, EPOLL_CTL_DEL, new_fd, 0) < 0){
+							perror("epoll_ctl del timedout fd");
+						}
 						this->close_client(&new_fd, close_client_callback);
 					}
 				}else{
@@ -380,10 +383,10 @@ void EpollServer::run_thread(unsigned int thread_id){
 					this->accept_mutex.unlock();
 				}
 			}else{
-				if(!client_to_timer_map.count(the_fd)){
-					PRINT("Bogus EPOLLIN event.. " << the_fd)
-					continue;
-				}
+				//if(!client_to_timer_map.count(the_fd)){
+				//	PRINT("Bogus EPOLLIN event.. " << the_fd)
+				//	continue;
+				//}
 				timer_fd = client_to_timer_map[the_fd];
 				timer_spec.it_interval.tv_sec = 0;
 				timer_spec.it_interval.tv_nsec = 0;
@@ -400,7 +403,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 						perror("close timer_fd");
 					}
 					this->close_client(&the_fd, close_client_callback);
-				}else if(len == PACKET_LIMIT){
+				}else if(len >= PACKET_LIMIT){
 					ERROR("OVERFLOAT more to read uh oh!")
 				}else if(len == 0){
 					PRINT("RECEIVE ZERO?!")

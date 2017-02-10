@@ -23,7 +23,7 @@ case "${argv[@]}" in
 		;;
 	*"DEBUG"*)
 		echo "DEBUG MODE"
-		extra="-O0 -DLIBJAYPEA_DEBUG"
+		extra="-O0 -D_DO_DEBUG"
 	
 		((argc-=1))
 		argv=( "${argv[@]/"DEBUG"}" )
