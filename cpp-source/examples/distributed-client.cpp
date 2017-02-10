@@ -116,6 +116,9 @@ int main(int argc, char** argv){
 		}
 	};
 
+	// If not ignored, write() on a closed TCP connection will signal instead of error.
+	std::signal(SIGPIPE, SIG_IGN);
+
 	PRINT(commands)
 
 	while(true){
@@ -136,9 +139,6 @@ int main(int argc, char** argv){
 		std::getline(std::cin, request);
 		
 		if(in_shell){
-			if(request == EXIT){
-				in_shell = false;
-			}
 			send(request);
 			continue;
 		}
@@ -165,7 +165,10 @@ int main(int argc, char** argv){
 		}else if(request == GET){
 			send(GET);
 		}else if(request == SET){
-			PRINT("ARE YOU SURE LOL?")
+			send(SET);
+			std::string services = distribution.stringify(false);
+			//TODO: custom services json per client
+			send(services);
 		}else if(request == SHELL){
 			send(SHELL);
 			in_shell = true;
