@@ -21,7 +21,7 @@
 
 #include "json.hpp"
 
-#define PACKET_LIMIT 2048
+#define PACKET_LIMIT 8096
 #define CONNECTIONS_LIMIT 2048
 #define FILE_PART_LIMIT 1024
 
