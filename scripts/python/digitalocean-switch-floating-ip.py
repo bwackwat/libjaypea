@@ -16,13 +16,16 @@ def rprint(response):
 	print json.dumps(response_json, indent=4)
 	return response_json
 
-droplets = json.loads(requests.get("https://api.digitalocean.com/v2/droplets", headers=headers).content)
+droplets = rprint(requests.get("https://api.digitalocean.com/v2/droplets", headers=headers))
+
+print '-----------------------------------------------------------------'
+
 for droplet in droplets["droplets"]:
 	print "\nDroplet:"
 	print "Name: " + droplet["name"]
 	print "Memory: " + droplet["size_slug"]
-	print "Disk size (GB?): " + droplet["disk"]
-	print "Id: " + droplet["id"]
+	print "Disk size (GB?): " + str(droplet["disk"])
+	print "Id: " + str(droplet["id"])
 
 print '-----------------------------------------------------------------'
 	
@@ -41,7 +44,7 @@ for fip in fips["floating_ips"]:
 
 print '-----------------------------------------------------------------'
 
-newfip = raw_input("If you want to assign the new droplet to a floating ip, enter the ip [n]: ") or "n";
+newfip = raw_input("If you want to assign a floating ip to the droplet, enter the ip [n]: ") or "n";
 if(newfip != "n"):
 	rprint(requests.post("https://api.digitalocean.com/v2/floating_ips/" + newfip + " /actions", headers=headers, json={"type":"assign","droplet_id":newid}))
 

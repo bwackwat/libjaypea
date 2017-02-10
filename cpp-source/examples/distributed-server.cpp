@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "util.hpp"
 #include "json.hpp"
 #include "distributed-util.hpp"
@@ -6,11 +8,22 @@
 int main(int argc, char** argv){
 	int port = 10001;
 	std::string keyfile;
+	std::string services_path = "services.json";
 	
 	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("keyfile", keyfile, {"-k"});
-	Util::parse_arguments(argc, argv, "This server manages others of its kind.");
+	Util::define_argument("services_file", services_path, {"-sf"});
+	Util::parse_arguments(argc, argv, "This server manages services on its host.");
 	
+	std::ifstream services_file(services_path);
+	JsonObject services;
+	if(services_file.is_open()){
+		std::string services_data((std::istreambuf_iterator<char>(distribution_file)), (std::istreambuf_iterator<char>()));
+		services.parse(services_data.c_str());
+		PRINT("LOADED SERVICES FILE: " + distribution_path)
+		PRINT(services.stringify(true));
+	}
+
 	SymmetricEpollServer server(keyfile, static_cast<uint16_t>(port), 1);
 	
 	enum ServerState{
