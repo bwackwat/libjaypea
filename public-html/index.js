@@ -50,7 +50,7 @@ function getMessages(){
 		if(typeof(response.error) === 'undefined'){
 			var newhtml = "";
 			for(var i = 0, len = response.result.length; i < len; i++){
-				newhtml += "<h3>" + response.result[i] + "</div>";
+				newhtml += "<div>" + response.result[i] + "</div>";
 			}
 			messages.innerHTML = newhtml;
 		}else{

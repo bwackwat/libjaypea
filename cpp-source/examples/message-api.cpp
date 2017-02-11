@@ -5,15 +5,19 @@ int main(int argc, char **argv){
 	std::string ssl_certificate;
 	std::string ssl_private_key;
 	int port = 443;
+	int cache_megabytes = 30;
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
 	Util::define_argument("port", &port, {"-p"});
+	Util::define_argument("cache_megabytes", &cache_megabytes,{"-cm"});
 	Util::parse_arguments(argc, argv, "This serves files over HTTPS , and JSON (with or without HTTP headers) through an API.");
 
 	HttpsApi server(public_directory, ssl_certificate, ssl_private_key, static_cast<uint16_t>(port));
 
+	server.set_file_cache_size(cache_megabytes);
+	
 	server.route("GET", "/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + server.routes_string + "}";
 	});
@@ -37,7 +41,7 @@ int main(int argc, char **argv){
 	server.route("POST", "/message", [&](JsonObject* json)->std::string{
 		message_mutex.lock();
 		messages.push_front(json->objectValues["message"]->stringValue);
-		if(messages.size() > 10){
+		if(messages.size() > 100){
 			messages.pop_back();
 		}
 		message_mutex.unlock();

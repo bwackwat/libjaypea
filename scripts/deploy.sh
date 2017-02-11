@@ -40,7 +40,8 @@ $1/scripts/build-example.sh distributed-server PROD > $1/logs/build-distributed-
 
 $1/binaries/distributed-server \
 --port $DIST \
---keyfile $1/artifacts/deploy.keyfile
+--keyfile $1/artifacts/deploy.keyfile \
+> $1/logs/distributed-server.log 2>&1 &
 
 $1/artifacts/start-services.sh
 
