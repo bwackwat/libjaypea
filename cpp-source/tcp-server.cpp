@@ -380,6 +380,10 @@ void EpollServer::run_thread(unsigned int thread_id){
 					this->accept_mutex.unlock();
 				}
 			}else{
+				if(!client_to_timer_map.count(the_fd)){
+					PRINT("Bogus EPOLLIN event.. " << the_fd)
+					continue;
+				}
 				timer_fd = client_to_timer_map[the_fd];
 				timer_spec.it_interval.tv_sec = 0;
 				timer_spec.it_interval.tv_nsec = 0;
