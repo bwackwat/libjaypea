@@ -49,5 +49,9 @@ int main(int argc, char **argv){
 		return "{\"result\":\"Message posted.\"}";
 	}, {{"message", STRING}});
 
+	server.route("get", "/distribution", [&](JsonObject* json)->std::string{
+		return "{\"result\":\"Message posted.\"}";
+	}, {{"token", STRING}});
+
 	server.start();
 }

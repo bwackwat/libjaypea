@@ -77,6 +77,7 @@ std::string SymmetricEncryptor::encrypt(std::string data, int transaction){
 
 	DEBUG("STRANS:" << static_cast<unsigned char>(transaction % 255))
 	DEBUG("STRANS:" << static_cast<char>(transaction % 255))
+	DEBUG("STEXT:" << std::string(static_cast<char>(transaction % 255) + salts + data))
 
 	return this->encrypt(static_cast<char>(transaction % 255) + salts + data);
 }
@@ -86,6 +87,8 @@ std::string SymmetricEncryptor::decrypt(std::string data, int transaction){
 
 	DEBUG("RTRANS:" << static_cast<unsigned char>(new_data[0]))
 	DEBUG("RTRANS:" << static_cast<char>(new_data[0]))
+	DEBUG("RTEXT:" << new_data)
+	
 	if(static_cast<unsigned char>(new_data[0]) != static_cast<unsigned char>(transaction % 255)){
 		PRINT("got " << static_cast<int>(new_data[0]) << " expected " << transaction)
 		throw CryptoPP::Exception(CryptoPP::BERDecodeErr::INVALID_DATA_FORMAT, "Bad transaction number.");
