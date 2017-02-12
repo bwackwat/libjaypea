@@ -1,9 +1,5 @@
 {
 	"service-definitions":[{
-		"name": "comd",
-		"port": "10000",
-		"keyfile": "artifacts/deploy.keyfile"
-	},{
 		"name": "http-redirecter",
 		"port": "10080",
 		"hostname": "test.bwackwat.com"
@@ -23,16 +19,14 @@
 		"keyfile": "database.keyfile",
 	}],
 	"node-definitions": [{
-		"name": "libjaypea-default",
+		"name": "libjaypea-test",
 		"services": [
-			"comd",
 			"http-redirecter",
 			"message-api"
 		]
 	},{
-		"name": "bwackwat-production",
+		"name": "bwackwat-test",
 		"services": [
-			"comd",
 			"http-redirecter",
 			"bwackwat"
 		]
@@ -44,7 +38,7 @@
 	}],	
 	"live-nodes": [{
 		"hostname": "bwackwat.com",
-		"node": "bwackwat-production"
+		"node": "bwackwat-test"
 	},{
 		"hostname": "localhost",
 		"node": "localhost-test"

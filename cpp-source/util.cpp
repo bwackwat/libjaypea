@@ -27,15 +27,15 @@ std::string Util::libjaypea_path;
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.push_back({name, alts, callback, required, ARG_STRING, std::ref(value), 0, 0});
+	arguments.push_back({name, alts, callback, required, false, ARG_STRING, std::ref(value), 0, 0});
 }
 
 void Util::define_argument(std::string name, int* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.push_back({name, alts, callback, required, ARG_INTEGER, std::ref(name), value, 0});
+	arguments.push_back({name, alts, callback, required, false, ARG_INTEGER, std::ref(name), value, 0});
 }
 
 void Util::define_argument(std::string name, bool* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.push_back({name, alts, callback, required, ARG_BOOLEAN, std::ref(name), 0, value});
+	arguments.push_back({name, alts, callback, required, false, ARG_BOOLEAN, std::ref(name), 0, value});
 }
 
 static std::string get_exe_path(){
@@ -52,6 +52,7 @@ static std::string get_exe_path(){
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
 	exit(1);
 }
+
 /*
 size_t Util::read_size_t(const char* data){
 	return static_cast<size_t>(
@@ -80,19 +81,18 @@ void Util::write_file(std::string filename, std::string content){
 
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
-	bool custom_configuration = false;
-	define_argument("configuration_file", config_path, {"-cf"}, [&](){
-		custom_configuration = true;
-	});
+	define_argument("configuration_file", config_path, {"-cf"});
+	
+	PRINT("------------------------------------------------------")
 
 	libjaypea_path = get_exe_path();
 	libjaypea_path = libjaypea_path.substr(0, libjaypea_path.find_last_of('/'));
 	libjaypea_path = libjaypea_path.substr(0, libjaypea_path.find_last_of('/')) + '/';
 	PRINT("libjaypea: " << libjaypea_path)
 
+	//#if defined(_DO_DEBUG)
 	std::signal(SIGSEGV, trace_segfault);
-
-	PRINT("------------------------------------------------------")
+	//#endif
 
 	std::string check;
 	std::cout << "Arguments: ";
@@ -100,7 +100,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		std::cout << argv[i] << ' ';
 	}
 	std::cout << '\n';
-	PRINT("std::thread::hardware_concurrency = " << std::thread::hardware_concurrency())
+	PRINT("std::thread::hardware_concurrency: " << std::thread::hardware_concurrency())
 
 	PRINT("------------------------------------------------------")
 
@@ -143,9 +143,71 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		}
 	}
 
-	if(!custom_configuration){
-		config_path = libjaypea_path + config_path;
+	for(int i = 0; i < argc; ++i){
+		for(auto& arg: arguments){
+			check = "--" + arg.name;
+			std::function<bool(const char*)> check_lambda;
+			switch(arg.type){
+			case ARG_STRING:
+				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
+					if(std::strcmp(argv[i], check_sub) == 0){
+						if(argc > i + 1){
+							arg.string_value.get() = std::string(argv[i + 1]);
+							arg.set = true;
+							PRINT("ARG SET " << arg.name << " = " << arg.string_value.get())
+							if(arg.callback != nullptr){
+								arg.callback();
+							}
+						}else{
+							PRINT("No string provided for " << check_sub)
+						}
+						return true;
+					}
+					return false;
+				};
+				break;
+			case ARG_INTEGER:
+				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
+					if(std::strcmp(argv[i], check_sub) == 0){
+						if(argc > i + 1){
+							*arg.integer_value = std::stoi(argv[i + 1]);
+							arg.set = true;
+							PRINT("ARG SET " << arg.name << " = " << *arg.integer_value)
+							if(arg.callback != nullptr){
+								arg.callback();
+							}
+						}else{
+							PRINT("No integer provided for " << check_sub)
+						}
+						return true;
+					}
+					return false;
+				};
+				break;
+			case ARG_BOOLEAN:
+				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
+					if(std::strcmp(argv[i], check_sub) == 0){
+						*arg.boolean_value = true;
+						arg.set = true;
+						PRINT("ARG SET " << arg.name << " = " << *arg.boolean_value)
+						if(arg.callback != nullptr){
+							arg.callback();
+						}
+						return true;
+					}
+					return false;
+				};
+				break;
+			}
+			if(check_lambda(check.c_str()))break;
+			for(auto& alt : arg.alts){
+				if(check_lambda(alt.c_str()))break;
+			}
+		}	
 	}
+
+	PRINT("------------------------------------------------------")
+
 	std::ifstream config_file(config_path);
 	if(config_file.is_open()){
 		std::string config_data((std::istreambuf_iterator<char>(config_file)),
@@ -155,6 +217,10 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		// PRINT(config_object.stringify(true))
 		for(auto& arg : arguments){
 			if(config_object.objectValues.count(arg.name)){
+				if(arg.set){
+					PRINT(arg.name << "ALREADY SET")
+					continue;
+				}
 				switch(arg.type){
 				case ARG_STRING:
 					arg.string_value.get() = config_object[arg.name]->stringValue;
@@ -176,68 +242,6 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		}
 	}else{
 		PRINT("Could not open " << config_path << ", ignoring.")
-	}
-	
-	PRINT("------------------------------------------------------")
-
-	for(int i = 0; i < argc; ++i){
-		for(auto& arg: arguments){
-			check = "--" + arg.name;
-			std::function<bool(const char*)> check_lambda;
-			switch(arg.type){
-			case ARG_STRING:
-				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
-					if(std::strcmp(argv[i], check_sub) == 0){
-						if(argc > i + 1){
-							arg.string_value.get() = std::string(argv[i + 1]);
-							PRINT("ARG SET " << arg.name << " = " << arg.string_value.get())
-							if(arg.callback != nullptr){
-								arg.callback();
-							}
-						}else{
-							PRINT("No string provided for " << check_sub)
-						}
-						return true;
-					}
-					return false;
-				};
-				break;
-			case ARG_INTEGER:
-				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
-					if(std::strcmp(argv[i], check_sub) == 0){
-						if(argc > i + 1){
-							*arg.integer_value = std::stoi(argv[i + 1]);
-							PRINT("ARG SET " << arg.name << " = " << *arg.integer_value)
-							if(arg.callback != nullptr){
-								arg.callback();
-							}
-						}else{
-							PRINT("No integer provided for " << check_sub)
-						}
-						return true;
-					}
-					return false;
-				};
-				break;
-			case ARG_BOOLEAN:
-				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
-					if(std::strcmp(argv[i], check_sub) == 0){
-						*arg.boolean_value = true;
-						PRINT("ARG SET " << arg.name << " = " << *arg.boolean_value)
-						if(arg.callback != nullptr){
-							arg.callback();
-						}
-						return true;
-					}
-					return false;
-				};
-				break;
-			}
-			if(check_lambda(check.c_str()))break;
-			for(auto& alt : arg.alts){
-				if(check_lambda(alt.c_str()))break;
-			}
-		}	
 	}
 
 	PRINT("------------------------------------------------------")

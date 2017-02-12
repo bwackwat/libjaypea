@@ -47,6 +47,7 @@ struct Argument {
 	std::vector<std::string> alts;
 	std::function<void()> callback;
 	bool required;
+	bool set;
 	enum ArgumentType type;
 
 	std::reference_wrapper<std::string> string_value;
