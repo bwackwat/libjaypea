@@ -14,10 +14,11 @@ public:
 	std::string communicate(std::string request);
 	std::string communicate(const char* request, size_t length);
 private:
-	std::mutex comm_mutex;
+	SymmetricEncryptor encryptor;
 	int writes;
 	int reads;
-	SymmetricEncryptor encryptor;
 	
-	void close();
+	std::mutex comm_mutex;
+	
+	void close_client();
 };
