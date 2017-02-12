@@ -64,7 +64,7 @@ enum RequestResult {
 
 class Util{
 private:
-	static std::vector<struct Argument> arguments;
+	static std::vector<struct Argument*> arguments;
 
 public:
 	static bool verbose;
@@ -75,12 +75,6 @@ public:
 	static void define_argument(std::string name, std::string& value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, int* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, bool* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
-
-/*
-	static size_t read_size_t(const char* data);
-	static void write_size_t(size_t value, char* data);
-*/
-
 
 	static void write_file(std::string filename, std::string content);
 

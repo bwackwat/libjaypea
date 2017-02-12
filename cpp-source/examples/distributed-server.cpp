@@ -173,6 +173,8 @@ int main(int argc, char** argv){
 			}
 			std::stringstream setup_firewall_bash;
 			setup_firewall_bash << "#!/bin/bash\n\n";
+			setup_firewall_bash << "firewall-cmd --permanent --delete-zone=libjaypea\n";
+			setup_firewall_bash << "firewall-cmd --permanent --new-zone=libjaypea\n\n";
 			std::stringstream start_services_bash;
 			start_services_bash << "#!/bin/bash\n\n";
 			for(auto service : services.arrayValues){
@@ -180,14 +182,15 @@ int main(int argc, char** argv){
 				Util::write_file(service_configuration_path, service->stringify(true));
 				if(service->HasObj("port", STRING)){
 					if(service->HasObj("forward-port-to", STRING)){
-						setup_firewall_bash << "firewall-cmd --zone=public --add-forward-port=port=" << service->GetStr("forward-port-to") << ":proto=tcp:toport=" << service->GetStr("port") << "\n\n";
+						setup_firewall_bash << "firewall-cmd --permanent --zone=libjaypea --add-forward-port=port=" << service->GetStr("forward-port-to") << ":proto=tcp:toport=" << service->GetStr("port") << "\n";
 					}else{
-						setup_firewall_bash << "firewall-cmd --zone=public --add-port=" << service->GetStr("port") << "/tcp\n\n";
+						setup_firewall_bash << "firewall-cmd --permanent --zone=libjaypea --add-port=" << service->GetStr("port") << "/tcp\n";
 					}
 				}
 				start_services_bash << Util::libjaypea_path << "scripts/build-example.sh " << service->GetStr("name") << " PROD > " << Util::libjaypea_path << "logs/build-" << service->GetStr("name") << ".log 2>&1\n\n";
 				start_services_bash << Util::libjaypea_path << "binaries/" << service->GetStr("name") << " --configuration_file " << service_configuration_path << " > " << Util::libjaypea_path << "logs/" << service->GetStr("name") << ".log 2>&1 &\n\n";
 			}
+			setup_firewall_bash << "\nfirewall-cmd --reload\n";
 			Util::write_file(Util::libjaypea_path + "artifacts/setup-firewall.sh", setup_firewall_bash.str());
 			Util::write_file(Util::libjaypea_path + "artifacts/start-services.sh", start_services_bash.str());
 			state = GET_ROUTINE;

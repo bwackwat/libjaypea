@@ -51,6 +51,7 @@ echo -e "@reboot $3 $1/artifacts/start.sh\n" >> /etc/crontab
 
 firewall-cmd --zone=public --permanent --add-masquerade
 firewall-cmd --zone=public --permanent --add-port=10000/tcp
+firewall-cmd --permanent --new-service-from-file=$1/artifacts/libjaypea-firewalld-service.xml
 firewall-cmd --reload
 
 # certbot certonly --standalone --tls-sni-01-port $HTTPS --domain $4

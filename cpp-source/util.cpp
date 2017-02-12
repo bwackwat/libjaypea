@@ -17,7 +17,7 @@
 
 #include "util.hpp"
 
-std::vector<struct Argument> Util::arguments;
+std::vector<struct Argument*> Util::arguments;
 
 bool Util::verbose = false;
 std::string Util::config_path = "extras/configuration.json";
@@ -27,15 +27,15 @@ std::string Util::libjaypea_path;
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.push_back({name, alts, callback, required, false, ARG_STRING, std::ref(value), 0, 0});
+	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_STRING, std::ref(value), 0, 0}));
 }
 
 void Util::define_argument(std::string name, int* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.push_back({name, alts, callback, required, false, ARG_INTEGER, std::ref(name), value, 0});
+	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_INTEGER, std::ref(name), value, 0}));
 }
 
 void Util::define_argument(std::string name, bool* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.push_back({name, alts, callback, required, false, ARG_BOOLEAN, std::ref(name), 0, value});
+	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_BOOLEAN, std::ref(name), 0, value}));
 }
 
 static std::string get_exe_path(){
@@ -110,28 +110,28 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			PRINT("Usage: " << argv[0])
 			PRINT("     --help")
 			PRINT("  OR -h\n")
-			for(auto& arg : arguments){
-				if(arg.required){
+			for(auto arg : arguments){
+				if(arg->required){
 					PRINT("     REQUIRED")
 				}
-				switch(arg.type){
+				switch(arg->type){
 				case ARG_STRING:
-					PRINT("     --" << arg.name << " <string>")
-					for(auto& alt : arg.alts){
+					PRINT("     --" << arg->name << " <string>")
+					for(auto& alt : arg->alts){
 						PRINT("  OR " << alt << " <string>")
 					}
-					PRINT("     (Default value: " << arg.string_value.get() << ")\n")
+					PRINT("     (Default value: " << arg->string_value.get() << ")\n")
 					break;
 				case ARG_INTEGER:
-					PRINT("     --" << arg.name << " <integer>")
-					for(auto& alt : arg.alts){
+					PRINT("     --" << arg->name << " <integer>")
+					for(auto& alt : arg->alts){
 						PRINT("  OR " << alt << " <integer")
 					}
-					PRINT("     (Default value: " << *arg.integer_value << ")\n")
+					PRINT("     (Default value: " << *arg->integer_value << ")\n")
 					break;
 				case ARG_BOOLEAN:
-					PRINT("     --" << arg.name)
-					for(auto& alt : arg.alts){
+					PRINT("     --" << arg->name)
+					for(auto& alt : arg->alts){
 						PRINT("  OR " << alt)
 					}
 					PRINT("     (Disabled by default.)\n")
@@ -144,19 +144,19 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 	}
 
 	for(int i = 0; i < argc; ++i){
-		for(auto& arg : arguments){
-			check = "--" + arg.name;
+		for(auto arg : arguments){
+			check = "--" + arg->name;
 			std::function<bool(const char*)> check_lambda;
-			switch(arg.type){
+			switch(arg->type){
 			case ARG_STRING:
 				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
 						if(argc > i + 1){
-							arg.string_value.get() = std::string(argv[i + 1]);
-							arg.set = true;
-							PRINT("ARG SET " << arg.name << " = " << arg.string_value.get())
-							if(arg.callback != nullptr){
-								arg.callback();
+							arg->string_value.get() = std::string(argv[i + 1]);
+							arg->set = true;
+							PRINT("ARGUMENT SET " << arg->name << " = " << arg->string_value.get())
+							if(arg->callback != nullptr){
+								arg->callback();	
 							}
 						}else{
 							PRINT("No string provided for " << check_sub)
@@ -170,12 +170,11 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
 						if(argc > i + 1){
-							*arg.integer_value = std::stoi(argv[i + 1]);
-							arg.set = true;
-				PRINT(arg.set)
-							PRINT("ARG SET " << arg.name << " = " << *arg.integer_value)
-							if(arg.callback != nullptr){
-								arg.callback();
+							*arg->integer_value = std::stoi(argv[i + 1]);
+							arg->set = true;
+							PRINT("ARGUMENT SET " << arg->name << " = " << *arg->integer_value)
+							if(arg->callback != nullptr){
+								arg->callback();
 							}
 						}else{
 							PRINT("No integer provided for " << check_sub)
@@ -188,11 +187,11 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			case ARG_BOOLEAN:
 				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
-						*arg.boolean_value = true;
-						arg.set = true;
-						PRINT("ARG SET " << arg.name << " = " << *arg.boolean_value)
-						if(arg.callback != nullptr){
-							arg.callback();
+						*arg->boolean_value = true;
+						arg->set = true;
+						PRINT("ARGUMENT SET " << arg->name << " = " << *arg->boolean_value)
+						if(arg->callback != nullptr){
+							arg->callback();
 						}
 						return true;
 					}
@@ -200,8 +199,9 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 				};
 				break;
 			}
+
 			if(check_lambda(check.c_str()))break;
-			for(auto& alt : arg.alts){
+			for(auto& alt : arg->alts){
 				if(check_lambda(alt.c_str()))break;
 			}
 		}	
@@ -217,28 +217,27 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		PRINT("Loaded " << config_path)
 		// PRINT(config_object.stringify(true))
 		for(auto& arg : arguments){
-			if(config_object.objectValues.count(arg.name)){
-				PRINT(arg.set)
-				if(arg.set){
-					PRINT(arg.name << "ALREADY SET")
+			if(config_object.objectValues.count(arg->name)){
+				if(arg->set){
+					PRINT("ARGUMENT " << arg->name << "ALREADY SET, SKIP")
 					continue;
 				}
-				switch(arg.type){
+				switch(arg->type){
 				case ARG_STRING:
-					arg.string_value.get() = config_object[arg.name]->stringValue;
-					PRINT("CONFIG SET STRING " << arg.name << " = " << arg.string_value.get())
+					arg->string_value.get() = config_object[arg->name]->stringValue;
+					PRINT("CONFIGURATION SET STRING " << arg->name << " = " << arg->string_value.get())
 					break;
 				case ARG_INTEGER:
-					*arg.integer_value = std::stoi(config_object[arg.name]->stringValue);
-					PRINT("CONFIG SET INTEGER " << arg.name << " = " << *arg.integer_value)
+					*arg->integer_value = std::stoi(config_object[arg->name]->stringValue);
+					PRINT("CONFIGURATION SET INTEGER " << arg->name << " = " << *arg->integer_value)
 					break;
 				case ARG_BOOLEAN:
-					*arg.boolean_value = true;
-					PRINT("CONFIG SET BOOLEAN " << arg.name << " = " << *arg.boolean_value)
+					*arg->boolean_value = true;
+					PRINT("CONFIGURATION SET BOOLEAN " << arg->name << " = " << *arg->boolean_value)
 					break;
 				}
-				if(arg.callback != nullptr){
-					arg.callback();
+				if(arg->callback != nullptr){
+					arg->callback();
 				}
 			}
 		}
