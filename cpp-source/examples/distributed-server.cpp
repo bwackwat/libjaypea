@@ -171,14 +171,25 @@ int main(int argc, char** argv){
 				PRINT("send error 2")
 				return -1;
 			}
+			std::stringstream setup_firewall_bash;
+			setup_firewall_bash << "#!/bin/bash\n\n";
 			std::stringstream start_services_bash;
 			start_services_bash << "#!/bin/bash\n\n";
 			for(auto service : services.arrayValues){
 				std::string service_configuration_path = Util::libjaypea_path + "artifacts/" + service->GetStr("name") + ".configuration.json";
 				Util::write_file(service_configuration_path, service->stringify(true));
-				start_services_bash << Util::libjaypea_path << "binaries/" << service->GetStr("name") << " --configuration_file " << service_configuration_path << " > " << Util::libjaypea_path << "artifacts/" << service->GetStr("name") << ".log 2>&1 &\n\n";
+				if(service->HasObj("port", STRING)){
+					if(service->HasObj("forward-port-to", STRING)){
+						setup_firewall_bash << "firewall-cmd --zone=public --add-forward-port=port=" << service->GetStr("forward-port-to") << ":proto=tcp:toport=" << service->GetStr("port") << "\n\n";
+					}else{
+						setup_firewall_bash << "firewall-cmd --zone=public --add-port=" << service->GetStr("port") << "/tcp\n\n";
+					}
+				}
+				start_services_bash << Util::libjaypea_path << "scripts/build-example.sh " << service->GetStr("name") << " PROD > " << Util::libjaypea_path << "logs/build-" << service->GetStr("name") << ".log 2>&1\n\n";
+				start_services_bash << Util::libjaypea_path << "binaries/" << service->GetStr("name") << " --configuration_file " << service_configuration_path << " > " << Util::libjaypea_path << "logs/" << service->GetStr("name") << ".log 2>&1 &\n\n";
 			}
-			Util::write_file("artifacts/start-services.sh", start_services_bash.str());
+			Util::write_file(Util::libjaypea_path + "artifacts/setup-firewall.sh", setup_firewall_bash.str());
+			Util::write_file(Util::libjaypea_path + "artifacts/start-services.sh", start_services_bash.str());
 			state = GET_ROUTINE;
 		}else if(state == IN_SHELL){
 			if(data == EXIT){

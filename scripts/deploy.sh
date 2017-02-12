@@ -32,6 +32,8 @@ echo "$2" >> $1/artifacts/deploy.keyfile
 
 touch $1/artifacts/start-services.sh
 chmod +x $1/artifacts/start-services.sh
+touch $1/artifacts/setup-firewall.sh
+chmod +x $1/artifacts/setup-firewall.sh
 
 cat <<EOF >> $1/artifacts/start.sh 
 #!/bin/bash
@@ -49,6 +51,7 @@ EOF
 
 chmod +x $1/artifacts/start.sh
 
+echo -e "\n@reboot root $1/artifacts/setup-firewall.sh" >> /etc/crontab
 echo -e "\n@reboot $3 $1/artifacts/start.sh" >> /etc/crontab
 
 #firewall-cmd --zone=public --permanent --add-masquerade

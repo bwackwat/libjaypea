@@ -88,6 +88,10 @@ int main(int argc, char** argv){
 			PRINT("Distribution JSON: A live-node is missing \"node\" string.")
 			return 1;
 		}
+		if(!nodes.count(node->GetStr("node"))){
+			PRINT("Distribution JSON: A node-definition is missing  for \"" << node->GetStr("node") << "\".")
+			return 1;
+		}
 	
 		if(node->HasObj("hostname", STRING)){
 			name = node->GetStr("hostname");
@@ -96,7 +100,7 @@ int main(int argc, char** argv){
 			name = node->GetStr("ip_address");
 			clients[name] = new SymmetricTcpClient(name.c_str(), static_cast<uint16_t>(port), keyfile);
 		}else{
-			PRINT("Distribution JSON: A live-node is missing both \"hostname\" and alternative \"ip_address\" strings.")
+			PRINT("Distribution JSON: A live-node is missing either \"hostname\" or \"ip_address\" strings.")
 			return 1;
 		}
 		send_to(name, password);
