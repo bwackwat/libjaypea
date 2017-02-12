@@ -144,7 +144,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 	}
 
 	for(int i = 0; i < argc; ++i){
-		for(auto& arg: arguments){
+		for(auto& arg : arguments){
 			check = "--" + arg.name;
 			std::function<bool(const char*)> check_lambda;
 			switch(arg.type){
@@ -172,6 +172,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 						if(argc > i + 1){
 							*arg.integer_value = std::stoi(argv[i + 1]);
 							arg.set = true;
+				PRINT(arg.set)
 							PRINT("ARG SET " << arg.name << " = " << *arg.integer_value)
 							if(arg.callback != nullptr){
 								arg.callback();
@@ -217,6 +218,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		// PRINT(config_object.stringify(true))
 		for(auto& arg : arguments){
 			if(config_object.objectValues.count(arg.name)){
+				PRINT(arg.set)
 				if(arg.set){
 					PRINT(arg.name << "ALREADY SET")
 					continue;

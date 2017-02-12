@@ -1,6 +1,7 @@
 #include <fstream>
 
 #include "util.hpp"
+#include "json.hpp"
 #include "distributed-util.hpp"
 #include "symmetric-tcp-client.hpp"
 

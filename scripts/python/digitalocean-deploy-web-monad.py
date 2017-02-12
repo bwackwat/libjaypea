@@ -27,18 +27,25 @@ newpass = ""
 if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
 	newpass = raw_input("Password: ")
 
+newname = raw_input("Enter a name for the droplet [" + newuser + "]: ") or newuser
 newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/libjaypea]: ") or "/opt/libjaypea"
+
 # Replaced by distribution JSON details.
 # newhost = raw_input("Enter a hostname [bwackwat.com]: ") or "bwackwat.com"
-newkey = raw_input("Enter a new 96 byte key for comd (enjoy writing a sentence) [pads random letters]: \n")
+
+newkey = raw_input("Enter a 96 byte key for secure communication [pads random letters]: \n")
 
 newkeylen = len(newkey)
 if newkeylen < 96:
 	newkey += ''.join(random.choice(string.ascii_letters) for x in range(96 - newkeylen))
 	print "Appended " + str(96 - newkeylen) + " characters to the key."
-with open(scriptdir + "/../../artifacts/" + newuser + ".deploy.keyfile", "w") as f:
+
+newkeyfile = scriptdir + "/../../artifacts/" + newname + ".deploy.keyfile"
+with open(newkeyfile, "w") as f:
 	f.write(newkey)
-print "Key is written to " + newuser + ".deploy.keyfile (in this directory) and will be used with cloud-init."
+
+# print "Key is written to " + newkeyfile + " and will be used with cloud-init."
+# print "You can then use a local client to communciate."
 
 print '-----------------------------------------------------------------'
 
@@ -89,7 +96,7 @@ for image in images["images"]:
 print '-----------------------------------------------------------------'
 
 newdroplet = rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers, json={
-	"name":raw_input("Enter a name for the droplet: "),
+	"name":newname,
 	"region":"sfo1",
 	"size":"512mb",
 	"image":raw_input("Enter an image id from above (newest is recommended): "),

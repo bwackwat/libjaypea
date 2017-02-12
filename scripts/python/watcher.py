@@ -1,12 +1,24 @@
 import subprocess, os, sys, time, atexit, signal, psutil
 
-if len(sys.argv) < 2:
-	print "Usage: watcher.py <directory to watch> <command to terminate and repeat>"
+if len(sys.argv) < 3:
+	print "Usage: watcher.py <directories and/or files to watch, comma separated> <command to terminate and repeat>"
 	sys.exit(1)
 
 print "------------------------------------------------------------------"
 
-print "DIRECTORY: " + sys.argv[1]
+watch = sys.argv[1].split(",")
+directories = []
+files = []
+for item in watch:
+	if os.path.isdir(item):
+		directories.append(item)
+	elif os.path.isfile(item):
+		files.append(item)
+	else:
+		print "BAD DIRECTORY OR FILE: " + item
+
+print "DIRECTORIES: " + ", ".join(directories)
+print "FILES: " + ", ".join(files)
 print "COMMAND: " + sys.argv[2]
 
 print "------------------------------------------------------------------"
@@ -25,24 +37,41 @@ def stop_process():
 	
 atexit.register(stop_process)
 
-files = {}
+filetime = {}
+
+def file_changed(file):
+	mtime = os.stat(file).st_mtime
+	if not file in filetime:
+		filetime[file] = mtime
+	else:
+		if filetime[file] != mtime:
+			filetime[file] = mtime
+			print "------------------------------------------------------------------"
+			print "CHANGE: " + file
+			print "RESTARTING"
+			print "------------------------------------------------------------------"
+			return True
+	return False
+
+def dir_changed(dir):
+	for file in os.listdir(dir):
+		if file_changed(dir + file):
+			return True
+	return False
+
+def any_changed():
+	for dir in directories:
+		if dir_changed(dir):
+			return True
+	for file in files:
+		if file_changed(file):
+			return True
+	return False
 
 while True:
-	checking_for_changes = True
-	while checking_for_changes:
+	changed = False
+	while not changed:
 		time.sleep(1)
-		for file in os.listdir(sys.argv[1]):
-			mtime = os.stat(sys.argv[1] + file).st_mtime
-			if not file in files:
-				files[file] = mtime
-			else:
-				if files[file] != mtime:
-					files[file] = mtime
-					checking_for_changes = False
-					stop_process()
-					process = start_process()
-					print "------------------------------------------------------------------"
-					print "CHANGE: " + file
-					print "RESTARTING"
-					print "------------------------------------------------------------------"
-					break
+		if any_changed():
+			stop_process()
+			process = start_process()

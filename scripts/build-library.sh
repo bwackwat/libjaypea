@@ -7,4 +7,4 @@ source scripts/build-prefix.sh
 echo "building libjaypea.so"
 eval $libcompiler
 
-ldconfig
+#ldconfig
