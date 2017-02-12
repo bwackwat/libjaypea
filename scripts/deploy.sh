@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 3 ]; then
-	echo "Usage: <install dir> <distribution key> <username> <optional password>"
+	echo "Usage: <install directory> <distribution keyfile> <username> <optional password>"
 	exit
 fi
 
