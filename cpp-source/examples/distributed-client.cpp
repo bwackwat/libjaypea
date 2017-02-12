@@ -200,7 +200,7 @@ int main(int argc, char** argv){
 					PRINT(iter->first << ": Disconnected")
 					continue;
 				}
-				// TODO: Rethink this. It sets hostname unqiuely.
+				// TODO: Rethink this. It sets hostname unqiuely, for the sake of the http-redirecter.
 				for(auto service : host_services[iter->first]->arrayValues){
 					if(service->HasObj("hostname", STRING)){
 						service->objectValues["hostname"]->stringValue = iter->first;

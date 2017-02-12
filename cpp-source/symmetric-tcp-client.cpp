@@ -2,19 +2,19 @@
 
 SymmetricTcpClient::SymmetricTcpClient(std::string hostname, uint16_t port, std::string keyfile)
 :SimpleTcpClient(hostname, port),
-encryptor(keyfile){}
+encryptor(keyfile), writes(0), reads(0){}
 
 SymmetricTcpClient::SymmetricTcpClient(const char* ip_address, uint16_t port, std::string keyfile)
 :SimpleTcpClient(ip_address, port),
-encryptor(keyfile){}
+encryptor(keyfile), writes(0), reads(0){}
 
-bool SymmetricTcpClient::reconnect(){
+void SymmetricTcpClient::close(){
+	this->connected = false;
 	if(close(this->fd) < 0){
 		perror("symmetric tcp client reconnect closing socket");
 	}
 	this->writes = 0;
 	this->reads = 0;
-	return SimpleTcpClient::reconnect();
 }
 
 std::string SymmetricTcpClient::communicate(std::string request){
@@ -32,8 +32,9 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 		}
 	}
 	
+	DEBUG("WRITES:" << this->writes)
 	if(this->encryptor.send(this->fd, request, length, &this->writes)){
-		this->connected = false;
+		this->close();
 		ERROR("SymmetricTcpClient send")
 		return response_string;
 	}
@@ -45,7 +46,7 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 
 	do{
 		if((len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, set_response_callback, &this->reads)) < 0){
-			this->connected = false;
+			this->close();
 			ERROR("SymmetricTcpClient recv")
 			return response_string;
 		}
