@@ -20,8 +20,7 @@ private:
 	byte iv[CryptoPP::AES::BLOCKSIZE];
 	CryptoPP::HMAC<CryptoPP::SHA256> hmac;
 public:
-	SymmetricEncryptor();
-	SymmetricEncryptor(std::string keyfile);
+	SymmetricEncryptor(std::string keyfile = std::string());
 
 	std::string encrypt(std::string data);
 	std::string decrypt(std::string data);

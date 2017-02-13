@@ -3,30 +3,55 @@
 #include "util.hpp"
 #include "symmetric-encryptor.hpp"
 
-SymmetricEncryptor::SymmetricEncryptor(){
-	this->random_pool.GenerateBlock(this->key, CryptoPP::AES::MAX_KEYLENGTH);
-	this->random_pool.GenerateBlock(this->iv, CryptoPP::AES::BLOCKSIZE);
+SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
+	std::string name = "SymmetricEncryptor";
+	if(keyfile.empty()){
+		this->random_pool.GenerateBlock(this->key, CryptoPP::AES::MAX_KEYLENGTH);
+		this->random_pool.GenerateBlock(this->iv, CryptoPP::AES::BLOCKSIZE);
+	}else{
+		int fd;
+		if((fd = open(keyfile.c_str(), O_RDONLY)) < 0){
+			throw std::runtime_error(name + " open keyfile");
+		}
+		if(read(fd, this->key, CryptoPP::AES::MAX_KEYLENGTH) < CryptoPP::AES::MAX_KEYLENGTH){
+			throw std::runtime_error(name + " read keyfile key");
+		}
+		if(read(fd, this->iv, CryptoPP::AES::BLOCKSIZE) < CryptoPP::AES::BLOCKSIZE){
+			throw std::runtime_error(name + " read keyfile iv");
+		}
+		if(close(fd) < 0){
+			throw std::runtime_error(name + " close keyfile");
+		}
+	}
+	this->hmac = CryptoPP::HMAC<CryptoPP::SHA256>(this->key, CryptoPP::AES::MAX_KEYLENGTH);
+
+	// Another random number tool.
+	// srand(static_cast<unsigned int>(time(0)));
 }
 
 std::string SymmetricEncryptor::encrypt(std::string data){
-	std::string new_data;
-	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
-	CryptoPP::Base64Encoder* base64_enc = new CryptoPP::Base64Encoder(sink, false);
-	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption enc(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
-	CryptoPP::StreamTransformationFilter* aes_enc = new CryptoPP::StreamTransformationFilter(enc, base64_enc);
-	CryptoPP::StringSource enc_source(data, true, aes_enc);
+	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encryptor(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
+
+	std::string encrypted_data;
+	CryptoPP::StringSource s1(data, true,
+		new CryptoPP::StreamTransformationFilter(encryptor,
+		new CryptoPP::StringSink(encrypted_data)));
 
 	std::string hash;
-        CryptoPP::StringSource source(new_data, true,
-                new CryptoPP::HashFilter(this->hmac,
-		new CryptoPP::Base64Encoder(
-                new CryptoPP::StringSink(hash))));
+	CryptoPP::StringSource s2(encrypted_data, true,
+		new CryptoPP::HashFilter(this->hmac,
+		new CryptoPP::StringSink(hash)));
 
 	// HMAC SHA256 produces 32 bytes.
-	if(hash.length() != 45){
+	if(hash.length() != 32){
 		PRINT("SHA256 in BASE64 length not 32 bytes?" << hash.length())
 	}
-	return hash + new_data;
+
+	std::string base64_encrypted_data;
+	CryptoPP::StringSource s3(hash + encrypted_data, true,
+		new CryptoPP::Base64Encoder(
+		new CryptoPP::StringSink(base64_encrypted_data)));
+	return base64_encrypted_data;
 }
 
 std::string SymmetricEncryptor::decrypt(std::string data){
@@ -47,28 +72,8 @@ std::string SymmetricEncryptor::decrypt(std::string data){
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption dec(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 	CryptoPP::StreamTransformationFilter* aes_dec = new CryptoPP::StreamTransformationFilter(dec, sink);
 	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
-	CryptoPP::StringSource dec_source(cyphertext, true, base64_dec);
+	CryptoPP::StringSource dec_source(raw_data.substr(32), true, aes_dec);
 	return new_data;
-}
-
-SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
-	std::string name = "SymmetricEncryptor";
-	int fd;
-	if((fd = open(keyfile.c_str(), O_RDONLY)) < 0){
-		throw std::runtime_error(name + " open keyfile");
-	}
-	if(read(fd, this->key, CryptoPP::AES::MAX_KEYLENGTH) < CryptoPP::AES::MAX_KEYLENGTH){
-		throw std::runtime_error(name + " read keyfile key");
-	}
-	if(read(fd, this->iv, CryptoPP::AES::BLOCKSIZE) < CryptoPP::AES::BLOCKSIZE){
-		throw std::runtime_error(name + " read keyfile iv");
-	}
-	if(close(fd) < 0){
-		throw std::runtime_error(name + " close keyfile");
-	}
-	this->hmac = CryptoPP::HMAC<CryptoPP::SHA256>(this->key, CryptoPP::AES::MAX_KEYLENGTH);
-	// What does this do? I forgot, some other radnom number tool.
-	// srand(static_cast<unsigned int>(time(0)));
 }
 
 std::string SymmetricEncryptor::encrypt(std::string data, int transaction){

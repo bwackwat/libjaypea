@@ -219,7 +219,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		for(auto& arg : arguments){
 			if(config_object.objectValues.count(arg->name)){
 				if(arg->set){
-					PRINT("ARGUMENT " << arg->name << "ALREADY SET, SKIP")
+					PRINT(arg->name << " ALREADY SET, SKIP")
 					continue;
 				}
 				switch(arg->type){
