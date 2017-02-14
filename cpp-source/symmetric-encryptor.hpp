@@ -2,6 +2,7 @@
 
 #include "cryptopp/aes.h"
 #include "cryptopp/osrng.h"
+#include "cryptopp/hmac.h"
 #include "cryptopp/modes.h"
 #include "cryptopp/base64.h"
 #include "cryptopp/filters.h"
@@ -17,8 +18,7 @@ private:
 	CryptoPP::AutoSeededRandomPool random_pool;
 	byte key[CryptoPP::AES::MAX_KEYLENGTH];
 	byte iv[CryptoPP::AES::BLOCKSIZE];
-
-	static std::string get_sha256_hash(std::string data);
+	CryptoPP::HMAC<CryptoPP::SHA256> hmac;
 public:
 	SymmetricEncryptor();
 	SymmetricEncryptor(std::string keyfile);

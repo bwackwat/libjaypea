@@ -55,7 +55,7 @@ def file_changed(file):
 
 def dir_changed(dir):
 	for file in os.listdir(dir):
-		if file_changed(dir + file):
+		if not file.endswith(".swp") and file_changed(dir + file):
 			return True
 	return False
 
