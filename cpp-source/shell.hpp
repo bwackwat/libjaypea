@@ -9,6 +9,7 @@ private:
 	int pid;
 public:
 	std::atomic<bool> opened;
+
 	int input;
 	int output;
 

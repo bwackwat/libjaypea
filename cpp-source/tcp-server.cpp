@@ -3,24 +3,26 @@
 #include "tcp-server.hpp"
 
 /**
- * @brief A TCP epoll-based, IPv4 server constructor.
+ * @brief A TCP, epoll-based, IPv4 server constructor.
  * @param port The port number the server's socket will bind to.
- * @param new_max_connections The maximum number of connections *each thread* will handle.
+ * @param new_max_connections The maximum number of connections *each thread* can handle.
  * Also the listen backlog.
  * @param new_name An arbitrary name for debugging purposes.
  *
  * This is the essential networking server code. Architecturally, each thread calls epoll_wait() and
- * waits for either a locked server fd to accept a new connection, a connected fd to indicate there is data to read,
- * or for a connected fd to timeout. Each thread manages its own set of connected fds, timeout fds, and
- * is able to accept new connections because epoll_wait is thread safe for reused fds *and* there is a mutex.
+ * waits for either a mutexed server fd to accept a new connection, a connected fd to indicate there is data to read,
+ * or for a connected fd to timeoutvia timerfd. Each thread manages its own set of connected fds, timeout fds, and
+ * is able to accept new connections because epoll_wait is thread safe for reused fds and there is a mutex.
  * @see EpollServer::accept_mutex
  *
  * @bug There lies a type of race condition within a single thread where a timeout and a read event can both trigger.
  * In some cases I believe this is harmless, in other cases I wouldn't be suprised if some memory leaks or other
- * unexpected behavior occurs. Need to research or reevaluate how epoll errors should be treated.
- * @bug EpollServer::start_event does nothing.
+ * unexpected behavior occurs. Need to research or reevaluate how epoll errors should be treated. EDIT: Resolved?
+ * This was solved by using EPOLL_MOD_DEL on the timed-out client's id.
+ * @bug EpollServer::start_event does nothing. EDIT: Resolved. A pipe is created to write event data to, and read from
+ * in epoll where the broadcast occurs.
  * @bug There is a condition within the kernel where not all data sent to write() is written.
- * This is completely unaccounted for.
+ * This is completely unaccounted for, but I havent hit it yet.
  */
 EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
 :name(new_name),
