@@ -1,31 +1,40 @@
-#include "https-api.hpp"
+#include "http-api.hpp"
 
 int main(int argc, char **argv){
 	std::string public_directory;
 	std::string ssl_certificate;
 	std::string ssl_private_key;
 	int port = 443;
+	bool http = false;
 	int cache_megabytes = 30;
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
 	Util::define_argument("port", &port, {"-p"});
+	Util::define_argument("http", &http);
 	Util::define_argument("cache_megabytes", &cache_megabytes,{"-cm"});
 	Util::parse_arguments(argc, argv, "This serves files over HTTPS , and JSON (with or without HTTP headers) through an API.");
 
-	HttpsApi server(public_directory, ssl_certificate, ssl_private_key, static_cast<uint16_t>(port));
-
-	server.set_file_cache_size(cache_megabytes);
+	EpollServer* server;
+	if(http){
+		server = new EpollServer(static_cast<uint16_t>(port), 10);
+	}else{
+		server = new TlsEpollServer(ssl_certificate, ssl_private_key, static_cast<uint16_t>(port), 10);
+	}
 	
-	server.route("GET", "/", [&](JsonObject*)->std::string{
-		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + server.routes_string + "}";
+	HttpApi api(public_directory, server);
+
+	api.set_file_cache_size(cache_megabytes);
+	
+	api.route("GET", "/", [&](JsonObject*)->std::string{
+		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + api.routes_string + "}";
 	});
 
 	std::mutex message_mutex;
 	std::deque<std::string> messages;
 
-	server.route("GET", "/message", [&](JsonObject*)->std::string{
+	api.route("GET", "/message", [&](JsonObject*)->std::string{
 		JsonObject result(OBJECT);
 		result.objectValues["result"] = new JsonObject(ARRAY);
 
@@ -38,7 +47,7 @@ int main(int argc, char **argv){
 		return result.stringify();
 	});
 
-	server.route("POST", "/message", [&](JsonObject* json)->std::string{
+	api.route("POST", "/message", [&](JsonObject* json)->std::string{
 		message_mutex.lock();
 		messages.push_front(json->objectValues["message"]->stringValue);
 		if(messages.size() > 100){
@@ -49,9 +58,9 @@ int main(int argc, char **argv){
 		return "{\"result\":\"Message posted.\"}";
 	}, {{"message", STRING}});
 
-	server.route("get", "/distribution", [&](JsonObject* json)->std::string{
+	api.route("get", "/distribution", [&](JsonObject* json)->std::string{
 		return "{\"result\":\"Message posted.\"}";
 	}, {{"token", STRING}});
 
-	server.start();
+	api.start();
 }

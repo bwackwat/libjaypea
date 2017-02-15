@@ -108,6 +108,11 @@ bool EpollServer::send(int fd, const char* data, size_t data_length){
  * @return Negative on error, zero on nothing to read, and positive for successful read.
  */
 ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
+	return this->recv(fd, data, data_length, this->on_read);
+}
+
+ssize_t EpollServer::recv(int fd, char* data, size_t data_length,
+std::function<ssize_t(int, char*, size_t)> callback){
 	ssize_t len;
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK && errno != EAGAIN){
@@ -120,7 +125,7 @@ ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
 		return -2;
 	}else{
 		data[len] = 0;
-		return this->on_read(fd, data, len);
+		return callback(fd, data, static_cast<size_t>(len));
 	}
 }
 
@@ -385,10 +390,6 @@ void EpollServer::run_thread(unsigned int thread_id){
 					this->accept_mutex.unlock();
 				}
 			}else{
-				//if(!client_to_timer_map.count(the_fd)){
-				//	PRINT("Bogus EPOLLIN event.. " << the_fd)
-				//	continue;
-				//}
 				timer_fd = client_to_timer_map[the_fd];
 				timer_spec.it_interval.tv_sec = 0;
 				timer_spec.it_interval.tv_nsec = 0;

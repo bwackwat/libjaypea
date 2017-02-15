@@ -8,7 +8,7 @@
 #include "json.hpp"
 #include "util.hpp"
 #include "tcp-server.hpp"
-#include "private-tcp-server.hpp"
+#include "tls-epoll-server.hpp"
 
 #define WSS_MAGIC_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
@@ -191,26 +191,31 @@ int main(int argc, char** argv){
 	std::string ssl_certificate;
 	std::string ssl_private_key;
 	int port;
+	bool http = false;
 
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
 	Util::define_argument("port", &port, {"-p"});
-	Util::parse_arguments(argc, argv, "This is a Secure WebSocketServer");
+	Util::define_argument("http", &http);
+	Util::parse_arguments(argc, argv, "This is a (Secure) WebSocketServer");
 	
 	std::unordered_map<std::string, Player*> player_data;
 	std::unordered_map<int /* fd */, std::string /* logged in handle */> client_player;
 	std::unordered_map<int /* fd */, enum ClientState> client_state;
 
-	EpollServer server(static_cast<uint16_t>(port), 10);
-	//PrivateEpollServer server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(port), 10);
+	
+	EpollServer* server;
+	if(http){
+		server = new EpollServer(static_cast<uint16_t>(port), 10);
+	}else{
+		server = new TlsEpollServer(ssl_certificate, ssl_private_key, static_cast<uint16_t>(port), 10);
+	}
 
-//	PRINT(hash_key_sha1(std::string("dGhlIHNhbXBsZSBub25jZQ==") + WSS_MAGIC_GUID))
-
-	server.on_connect =  [&](int fd){
+	server->on_connect =  [&](int fd){
 		client_state[fd] = CONNECTING;
 	};
 
-	server.on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
+	server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		PRINT("RECV: " << data)
 		if(client_state[fd] == CONNECTING){
 			JsonObject r_obj(OBJECT);
@@ -219,7 +224,7 @@ int main(int argc, char** argv){
 
 			if(r_obj.HasObj("Sec-WebSocket-Key", STRING)){
 				const std::string response = wss_handshake_response(r_obj.GetStr("Sec-WebSocket-Key"));
-				if(server.send(fd, response.c_str(), response.length())){
+				if(server->send(fd, response.c_str(), response.length())){
 					return -1;
 				}
 
@@ -232,7 +237,7 @@ int main(int argc, char** argv){
 		}else if(client_state[fd] == EXCHANGING){
 			std::string message = parse_web_socket_frame(data, data_length);
 			std::string response = create_web_socket_frame(std::string("I got the message!"));
-			if(server.send(fd, data, data_length)){
+			if(server->send(fd, data, data_length)){
 			//if(server.send(fd, response.c_str(), response.length())){
 				return -1;
 			}
@@ -243,5 +248,5 @@ int main(int argc, char** argv){
 		return data_length;
 	};
 
-	server.run(false, 1);
+	server->run(false, 1);
 }

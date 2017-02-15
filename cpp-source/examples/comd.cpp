@@ -22,7 +22,7 @@
 #include "util.hpp"
 #include "shell.hpp"
 #include "comd-util.hpp"
-#include "symmetric-tcp-server.hpp"
+#include "symmetric-epoll-server.hpp"
 
 int main(int argc, char** argv){
 	enum ComdState state = VERIFY_IDENTITY;
