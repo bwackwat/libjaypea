@@ -213,7 +213,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 		if(close(*fd) < 0){
 			perror("close");
 		}
-		PRINT(*fd << " done on " << thread_id)
+		DEBUG(*fd << " done on " << thread_id)
 		if(this->on_disconnect != nullptr){
 			this->on_disconnect(*fd);
 		}
@@ -251,7 +251,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				timer_fd = client_to_timer_map[the_fd];
 				client_to_timer_map.erase(the_fd);
 				timer_to_client_map.erase(timer_fd);
-				std::cout << "error, close tfd " << timer_fd << ' ';
+				ERROR(the_fd << " and timer " << timer_fd << " donezo.")
 				if(close(timer_fd) < 0){
 					perror("close timer_fd on error");
 				}
@@ -268,7 +268,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 						new_fd = timer_to_client_map[timer_fd];
 						timer_to_client_map.erase(timer_fd);
 						client_to_timer_map.erase(new_fd);
-						std::cout << "timeout, close tfd " << timer_fd << ' ';
+						PRINT(timer_fd << " timed out on " << new_fd)
 						if(close(timer_fd) < 0){
 							perror("close timer_fd on timeout");
 							continue;
@@ -294,7 +294,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 					is first read from the read end of the pipe, and then written to each currently tracked client fd. Broadcasted.
 				*/
 				if((len = read(this->broadcast_pipe[0], packet, PACKET_LIMIT)) <= 0){
-						ERROR("I really hope this doesn't happen.")
+					ERROR("I really hope this doesn't happen.")
 				}
 				packet[len] = 0;
 				for(auto iter = client_to_timer_map.begin(); iter != client_to_timer_map.end(); ++iter){
@@ -319,7 +319,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 							break;
 						}else{
 							if(this->accept_continuation(&new_fd)){
-								PRINT("accept continuation failed.")
+								DEBUG("accept continuation failed.")
 								this->close_client(&new_fd, [&](int* fd){
 									close(*fd);
 								});
@@ -398,7 +398,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
 					timer_to_client_map.erase(timer_fd);
 					client_to_timer_map.erase(the_fd);
-					PRINT("BAD RECV. " << the_fd << " timing " << timer_fd)
+					PRINT(the_fd << " and timer " << timer_fd << " donezo.")
 					if(close(timer_fd) < 0){
 						perror("close timer_fd");
 					}

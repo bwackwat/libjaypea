@@ -2,81 +2,9 @@
 
 #include "util.hpp"
 #include "json.hpp"
+#include "shell.hpp"
 #include "distributed-util.hpp"
 #include "symmetric-tcp-server.hpp"
-
-class Shell{
-private:
-	bool opened;
-	int pid;
-public:
-	int input;
-	int output;
-
-	Shell():opened(false){}
-
-	bool sopen(){
-		if(this->opened){
-			return false;
-		}
-
-		int shell_pipe[2][2];
-
-		if(pipe(shell_pipe[0]) < 0){
-			ERROR("pipe 0")
-			return true;
-		}
-	
-		if(pipe(shell_pipe[1]) < 0){
-			ERROR("pipe 1")
-			return true;
-		}
-	
-		if((this->pid = fork()) < 0){
-			ERROR("fork")
-			return true;
-		}else if(this->pid == 0){
-			dup2(shell_pipe[0][0], STDIN_FILENO);
-			dup2(shell_pipe[1][1], STDOUT_FILENO);
-
-			close(shell_pipe[0][0]);
-			close(shell_pipe[1][1]);
-			close(shell_pipe[1][0]);
-			close(shell_pipe[0][1]);
-
-			if(execl("/bin/bash", "/bin/bash", static_cast<char*>(0)) < 0){
-				ERROR("execl")
-			}
-			PRINT("execl done!")
-			return true;
-		}else{
-			close(shell_pipe[0][0]);
-			close(shell_pipe[1][1]);
-
-			this->output = shell_pipe[1][0];
-			this->input = shell_pipe[0][1];
-		}
-
-		this->opened = true;
-		return false;
-	}
-
-	void sclose(){
-		if(!this->opened){
-			return;
-		}
-		if(kill(this->pid, SIGTERM) < 0){
-			ERROR("kill shell")
-		}
-		if(close(this->input) < 0){
-			ERROR("close shell input")
-		}
-		if(close(this->output) < 0){
-			ERROR("close shell output")
-		}
-		this->opened = false;
-	}
-};
 
 int main(int argc, char** argv){
 	int port;
@@ -171,23 +99,25 @@ int main(int argc, char** argv){
 				PRINT("send error 2")
 				return -1;
 			}
+
 			std::stringstream setup_firewall_bash;
 			setup_firewall_bash << "#!/bin/bash\n\n";
-			setup_firewall_bash << "firewall-cmd --permanent --delete-zone=libjaypea\n";
-			setup_firewall_bash << "firewall-cmd --permanent --new-zone=libjaypea\n\n";
 			std::stringstream start_services_bash;
 			start_services_bash << "#!/bin/bash\n\n";
+
 			for(auto service : services.arrayValues){
 				std::string service_configuration_path = Util::libjaypea_path + "artifacts/" + service->GetStr("name") + ".configuration.json";
 				Util::write_file(service_configuration_path, service->stringify(true));
 				if(service->HasObj("port", STRING)){
 					if(service->HasObj("forward-port-to", STRING)){
-						setup_firewall_bash << "firewall-cmd --permanent --zone=libjaypea --add-forward-port=port=" << service->GetStr("forward-port-to") << ":proto=tcp:toport=" << service->GetStr("port") << "\n";
+						setup_firewall_bash << "firewall-cmd --permanent --zone=public --add-forward-port=port=" << service->GetStr("forward-port-to") << ":proto=tcp:toport=" << service->GetStr("port") << "\n";
 					}else{
-						setup_firewall_bash << "firewall-cmd --permanent --zone=libjaypea --add-port=" << service->GetStr("port") << "/tcp\n";
+						setup_firewall_bash << "firewall-cmd --permanent --zone=public --add-port=" << service->GetStr("port") << "/tcp\n";
 					}
 				}
+				// Build service
 				start_services_bash << Util::libjaypea_path << "scripts/build-example.sh " << service->GetStr("name") << " PROD > " << Util::libjaypea_path << "logs/build-" << service->GetStr("name") << ".log 2>&1\n\n";
+				// Run service.
 				start_services_bash << Util::libjaypea_path << "binaries/" << service->GetStr("name") << " --configuration_file " << service_configuration_path << " > " << Util::libjaypea_path << "logs/" << service->GetStr("name") << ".log 2>&1 &\n\n";
 			}
 			setup_firewall_bash << "\nfirewall-cmd --reload\n";

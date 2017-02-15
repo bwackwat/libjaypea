@@ -52,7 +52,7 @@ firewall-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:top
 firewall-cmd --zone=public --permanent --add-port=10000/tcp
 firewall-cmd --reload
 
-# certbot certonly --standalone --tls-sni-01-port $HTTPS --domain $4
+# certbot certonly --standalone --tls-sni-01-port 10443 --domain test.bwackwat.com
 # cp /etc/letsencrypt/live/$4/fullchain.pem $1/artifacts/ssl.crt
 # cp /etc/letsencrypt/live/$4/privkey.pem $1/artifacts/ssl.key
 

@@ -33,12 +33,12 @@ std::string SymmetricEncryptor::encrypt(std::string data){
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encryptor(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 
 	std::string encrypted_data;
-	CryptoPP::StringSource s1(data, true,
+	CryptoPP::StringSource pipeline1(data, true,
 		new CryptoPP::StreamTransformationFilter(encryptor,
 		new CryptoPP::StringSink(encrypted_data)));
 
 	std::string hash;
-	CryptoPP::StringSource s2(encrypted_data, true,
+	CryptoPP::StringSource pipeline2(encrypted_data, true,
 		new CryptoPP::HashFilter(this->hmac,
 		new CryptoPP::StringSink(hash)));
 
@@ -48,32 +48,30 @@ std::string SymmetricEncryptor::encrypt(std::string data){
 	}
 
 	std::string base64_encrypted_data;
-	CryptoPP::StringSource s3(hash + encrypted_data, true,
+	CryptoPP::StringSource pipeline3(hash + encrypted_data, true,
 		new CryptoPP::Base64Encoder(
 		new CryptoPP::StringSink(base64_encrypted_data)));
 	return base64_encrypted_data;
 }
 
 std::string SymmetricEncryptor::decrypt(std::string data){
-	std::string cyphertext = data.substr(45);
+	CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption decryptor(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 
-	std::string raw_data;
-	CryptoPP::StringSource get_raw_data(data, true,
+	std::string encrypted_data;
+	CryptoPP::StringSource pipeline1(data, true,
 		new CryptoPP::Base64Decoder(
-		new CryptoPP::StringSink(raw_data)));
+		new CryptoPP::StringSink(encrypted_data)));
 
-	CryptoPP::StringSource hash(raw_data, true,
+	CryptoPP::StringSource pipeline2(encrypted_data, true,
 		new CryptoPP::HashVerificationFilter(this->hmac, 0,
 		CryptoPP::HashVerificationFilter::THROW_EXCEPTION |
-		CryptoPP::HashVerificationFilter::DEFAULT_FLAGS));
+		CryptoPP::HashVerificationFilter::HASH_AT_BEGIN));
 
-	std::string new_data;
-	CryptoPP::StringSink* sink = new CryptoPP::StringSink(new_data);
-	CryptoPP::CBC_Mode<CryptoPP::AES>::Decryption dec(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
-	CryptoPP::StreamTransformationFilter* aes_dec = new CryptoPP::StreamTransformationFilter(dec, sink);
-	CryptoPP::Base64Decoder* base64_dec = new CryptoPP::Base64Decoder(aes_dec);
-	CryptoPP::StringSource dec_source(raw_data.substr(32), true, aes_dec);
-	return new_data;
+	std::string decrypted_data;
+	CryptoPP::StringSource pipeline3(encrypted_data.substr(32), true,
+		new CryptoPP::StreamTransformationFilter(decryptor,
+		new CryptoPP::StringSink(decrypted_data)));
+	return decrypted_data;
 }
 
 std::string SymmetricEncryptor::encrypt(std::string data, int transaction){
@@ -159,7 +157,12 @@ std::function<ssize_t(int, const char*, ssize_t)> callback, int* transaction){
 		return -3;
 	}
 	data[len] = 0;
-	recv_size_data = this->decrypt(std::string(data, static_cast<size_t>(len)), *transaction);
+	try{
+		recv_size_data = this->decrypt(std::string(data, static_cast<size_t>(len)), *transaction);
+	}catch(const std::exception& e){
+		ERROR(e.what() << "\nImplied hacker, closing!")
+		return -4;
+	}
 	if(recv_size_data.length() != 4){
 		PRINT("Did not receive 4 bytes or decrypted length...")
 		return -5;
@@ -182,7 +185,7 @@ std::function<ssize_t(int, const char*, ssize_t)> callback, int* transaction){
 			}
 			continue;
 		}else if(len == 0){
-			ERROR("encryptor read zero block")
+			PRINT("Server kicked you.")
 			return -2;
 		}else if(len != static_cast<ssize_t>(block_size)){
 			ERROR("couldn't read block size block?" << len << '|' << block_size)

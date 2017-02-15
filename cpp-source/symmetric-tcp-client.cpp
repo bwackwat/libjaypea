@@ -47,7 +47,7 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 	do{
 		if((len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, set_response_callback, &this->reads)) < 0){
 			this->close_client();
-			ERROR("SymmetricTcpClient recv")
+			DEBUG("SymmetricTcpClient recv " << this->fd)
 			return response_string;
 		}
 	}while(len == 0);
