@@ -10,7 +10,6 @@ function connectionSuccess(e){
 	//msg.secret = prompt("Please enter your old or new secret");
 	msg.username = 'test';
 	msg.password = 'pass';
-	ws.send(JSON.stringify(msg));
 }
 
 function receivedPacket(e){
@@ -28,10 +27,19 @@ function connectionError(e){
 	console.log(e);
 }
 
-var ws = new WebSocket("wss://" + window.location.hostname + ":11000/");
+var ws = new WebSocket("ws://" + window.location.hostname + ":11000/");
 ws.onopen = connectionSuccess;
 ws.onmessage = receivedPacket;
 ws.onclose = connectionClosed;
 ws.onerror = connectionError;
+
+window.onkeyup = function(e){
+	msg = {};
+	msg.type = "key";
+	msg.key = e.code;
+	str = JSON.stringify(msg);
+	console.log("SEND: " + str);
+	ws.send(str);
+}
 
 }
