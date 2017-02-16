@@ -88,5 +88,10 @@ public:
 	static std::string get_redirection_html(const std::string& hostname);
 
 	static enum RequestResult parse_http_api_request(const char* request, JsonObject* request_obj);
+
+	static std::string websocket_handshake_response(std::string key);
+	static void print_bits(const char* data, size_t data_length);
+	static std::string parse_web_socket_frame(const char* data, ssize_t data_length);
+	static std::string create_web_socket_frame(std::string message);
 };
 

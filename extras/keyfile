@@ -1,3 +1,1 @@
-here_is_a_32byte_private_aes_keya_16_byte_aes_iv
-
-The com and comd simply read the first 32 bytes and the following 16 bytes to be the key and iv, respectively, for AES encryption.
+A symmetrically encrypted epoll server from libjaypea can use any text like this basically for key file.

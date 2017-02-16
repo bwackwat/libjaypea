@@ -478,3 +478,107 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 
 	return HTTP;
 }
+
+std::string Util::websocket_handshake_response(std::string key){
+	std::string accept_hash;
+	CryptoPP::SHA1 hasher;
+	CryptoPP::StringSource source(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", true,
+		new CryptoPP::HashFilter(hasher,
+		new CryptoPP::Base64Encoder(
+		new CryptoPP::StringSink(accept_hash), false)));
+	return "HTTP/1.1 101 Switching Protocols\r\n"
+		"Upgrade: websocket\r\n"
+		"Connection: Upgrade\r\n"
+		"Sec-WebSocket-Accept: " + accept_hash + "\r\n"
+		"\r\n";
+}
+
+void Util::print_bits(const char* data, size_t data_length){
+	std::bitset<8> bits;
+	for(size_t i = 0; i < data_length; ++i){
+		bits = std::bitset<8>(data[i]);
+		std::cout << bits << ' ';
+		if(i % 4 == 3){
+			std::cout << std::endl;
+		}
+	}
+	std::cout << std::endl;
+}
+
+std::string Util::parse_web_socket_frame(const char* data, ssize_t data_length){
+	std::stringstream message;
+
+	uint64_t len = data[1] & 0x7F;
+	uint64_t payload_length;
+	size_t offset;
+
+	if(len == 126){
+		payload_length = static_cast<uint64_t>(data[2]) + (static_cast<uint64_t>(data[3]) << 8);
+		offset = 4;
+	}else if(len == 127){
+		payload_length = static_cast<uint64_t>(data[2]) + (static_cast<uint64_t>(data[3]) << 8);
+		offset = 10;
+	}else{
+		payload_length = len;
+		offset = 2;
+	}
+
+	if(data_length < payload_length + offset){
+		ERROR("DIDNT READ ALL DATA")
+	}
+
+	unsigned char mask[4] = {0, 0, 0, 0};
+	if(data[1] & 0x80){
+		std::memcpy(mask, data + offset, 4);
+		offset += 4;
+	}
+
+	for(int i = 0; i < payload_length && offset + i < data_length; ++i){
+		message << static_cast<char>(static_cast<unsigned char>(data[offset + i]) ^ mask[i % 4]);
+	}
+
+	#if defined(_DO_DEBUG)
+	PRINT("DATA:")
+	Util::print_bits(data, data_length);
+	PRINT("MASK:")
+	Util::print_bits(reinterpret_cast<char*>(mask), 4);
+	#endif
+
+	return message.str();
+}
+
+std::string Util::create_web_socket_frame(std::string message){
+	char frame[message.length() + 10];
+	char ssize[2] = {0, 0};
+	char lsize[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+	size_t offset;
+
+	// Basic binary frame.
+	frame[0] = 0x82;
+	if(message.length() <= 125){
+		frame[1] = static_cast<unsigned char>(message.length());
+		offset = 2;
+	}else if(message.length() <= 65535){
+		*(reinterpret_cast<uint16_t*>(ssize)) = static_cast<uint16_t>(message.length());
+		frame[1] = 126;
+		frame[2] = ssize[0];
+		frame[3] = ssize[1];
+		offset = 4;
+	}else{
+		*(reinterpret_cast<uint64_t*>(lsize)) = static_cast<uint64_t>(message.length());
+		frame[1] = 127;
+		frame[2] = lsize[0];
+		frame[3] = lsize[1];
+		frame[4] = lsize[2];
+		frame[5] = lsize[3];
+		frame[6] = lsize[4];
+		frame[7] = lsize[5];
+		frame[8] = lsize[6];
+		frame[9] = lsize[7];
+		offset = 10;
+	}
+
+	std::memcpy(frame + offset, message.c_str(), message.length());
+
+	return std::string(frame, message.length() + offset);
+}

@@ -75,6 +75,10 @@ void EpollServer::close_client(int* fd, std::function<void(int*)> callback){
 	callback(fd);
 }
 
+bool EpollServer::send(int fd, const std::string& data){
+	this->send(fd, data.c_str(), static_cast<size_t>(data.length()));
+}
+
 /**
  * @brief The base send function that should be used by all implementers.
  *
