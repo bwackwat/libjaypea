@@ -24,11 +24,11 @@ static std::string hash_key_sha1(std::string token){
 
 static std::string wss_handshake_response(std::string key){
 	std::string accept = hash_key_sha1(key + WSS_MAGIC_GUID);
-	return "HTTP/1.1 101 Switching Protocols\n"
-		"Upgrade: websocket\n"
-		"Connection: Upgrade\n"
-		"Sec-WebSocket-Accept: " + accept + "\n"
-		"\r\n\r\n";
+	return "HTTP/1.1 101 Switching Protocols\r\n"
+		"Upgrade: websocket\r\n"
+		"Connection: Upgrade\r\n"
+		"Sec-WebSocket-Accept: " + accept + "\r\n"
+		"\r\n";
 }
 
 enum ClientState {
@@ -49,67 +49,56 @@ public:
 	}
 };
 
-static std::string parse_web_socket_frame(const char* request, ssize_t data_length){
-	std::stringstream message;
-
-	uint64_t len = request[1] & 0x7F;
-	uint64_t payload_length;
-	size_t offset;
-
+static void print_bits(const char* data, size_t data_length){
 	std::bitset<8> bits;
-	for(int i = 0; i < data_length; ++i){
-		bits = std::bitset<8>(request[i]);
+	for(size_t i = 0; i < data_length; ++i){
+		bits = std::bitset<8>(data[i]);
 		std::cout << bits << ' ';
 		if(i % 4 == 3){
 			std::cout << std::endl;
 		}
 	}
 	std::cout << std::endl;
+}
+
+static std::string parse_web_socket_frame(const char* data, ssize_t data_length){
+	std::stringstream message;
+
+	uint64_t len = data[1] & 0x7F;
+	uint64_t payload_length;
+	size_t offset;
 
 	if(len == 126){
-		payload_length = request[2] + (request[3] << 8);
+		payload_length = static_cast<uint64_t>(data[2]) + (static_cast<uint64_t>(data[3]) << 8);
 		offset = 4;
 	}else if(len == 127){
-		payload_length = request[2] + (request[3] << 8);
+		payload_length = static_cast<uint64_t>(data[2]) + (static_cast<uint64_t>(data[3]) << 8);
 		offset = 10;
 	}else{
 		payload_length = len;
 		offset = 2;
 	}
 
-	PRINT("PAYLOAD LEN: " << payload_length)
-	PRINT("RECV DATA LEN: " << data_length)
-
 	if(data_length < payload_length + offset){
-		ERROR("incorrect or incomplete length field")
+		ERROR("DIDNT READ ALL DATA")
 	}
 
 	unsigned char mask[4] = {0, 0, 0, 0};
-	if(request[1] & 0x80){
-		//std::memcpy(mask, request + offset, 4);
-		mask[0] = static_cast<unsigned char>(request[offset]);
-		mask[1] = static_cast<unsigned char>(request[offset + 1]);
-		mask[2] = static_cast<unsigned char>(request[offset + 2]);
-		mask[3] = static_cast<unsigned char>(request[offset + 3]);
+	if(data[1] & 0x80){
+		std::memcpy(mask, data + offset, 4);
 		offset += 4;
 	}
 
-	PRINT("OFFSET: " << offset)
-
-	PRINT("MASK: ")
-	bits = std::bitset<8>(mask[0]);
-	std::cout << bits;
-	bits = std::bitset<8>(mask[1]);
-	std::cout << bits;
-	bits = std::bitset<8>(mask[2]);
-	std::cout << bits;
-	bits = std::bitset<8>(mask[3]);
-	std::cout << bits << std::endl;
-
-	int i = 0;
-	for(const char* it = request + offset; *it; ++it){
-		message << static_cast<char>(static_cast<unsigned char>(*it) ^ mask[i++ % 4]);
+	for(int i = 0; i < payload_length; ++i){
+		message << static_cast<char>(static_cast<unsigned char>(data[offset + i]) ^ mask[i % 4]);
 	}
+
+	#if defined(_DO_DEBUG)
+	PRINT("DATA:")
+	print_bits(data, data_length);
+	PRINT("MASK:")
+	print_bits(reinterpret_cast<char*>(mask), 4);
+	#endif
 
 	return message.str();
 }
@@ -120,10 +109,10 @@ static std::string create_web_socket_frame(std::string message){
 	char lsize[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 	size_t offset;
 
-	// Basic text frame.
-	frame[0] = 1;
+	// Basic binary frame.
+	frame[0] = 0x82;
 	if(message.length() <= 125){
-		frame[1] = static_cast<char>(message.length());
+		frame[1] = static_cast<unsigned char>(message.length());
 		offset = 2;
 	}else if(message.length() <= 65535){
 		*(reinterpret_cast<uint16_t*>(ssize)) = static_cast<uint16_t>(message.length());
@@ -150,43 +139,6 @@ static std::string create_web_socket_frame(std::string message){
 	return std::string(frame, message.length() + offset);
 }
 
-/*
-
-static std::string create_web_socket_frame(char* data, ssize_t data_length){
-	int pos = 0;
-	int size = data_length; 
-	buffer[pos++] = (unsigned char)frame_type; // text frame
-
-	if(size <= 125) {
-		buffer[pos++] = size;
-	}
-	else if(size <= 65535) {
-		buffer[pos++] = 126; //16 bit length follows
-		
-		buffer[pos++] = (size >> 8) & 0xFF; // leftmost first
-		buffer[pos++] = size & 0xFF;
-	}
-	else { // >2^16-1 (65535)
-		buffer[pos++] = 127; //64 bit length follows
-		
-		// write 8 bytes length (significant first)
-		
-		// since msg_length is int it can be no longer than 4 bytes = 2^32-1
-		// padd zeroes for the first 4 bytes
-		for(int i=3; i>=0; i--) {
-			buffer[pos++] = 0;
-		}
-		// write the actual 32bit msg_length in the next 4 bytes
-		for(int i=3; i>=0; i--) {
-			buffer[pos++] = ((size >> 8*i) & 0xFF);
-		}
-	}
-	memcpy((void*)(buffer+pos), msg, size);
-	return (size+pos);
-}
-
-*/
-
 int main(int argc, char** argv){
 	std::string ssl_certificate;
 	std::string ssl_private_key;
@@ -203,7 +155,6 @@ int main(int argc, char** argv){
 	std::unordered_map<int /* fd */, std::string /* logged in handle */> client_player;
 	std::unordered_map<int /* fd */, enum ClientState> client_state;
 
-	
 	EpollServer* server;
 	if(http){
 		server = new EpollServer(static_cast<uint16_t>(port), 10);
@@ -216,7 +167,6 @@ int main(int argc, char** argv){
 	};
 
 	server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
-		PRINT("RECV: " << data)
 		if(client_state[fd] == CONNECTING){
 			JsonObject r_obj(OBJECT);
 			Util::parse_http_api_request(data, &r_obj);
@@ -237,11 +187,13 @@ int main(int argc, char** argv){
 		}else if(client_state[fd] == EXCHANGING){
 			std::string message = parse_web_socket_frame(data, data_length);
 			std::string response = create_web_socket_frame(std::string("I got the message!"));
-			if(server->send(fd, data, data_length)){
-			//if(server.send(fd, response.c_str(), response.length())){
+			//if(server->send(fd, data, data_length)){
+			PRINT("SEND: " << response)
+			print_bits(response.c_str(), response.length());
+			if(server->send(fd, response.c_str(), response.length())){
 				return -1;
 			}
-			PRINT("MSG: " << message)
+			PRINT("RECV: " << message)
 		}else{
 			PRINT("NEVER")
 		}
