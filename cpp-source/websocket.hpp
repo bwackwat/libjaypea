@@ -127,6 +127,14 @@ public:
 		if(this->client_handshake_complete[fd]){
 			std::string message = this->parse_frame(data, data_length);
 			PRINT("RECV:" << message)
+			if(message == "ping"){
+				message = "pong";
+				if(this->server->send(fd, message.c_str(), message.length())){
+					PRINT("Send handshake failed.")
+					return -1;
+				}
+				return data_length;
+			}
 			return this->server->on_read(fd, message.c_str(), static_cast<size_t>(message.length()));
 		}
 

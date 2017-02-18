@@ -10,12 +10,29 @@ var messages = document.getElementById("messages");
 var ws = new WebSocket("ws://" + window.location.hostname + ":11000/");
 var msg = {};
 
+function ping(){
+	console.log("ping " + ws.readyState);
+	if(ws.readyState === ws.CLOSED){
+		ws = new WebSocket("ws://" + window.location.hostname + ":11000/");
+		status.innerHTML = "Connecting...";
+	}else if(ws.readyState === ws.OPEN){
+		status.innerHTML = "Connected.";
+		ws.send("ping")
+	}else{
+		status.innerHTML = "Working...";
+	}
+}
+var pinger = setInterval(ping, 1000);
+
 ws.onopen = function(e){
 	console.log(e);
 	status.innerHTML = "Connected.";
 }
 
 ws.onmessage = function(e){
+	if(e.data == "pong"){
+		return;
+	}
 	msg = JSON.parse(e.data);
 	console.log("RECV:" + e.data);
 	if(typeof msg.handle !== 'undefined' && typeof msg.message !== 'undefined'){
@@ -37,14 +54,38 @@ ws.onerror = function(e){
 	status.innerHTML = "Error.";
 }
 
-submitButton.onclick = function(e){
+function send(e){
 	status.innerHTML = "";
+	clearInterval(pinger);
+	pinger = setInterval(ping, 1000);
 	msg = {};
 	msg.handle = handleField.value;
 	msg.message = messageField.value;
+	messageField.value = "";
+	messageField.focus();
 
 	console.log("SEND:" + JSON.stringify(msg));
 	ws.send(JSON.stringify(msg));
 }
+
+window.onkeypress = function(e){
+	if(e.code === "Enter"){
+		send(e);
+	}else{
+		console.log(e.code);
+	}
+}
+
+submitButton.onclick = send;
+
+//function(e){
+//	status.innerHTML = "";
+//	msg = {};
+//	msg.handle = handleField.value;
+//	msg.message = messageField.value;
+
+//	console.log("SEND:" + JSON.stringify(msg));
+//	ws.send(JSON.stringify(msg));
+//}
 
 }
