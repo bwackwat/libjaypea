@@ -23,7 +23,7 @@ case "${argv[@]}" in
 		;;
 	*"DEBUG"*)
 		echo "DEBUG MODE"
-		extra="-O0 -DLIBJAYPEA_DEBUG"
+		extra="-O0 -D_DO_DEBUG"
 	
 		((argc-=1))
 		argv=( "${argv[@]/"DEBUG"}" )
@@ -36,8 +36,8 @@ esac
 
 libs="-lpthread -lssl -lcryptopp"
 
-compiler="clang++ -std=c++11 -I$dir/cpp-source -ljaypea -lcryptopp -lpqxx $warn $extra" 
-
 libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \
-$dir/cpp-source/*.cpp -o /lib64/libjaypea.so"
+$dir/cpp-source/*.cpp -o $dir/artifacts/libjaypea.so"
+
+compiler="clang++ -std=c++11 -I$dir/cpp-source $dir/artifacts/libjaypea.so -lcryptopp -lpqxx $warn $extra"

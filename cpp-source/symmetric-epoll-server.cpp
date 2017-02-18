@@ -2,12 +2,12 @@
 #include <fcntl.h>
 
 #include "util.hpp"
-#include "symmetric-tcp-server.hpp"
+#include "symmetric-epoll-server.hpp"
 
 /**
  * /implements EpollServer
  *
- * @brief This class has the same characteristics of EpollServer, yet uses AES256 bit symmetric key encryption.
+ * @brief This class has the same characteristics of EpollServer, yet uses symmetric key encryption.
  *
  * @param keyfile The path to the keyfile made standard by @see SymmetricEncryptor.
  *

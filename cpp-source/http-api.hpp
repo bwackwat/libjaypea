@@ -19,7 +19,7 @@
 #include "util.hpp"
 #include "json.hpp"
 #include "tcp-server.hpp"
-#include "private-tcp-server.hpp"
+#include "tls-epoll-server.hpp"
 
 #define BUFFER_LIMIT 8192
 #define HTTP_404 "<h1>404 Not Found</h1>"
@@ -41,12 +41,12 @@ public:
 	size_t data_length;
 };
 
-class HttpsApi{
+class HttpApi{
 public:
 	JsonObject* routes_object;
 	std::string routes_string;
 
-	HttpsApi(std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t https_port = 443);
+	HttpApi(std::string new_public_directory, EpollServer* new_server);
 	void route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(), bool requires_human = false);
 	void start();
 	void set_file_cache_size(int megabytes);
@@ -58,5 +58,5 @@ private:
 	std::unordered_map<std::string, Route*> routemap;
 	std::string public_directory;
 
-	PrivateEpollServer* server;
+	EpollServer* server;
 };

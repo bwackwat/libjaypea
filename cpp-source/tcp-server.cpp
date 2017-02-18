@@ -3,24 +3,26 @@
 #include "tcp-server.hpp"
 
 /**
- * @brief A TCP epoll-based, IPv4 server constructor.
+ * @brief A TCP, epoll-based, IPv4 server constructor.
  * @param port The port number the server's socket will bind to.
- * @param new_max_connections The maximum number of connections *each thread* will handle.
+ * @param new_max_connections The maximum number of connections *each thread* can handle.
  * Also the listen backlog.
  * @param new_name An arbitrary name for debugging purposes.
  *
  * This is the essential networking server code. Architecturally, each thread calls epoll_wait() and
- * waits for either a locked server fd to accept a new connection, a connected fd to indicate there is data to read,
- * or for a connected fd to timeout. Each thread manages its own set of connected fds, timeout fds, and
- * is able to accept new connections because epoll_wait is thread safe for reused fds *and* there is a mutex.
+ * waits for either a mutexed server fd to accept a new connection, a connected fd to indicate there is data to read,
+ * or for a connected fd to timeoutvia timerfd. Each thread manages its own set of connected fds, timeout fds, and
+ * is able to accept new connections because epoll_wait is thread safe for reused fds and there is a mutex.
  * @see EpollServer::accept_mutex
  *
  * @bug There lies a type of race condition within a single thread where a timeout and a read event can both trigger.
  * In some cases I believe this is harmless, in other cases I wouldn't be suprised if some memory leaks or other
- * unexpected behavior occurs. Need to research or reevaluate how epoll errors should be treated.
- * @bug EpollServer::start_event does nothing.
+ * unexpected behavior occurs. Need to research or reevaluate how epoll errors should be treated. EDIT: Resolved?
+ * This was solved by using EPOLL_MOD_DEL on the timed-out client's id.
+ * @bug EpollServer::start_event does nothing. EDIT: Resolved. A pipe is created to write event data to, and read from
+ * in epoll where the broadcast occurs.
  * @bug There is a condition within the kernel where not all data sent to write() is written.
- * This is completely unaccounted for.
+ * This is completely unaccounted for, but I havent hit it yet.
  */
 EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
 :name(new_name),
@@ -73,6 +75,10 @@ void EpollServer::close_client(int* fd, std::function<void(int*)> callback){
 	callback(fd);
 }
 
+bool EpollServer::send(int fd, std::string data){
+	return this->send(fd, data.c_str(), static_cast<size_t>(data.length()));
+}
+
 /**
  * @brief The base send function that should be used by all implementers.
  *
@@ -106,6 +112,11 @@ bool EpollServer::send(int fd, const char* data, size_t data_length){
  * @return Negative on error, zero on nothing to read, and positive for successful read.
  */
 ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
+	return this->recv(fd, data, data_length, this->on_read);
+}
+
+ssize_t EpollServer::recv(int fd, char* data, size_t data_length,
+std::function<ssize_t(int, char*, size_t)> callback){
 	ssize_t len;
 	if((len = read(fd, data, data_length)) < 0){
 		if(errno != EWOULDBLOCK && errno != EAGAIN){
@@ -118,7 +129,7 @@ ssize_t EpollServer::recv(int fd, char* data, size_t data_length){
 		return -2;
 	}else{
 		data[len] = 0;
-		return this->on_read(fd, data, len);
+		return callback(fd, data, static_cast<size_t>(len));
 	}
 }
 
@@ -213,7 +224,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 		if(close(*fd) < 0){
 			perror("close");
 		}
-		PRINT(*fd << " done on " << thread_id)
+		DEBUG(*fd << " done on " << thread_id)
 		if(this->on_disconnect != nullptr){
 			this->on_disconnect(*fd);
 		}
@@ -251,7 +262,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				timer_fd = client_to_timer_map[the_fd];
 				client_to_timer_map.erase(the_fd);
 				timer_to_client_map.erase(timer_fd);
-				std::cout << "error, close tfd " << timer_fd << ' ';
+				ERROR(the_fd << " and timer " << timer_fd << " donezo.")
 				if(close(timer_fd) < 0){
 					perror("close timer_fd on error");
 				}
@@ -268,10 +279,13 @@ void EpollServer::run_thread(unsigned int thread_id){
 						new_fd = timer_to_client_map[timer_fd];
 						timer_to_client_map.erase(timer_fd);
 						client_to_timer_map.erase(new_fd);
-						std::cout << "timeout, close tfd " << timer_fd << ' ';
+						PRINT(timer_fd << " timed out on " << new_fd)
 						if(close(timer_fd) < 0){
 							perror("close timer_fd on timeout");
 							continue;
+						}
+						if(epoll_ctl(epoll_fd, EPOLL_CTL_DEL, new_fd, 0) < 0){
+							perror("epoll_ctl del timedout fd");
 						}
 						this->close_client(&new_fd, close_client_callback);
 					}
@@ -291,7 +305,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 					is first read from the read end of the pipe, and then written to each currently tracked client fd. Broadcasted.
 				*/
 				if((len = read(this->broadcast_pipe[0], packet, PACKET_LIMIT)) <= 0){
-						ERROR("I really hope this doesn't happen.")
+					ERROR("I really hope this doesn't happen.")
 				}
 				packet[len] = 0;
 				for(auto iter = client_to_timer_map.begin(); iter != client_to_timer_map.end(); ++iter){
@@ -316,7 +330,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 							break;
 						}else{
 							if(this->accept_continuation(&new_fd)){
-								PRINT("accept continuation failed.")
+								DEBUG("accept continuation failed.")
 								this->close_client(&new_fd, [&](int* fd){
 									close(*fd);
 								});
@@ -391,12 +405,12 @@ void EpollServer::run_thread(unsigned int thread_id){
 				if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
 					timer_to_client_map.erase(timer_fd);
 					client_to_timer_map.erase(the_fd);
-					PRINT("BAD RECV. " << the_fd << " timing " << timer_fd)
+					PRINT(the_fd << " and timer " << timer_fd << " donezo.")
 					if(close(timer_fd) < 0){
 						perror("close timer_fd");
 					}
 					this->close_client(&the_fd, close_client_callback);
-				}else if(len == PACKET_LIMIT){
+				}else if(len >= PACKET_LIMIT){
 					ERROR("OVERFLOAT more to read uh oh!")
 				}else if(len == 0){
 					PRINT("RECEIVE ZERO?!")

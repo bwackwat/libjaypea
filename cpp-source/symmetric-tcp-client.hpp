@@ -11,12 +11,14 @@ public:
 	SymmetricTcpClient(std::string hostname, uint16_t port, std::string keyfile);
 	SymmetricTcpClient(const char* ip_address, uint16_t port, std::string keyfile);
 
-	bool reconnect();
 	std::string communicate(std::string request);
 	std::string communicate(const char* request, size_t length);
 private:
-	std::mutex comm_mutex;
+	SymmetricEncryptor encryptor;
 	int writes;
 	int reads;
-	SymmetricEncryptor encryptor;
+	
+	std::mutex comm_mutex;
+	
+	void close_client();
 };

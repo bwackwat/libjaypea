@@ -27,17 +27,25 @@ newpass = ""
 if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
 	newpass = raw_input("Password: ")
 
+newname = raw_input("Enter a name for the droplet [" + newuser + "]: ") or newuser
 newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/libjaypea]: ") or "/opt/libjaypea"
-newhost = raw_input("Enter a hostname [bwackwat.com]: ") or "bwackwat.com"
-newkey = raw_input("Enter a new 96 byte key for comd (enjoy writing a sentence) [pads random letters]: \n")
+
+# Replaced by distribution JSON details.
+# newhost = raw_input("Enter a hostname [bwackwat.com]: ") or "bwackwat.com"
+
+newkey = raw_input("Enter a 96 byte key for secure communication [pads random letters]: \n")
 
 newkeylen = len(newkey)
 if newkeylen < 96:
 	newkey += ''.join(random.choice(string.ascii_letters) for x in range(96 - newkeylen))
 	print "Appended " + str(96 - newkeylen) + " characters to the key."
-with open(scriptdir + "/../../artifacts/" + newuser + ".deploy.keyfile", "w") as f:
+
+newkeyfile = scriptdir + "/../../artifacts/" + newname + ".deploy.keyfile"
+with open(newkeyfile, "w") as f:
 	f.write(newkey)
-print "Key is written to " + newuser + ".deploy.keyfile (in this directory) and will be used with cloud-init."
+
+# print "Key is written to " + newkeyfile + " and will be used with cloud-init."
+# print "You can then use a local client to communciate."
 
 print '-----------------------------------------------------------------'
 
@@ -58,15 +66,15 @@ cloud_config = """
 runcmd:
  - yum -y install git
  - mkdir -p {0}
- - git clone https://github.com/bwackwat/libjaypea {0}
+ - git clone -b distribution-work https://github.com/bwackwat/libjaypea {0}
  - chmod +x {0}/scripts/deploy.sh
- - {0}/scripts/deploy.sh {0} "{1}" {2} {3} {4}
+ - {0}/scripts/deploy.sh {0} "{1}" {2} {3}
 
 power_state:
    mode: reboot
 """
 
-cloud_config = cloud_config.format(newdir, newkey, newuser, newhost, newpass)
+cloud_config = cloud_config.format(newdir, newkey, newuser, newpass)
 print cloud_config
 
 print '-----------------------------------------------------------------'
@@ -88,7 +96,7 @@ for image in images["images"]:
 print '-----------------------------------------------------------------'
 
 newdroplet = rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers, json={
-	"name":raw_input("Enter a name for the droplet: "),
+	"name":newname,
 	"region":"sfo1",
 	"size":"512mb",
 	"image":raw_input("Enter an image id from above (newest is recommended): "),

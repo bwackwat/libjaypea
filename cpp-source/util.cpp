@@ -17,22 +17,25 @@
 
 #include "util.hpp"
 
-std::vector<struct Argument> Util::arguments;
+std::vector<struct Argument*> Util::arguments;
 
 bool Util::verbose = false;
 std::string Util::config_path = "extras/configuration.json";
+
+std::string Util::libjaypea_path;
+
 JsonObject Util::config_object;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.push_back({name, alts, callback, required, ARG_STRING, std::ref(value), 0, 0});
+	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_STRING, std::ref(value), 0, 0}));
 }
 
 void Util::define_argument(std::string name, int* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.push_back({name, alts, callback, required, ARG_INTEGER, std::ref(name), value, 0});
+	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_INTEGER, std::ref(name), value, 0}));
 }
 
 void Util::define_argument(std::string name, bool* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.push_back({name, alts, callback, required, ARG_BOOLEAN, std::ref(name), 0, value});
+	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_BOOLEAN, std::ref(name), 0, value}));
 }
 
 static std::string get_exe_path(){
@@ -49,6 +52,7 @@ static std::string get_exe_path(){
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
 	exit(1);
 }
+
 /*
 size_t Util::read_size_t(const char* data){
 	return static_cast<size_t>(
@@ -77,14 +81,18 @@ void Util::write_file(std::string filename, std::string content){
 
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
-	bool custom_configuration = false;
-	define_argument("configuration_file", config_path, {"-cf"}, [&](){
-		custom_configuration = true;
-	});
-
-	std::signal(SIGSEGV, trace_segfault);
-
+	define_argument("configuration_file", config_path, {"-cf"});
+	
 	PRINT("------------------------------------------------------")
+
+	libjaypea_path = get_exe_path();
+	libjaypea_path = libjaypea_path.substr(0, libjaypea_path.find_last_of('/'));
+	libjaypea_path = libjaypea_path.substr(0, libjaypea_path.find_last_of('/')) + '/';
+	PRINT("libjaypea: " << libjaypea_path)
+
+	//#if defined(_DO_DEBUG)
+	std::signal(SIGSEGV, trace_segfault);
+	//#endif
 
 	std::string check;
 	std::cout << "Arguments: ";
@@ -92,7 +100,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		std::cout << argv[i] << ' ';
 	}
 	std::cout << '\n';
-	PRINT("std::thread::hardware_concurrency = " << std::thread::hardware_concurrency())
+	PRINT("std::thread::hardware_concurrency: " << std::thread::hardware_concurrency())
 
 	PRINT("------------------------------------------------------")
 
@@ -102,28 +110,28 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			PRINT("Usage: " << argv[0])
 			PRINT("     --help")
 			PRINT("  OR -h\n")
-			for(auto& arg : arguments){
-				if(arg.required){
+			for(auto arg : arguments){
+				if(arg->required){
 					PRINT("     REQUIRED")
 				}
-				switch(arg.type){
+				switch(arg->type){
 				case ARG_STRING:
-					PRINT("     --" << arg.name << " <string>")
-					for(auto& alt : arg.alts){
+					PRINT("     --" << arg->name << " <string>")
+					for(auto& alt : arg->alts){
 						PRINT("  OR " << alt << " <string>")
 					}
-					PRINT("     (Default value: " << arg.string_value.get() << ")\n")
+					PRINT("     (Default value: " << arg->string_value.get() << ")\n")
 					break;
 				case ARG_INTEGER:
-					PRINT("     --" << arg.name << " <integer>")
-					for(auto& alt : arg.alts){
+					PRINT("     --" << arg->name << " <integer>")
+					for(auto& alt : arg->alts){
 						PRINT("  OR " << alt << " <integer")
 					}
-					PRINT("     (Default value: " << *arg.integer_value << ")\n")
+					PRINT("     (Default value: " << *arg->integer_value << ")\n")
 					break;
 				case ARG_BOOLEAN:
-					PRINT("     --" << arg.name)
-					for(auto& alt : arg.alts){
+					PRINT("     --" << arg->name)
+					for(auto& alt : arg->alts){
 						PRINT("  OR " << alt)
 					}
 					PRINT("     (Disabled by default.)\n")
@@ -135,59 +143,20 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		}
 	}
 
-	if(!custom_configuration){
-		std::string root_path = get_exe_path();
-		root_path = root_path.substr(0, root_path.find_last_of('/'));
-		root_path = root_path.substr(0, root_path.find_last_of('/')) + '/';
-		config_path = root_path + config_path;
-	}
-	std::ifstream config_file(config_path);
-	if(config_file.is_open()){
-		std::string config_data((std::istreambuf_iterator<char>(config_file)),
-			(std::istreambuf_iterator<char>()));
-		config_object.parse(config_data.c_str());
-		PRINT("Loaded " << config_path)
-		// PRINT(config_object.stringify(true))
-		for(auto& arg : arguments){
-			if(config_object.objectValues.count(arg.name)){
-				switch(arg.type){
-				case ARG_STRING:
-					arg.string_value.get() = config_object[arg.name]->stringValue;
-					PRINT("CONFIG SET STRING " << arg.name << " = " << arg.string_value.get())
-					break;
-				case ARG_INTEGER:
-					*arg.integer_value = std::stoi(config_object[arg.name]->stringValue);
-					PRINT("CONFIG SET INTEGER " << arg.name << " = " << *arg.integer_value)
-					break;
-				case ARG_BOOLEAN:
-					*arg.boolean_value = true;
-					PRINT("CONFIG SET BOOLEAN " << arg.name << " = " << *arg.boolean_value)
-					break;
-				}
-				if(arg.callback != nullptr){
-					arg.callback();
-				}
-			}
-		}
-	}else{
-		PRINT("Could not open " << config_path << ", ignoring.")
-	}
-	
-	PRINT("------------------------------------------------------")
-
 	for(int i = 0; i < argc; ++i){
-		for(auto& arg: arguments){
-			check = "--" + arg.name;
+		for(auto arg : arguments){
+			check = "--" + arg->name;
 			std::function<bool(const char*)> check_lambda;
-			switch(arg.type){
+			switch(arg->type){
 			case ARG_STRING:
 				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
 						if(argc > i + 1){
-							arg.string_value.get() = std::string(argv[i + 1]);
-							PRINT("ARG SET " << arg.name << " = " << arg.string_value.get())
-							if(arg.callback != nullptr){
-								arg.callback();
+							arg->string_value.get() = std::string(argv[i + 1]);
+							arg->set = true;
+							PRINT("ARGUMENT SET " << arg->name << " = " << arg->string_value.get())
+							if(arg->callback != nullptr){
+								arg->callback();	
 							}
 						}else{
 							PRINT("No string provided for " << check_sub)
@@ -201,10 +170,11 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
 						if(argc > i + 1){
-							*arg.integer_value = std::stoi(argv[i + 1]);
-							PRINT("ARG SET " << arg.name << " = " << *arg.integer_value)
-							if(arg.callback != nullptr){
-								arg.callback();
+							*arg->integer_value = std::stoi(argv[i + 1]);
+							arg->set = true;
+							PRINT("ARGUMENT SET " << arg->name << " = " << *arg->integer_value)
+							if(arg->callback != nullptr){
+								arg->callback();
 							}
 						}else{
 							PRINT("No integer provided for " << check_sub)
@@ -217,10 +187,11 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			case ARG_BOOLEAN:
 				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
-						*arg.boolean_value = true;
-						PRINT("ARG SET " << arg.name << " = " << *arg.boolean_value)
-						if(arg.callback != nullptr){
-							arg.callback();
+						*arg->boolean_value = true;
+						arg->set = true;
+						PRINT("ARGUMENT SET " << arg->name << " = " << *arg->boolean_value)
+						if(arg->callback != nullptr){
+							arg->callback();
 						}
 						return true;
 					}
@@ -228,11 +199,50 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 				};
 				break;
 			}
+
 			if(check_lambda(check.c_str()))break;
-			for(auto& alt : arg.alts){
+			for(auto& alt : arg->alts){
 				if(check_lambda(alt.c_str()))break;
 			}
 		}	
+	}
+
+	PRINT("------------------------------------------------------")
+
+	std::ifstream config_file(config_path);
+	if(config_file.is_open()){
+		std::string config_data((std::istreambuf_iterator<char>(config_file)),
+			(std::istreambuf_iterator<char>()));
+		config_object.parse(config_data.c_str());
+		PRINT("Loaded " << config_path)
+		// PRINT(config_object.stringify(true))
+		for(auto& arg : arguments){
+			if(config_object.objectValues.count(arg->name)){
+				if(arg->set){
+					PRINT(arg->name << " ALREADY SET, SKIP")
+					continue;
+				}
+				switch(arg->type){
+				case ARG_STRING:
+					arg->string_value.get() = config_object[arg->name]->stringValue;
+					PRINT("CONFIGURATION SET STRING " << arg->name << " = " << arg->string_value.get())
+					break;
+				case ARG_INTEGER:
+					*arg->integer_value = std::stoi(config_object[arg->name]->stringValue);
+					PRINT("CONFIGURATION SET INTEGER " << arg->name << " = " << *arg->integer_value)
+					break;
+				case ARG_BOOLEAN:
+					*arg->boolean_value = true;
+					PRINT("CONFIGURATION SET BOOLEAN " << arg->name << " = " << *arg->boolean_value)
+					break;
+				}
+				if(arg->callback != nullptr){
+					arg->callback();
+				}
+			}
+		}
+	}else{
+		PRINT("Could not open " << config_path << ", ignoring.")
 	}
 
 	PRINT("------------------------------------------------------")
@@ -467,4 +477,16 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 	}
 
 	return HTTP;
+}
+
+void Util::print_bits(const char* data, size_t data_length){
+	std::bitset<8> bits;
+	for(size_t i = 0; i < data_length; ++i){
+		bits = std::bitset<8>(static_cast<unsigned char>(data[i]));
+		std::cout << bits << ' ';
+		if(i % 4 == 3){
+			std::cout << std::endl;
+		}
+	}
+	std::cout << std::endl;
 }

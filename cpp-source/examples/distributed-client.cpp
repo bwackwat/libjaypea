@@ -1,6 +1,7 @@
 #include <fstream>
 
 #include "util.hpp"
+#include "json.hpp"
 #include "distributed-util.hpp"
 #include "symmetric-tcp-client.hpp"
 
@@ -40,6 +41,32 @@ int main(int argc, char** argv){
 		return 1;
 	}
 
+	// Maps service name to service object.
+	std::unordered_map<std::string, JsonObject*> services;
+
+	for(auto service : distribution.objectValues["service-definitions"]->arrayValues){
+		if(!service->HasObj("name", STRING)){
+			PRINT("A service-definition is missing \"name\" string.")
+			return 1;
+		}
+		services[service->GetStr("name")] = service;
+	}
+	
+	// Maps node names to services arrays.
+	std::unordered_map<std::string, JsonObject*> nodes;
+
+	for(auto node : distribution.objectValues["node-definitions"]->arrayValues){
+		if(!node->HasObj("name", STRING)){
+			PRINT("A node-definition is missing \"name\" string.")
+			return 1;
+		}
+		if(!node->HasObj("services", ARRAY)){
+			PRINT("A node-definition is missing \"services\" array.")
+			return 1;
+		}
+		nodes[node->GetStr("name")] = node;
+	}
+
 	std::function<void(const std::string&, std::string&)> send_to =
 	[&](const std::string& client, std::string& message){
 		std::string response = clients[client]->communicate(message);
@@ -53,14 +80,20 @@ int main(int argc, char** argv){
 	std::string password;
 	std::cout << "Enter the password for the distribution: ";
 	std::getline(std::cin, password);
-	
+
+	std::unordered_map<std::string, JsonObject*> host_services;
+
 	std::string name;
 	for(auto node : distribution.objectValues["live-nodes"]->arrayValues){
 		if(!node->HasObj("node", STRING)){
 			PRINT("Distribution JSON: A live-node is missing \"node\" string.")
 			return 1;
 		}
-		
+		if(!nodes.count(node->GetStr("node"))){
+			PRINT("Distribution JSON: A node-definition is missing  for \"" << node->GetStr("node") << "\".")
+			return 1;
+		}
+	
 		if(node->HasObj("hostname", STRING)){
 			name = node->GetStr("hostname");
 			clients[name] = new SymmetricTcpClient(name, static_cast<uint16_t>(port), keyfile);
@@ -68,10 +101,14 @@ int main(int argc, char** argv){
 			name = node->GetStr("ip_address");
 			clients[name] = new SymmetricTcpClient(name.c_str(), static_cast<uint16_t>(port), keyfile);
 		}else{
-			PRINT("Distribution JSON: A live-node is missing both \"hostname\" and alternative \"ip_address\" strings.")
+			PRINT("Distribution JSON: A live-node is missing either \"hostname\" or \"ip_address\" strings.")
 			return 1;
 		}
 		send_to(name, password);
+		host_services[name] = new JsonObject(ARRAY);
+		for(auto service : nodes[node->GetStr("node")]->objectValues["services"]->arrayValues){
+			host_services[name]->arrayValues.push_back(services[service->stringValue]);
+		}
 	}
 
 	std::string commands = "Commands:\n"
@@ -123,27 +160,21 @@ int main(int argc, char** argv){
 
 	while(true){
 		if(selected_client.empty()){
-			if(in_shell){
-				std::cout << "Broadcast /bin/bash >>> ";
-			}else{
-				std::cout << "Broadcast >>> ";
-			}
+			std::cout << "Broadcast";
 		}else{
-			if(in_shell){
-				std::cout << selected_client << " /bin/bash >>> ";
-			}else{
-				std::cout << selected_client << " >>> ";
-			}
+			std::cout << selected_client;
+		}
+		if(in_shell){
+			std::cout << " /bin/bash >>> ";
+		}else{
+			std::cout << " >>> ";
 		}
 
 		std::getline(std::cin, request);
 		
 		if(in_shell){
 			send(request);
-			continue;
-		}
-
-		if(request == HELP){
+		}else if(request == HELP){
 			PRINT(commands)
 		}else if(request == SERVERS){
 			for(auto iter = clients.begin(); iter != clients.end(); ++iter){
@@ -166,9 +197,20 @@ int main(int argc, char** argv){
 			send(GET);
 		}else if(request == SET){
 			send(SET);
-			std::string services = distribution.stringify(false);
-			//TODO: custom services json per client
-			send(services);
+			for(auto iter = clients.begin(); iter != clients.end(); ++iter){
+				if(!iter->second->connected){
+					PRINT(iter->first << ": Disconnected")
+					continue;
+				}
+				// TODO: Rethink this. It sets hostname unqiuely, for the sake of the http-redirecter.
+				for(auto service : host_services[iter->first]->arrayValues){
+					if(service->HasObj("hostname", STRING)){
+						service->objectValues["hostname"]->stringValue = iter->first;
+					}
+				}
+				std::string temp_services = host_services[iter->first]->stringify(true) + "\n";
+				send_to(iter->first, temp_services);
+			}
 		}else if(request == SHELL){
 			send(SHELL);
 			in_shell = true;

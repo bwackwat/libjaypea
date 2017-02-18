@@ -2,71 +2,12 @@
 
 #include "util.hpp"
 #include "json.hpp"
+#include "shell.hpp"
 #include "distributed-util.hpp"
-#include "symmetric-tcp-server.hpp"
-
-struct Shell{
-	int pid;
-	int input;
-	int output;
-};
-
-static struct Shell* open_shell(){
-	struct Shell* new_shell = new struct Shell();
-	int shell_pipe[2][2];
-
-	if(pipe(shell_pipe[0]) < 0){
-		ERROR("pipe 0")
-		delete new_shell;
-		return 0;
-	}
-	
-	if(pipe(shell_pipe[1]) < 0){
-		ERROR("pipe 1")
-		delete new_shell;
-		return 0;
-	}
-	
-	if((new_shell->pid = fork()) < 0){
-		ERROR("fork")
-		delete new_shell;
-		return 0;
-	}else if(new_shell->pid == 0){
-		dup2(shell_pipe[0][0], STDIN_FILENO);
-		dup2(shell_pipe[1][1], STDOUT_FILENO);
-
-		close(shell_pipe[0][0]);
-		close(shell_pipe[1][1]);
-		close(shell_pipe[1][0]);
-		close(shell_pipe[0][1]);
-
-		if(execl("/bin/bash", "/bin/bash", static_cast<char*>(0)) < 0){
-			ERROR("execl")
-		}
-		PRINT("execl done!")
-		delete new_shell;
-		return 0;
-	}else{
-		close(shell_pipe[0][0]);
-		close(shell_pipe[1][1]);
-
-		new_shell->output = shell_pipe[1][0];
-		new_shell->input = shell_pipe[0][1];
-
-		return new_shell;
-	}
-}
-
-static void close_shell(struct Shell* shell){
-		kill(shell->pid, SIGTERM);
-		close(shell->input);
-		close(shell->output);
-		delete shell;
-		shell = 0;
-}
+#include "symmetric-epoll-server.hpp"
 
 int main(int argc, char** argv){
-	int port = 10001;
+	int port;
 	std::string keyfile;
 	std::string services_path = "artifacts/services.json";
 	
@@ -85,8 +26,8 @@ int main(int argc, char** argv){
 	}
 
 	SymmetricEpollServer server(keyfile, static_cast<uint16_t>(port), 1);
-	
-	struct Shell* shell;
+
+	Shell shell;
 	
 	enum ServerState{
 		VERIFYING,
@@ -121,13 +62,13 @@ int main(int argc, char** argv){
 			return data_length;
 		}else if(state == GET_ROUTINE){
 			if(data == GET){
-				if(services.HasObj("services", ARRAY)){
-					if(server.send(fd, services.stringify(false))){
+				if(services.type == NOTYPE){
+					if(server.send(fd, "No services JSON!")){
 						PRINT("send error 2")
 						return -1;
 					}
 				}else{
-					if(server.send(fd, "No services JSON!")){
+					if(server.send(fd, services.stringify(false))){
 						PRINT("send error 2")
 						return -1;
 					}
@@ -143,8 +84,8 @@ int main(int argc, char** argv){
 					PRINT("send error 4")
 					return -1;
 				}
-				if((shell = open_shell()) == 0){
-					ERROR("shell_routine")
+				if(shell.sopen()){
+					ERROR("shell open")
 					return -1;
 				}
 				state = IN_SHELL;
@@ -158,10 +99,34 @@ int main(int argc, char** argv){
 				PRINT("send error 2")
 				return -1;
 			}
+
+			std::stringstream setup_firewall_bash;
+			setup_firewall_bash << "#!/bin/bash\n\n";
+			std::stringstream start_services_bash;
+			start_services_bash << "#!/bin/bash\n\n";
+
+			for(auto service : services.arrayValues){
+				std::string service_configuration_path = Util::libjaypea_path + "artifacts/" + service->GetStr("name") + ".configuration.json";
+				Util::write_file(service_configuration_path, service->stringify(true));
+				if(service->HasObj("port", STRING)){
+					if(service->HasObj("forward-port-to", STRING)){
+						setup_firewall_bash << "firewall-cmd --permanent --zone=public --add-forward-port=port=" << service->GetStr("forward-port-to") << ":proto=tcp:toport=" << service->GetStr("port") << "\n";
+					}else{
+						setup_firewall_bash << "firewall-cmd --permanent --zone=public --add-port=" << service->GetStr("port") << "/tcp\n";
+					}
+				}
+				// Build service
+				start_services_bash << Util::libjaypea_path << "scripts/build-example.sh " << service->GetStr("name") << " PROD > " << Util::libjaypea_path << "logs/build-" << service->GetStr("name") << ".log 2>&1\n\n";
+				// Run service.
+				start_services_bash << Util::libjaypea_path << "binaries/" << service->GetStr("name") << " --configuration_file " << service_configuration_path << " > " << Util::libjaypea_path << "logs/" << service->GetStr("name") << ".log 2>&1 &\n\n";
+			}
+			setup_firewall_bash << "\nfirewall-cmd --reload\n";
+			Util::write_file(Util::libjaypea_path + "artifacts/setup-firewall.sh", setup_firewall_bash.str());
+			Util::write_file(Util::libjaypea_path + "artifacts/start-services.sh", start_services_bash.str());
 			state = GET_ROUTINE;
 		}else if(state == IN_SHELL){
 			if(data == EXIT){
-				close_shell(shell);
+				shell.sclose();
 				if(server.send(fd, "Shell is done.")){
 					PRINT("send error 2")
 					return -1;
@@ -170,32 +135,37 @@ int main(int argc, char** argv){
 			}else{
 				ssize_t len;
 				char shell_data[PACKET_LIMIT];
-				if((len = write(shell->input, data, static_cast<size_t>(data_length))) < 0){
+				if((len = write(shell.input, data, static_cast<size_t>(data_length))) < 0){
 					ERROR("write to shell input")
-					close_shell(shell);
+					shell.sclose();
 					return -1;
 				}else if(len != data_length){
 					ERROR("couldn't write all " << len << ", " << data_length)
 				}
+
+				// Just write newline for bash.
 				shell_data[0] = '\n';
 				shell_data[1] = 0;
-				if((len = write(shell->input, shell_data, 1)) < 0){
+				if((len = write(shell.input, shell_data, 1)) < 0){
 					ERROR("write n to shell input")
-					close_shell(shell);
+					shell.sclose();
 					return -1;
 				}else if(len != 1){
 					ERROR("couldn't write n " << len << ", " << data_length)
 				}
+
+				// Wait a second to get a bit of output if any
 				sleep(1);
-				if((len = read(shell->output, shell_data, PACKET_LIMIT)) < 0){
+				if((len = read(shell.output, shell_data, PACKET_LIMIT)) < 0){
 					ERROR("read from shell output")
-					close_shell(shell);
+					shell.sclose();
 					return -1;
 				}
 				shell_data[len] = 0;
 				PRINT("SHELL:" <<  shell_data)
 				if(server.send(fd, shell_data, static_cast<size_t>(len))){
 					PRINT("send error 5")
+					shell.sclose();
 					return -1;
 				}
 			}

@@ -40,8 +40,8 @@ public:
 	SimpleTcpClient(const char* ip_address, uint16_t new_port, bool new_verbose = false);
 
 	bool communicate(const char* request, size_t length, char* response);
-	virtual bool reconnect();
-	virtual ~SimpleTcpClient();
+	bool reconnect();
+	~SimpleTcpClient();
 
 	int fd;
 	int requests;

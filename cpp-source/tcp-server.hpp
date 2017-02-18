@@ -45,8 +45,10 @@ public:
 	void set_timeout(time_t seconds);
 	int broadcast_fd();
 
+	bool send(int fd, std::string data);
 	virtual bool send(int fd, const char* data, size_t data_length);
 	virtual ssize_t recv(int fd, char* data, size_t data_length);
+	virtual ssize_t recv(int fd, char* data, size_t data_length, std::function<ssize_t(int, char*, size_t)> callback);
 
 	virtual void run(bool returning = false, unsigned int new_num_threads = std::thread::hardware_concurrency());
 
@@ -54,7 +56,7 @@ public:
 	std::function<void(int)> on_connect;
 
 	/// When a connection has read some data, this is called.
-	std::function<ssize_t(int, const char*, ssize_t)> on_read;
+	std::function<ssize_t(int, const char*, size_t)> on_read;
 
 	/// When a previously successfully made connection has been closed, this is called.
 	std::function<void(int)> on_disconnect;

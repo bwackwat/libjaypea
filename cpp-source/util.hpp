@@ -9,6 +9,7 @@
 #include <tuple>
 #include <functional>
 #include <map>
+#include <bitset>
 
 #include <sys/poll.h>
 #include <sys/socket.h>
@@ -18,6 +19,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <signal.h>
 
 #include "json.hpp"
 
@@ -26,9 +28,9 @@
 #define FILE_PART_LIMIT 1024
 
 #define PRINT(msg) std::cout << msg << std::endl;
-#define ERROR(msg) std::cout << "Uh oh, " << msg << " error." << std::endl;
+#define ERROR(msg) std::cerr << "Uh oh, " << msg << " error." << std::endl;
 
-#if defined(LIBJAYPEA_DEBUG)
+#if defined(_DO_DEBUG)
 	#define DEBUG(msg) std::cout << msg << std::endl;
 	#define DEBUG_SLEEP(sec) sleep(sec);
 #else
@@ -47,6 +49,7 @@ struct Argument {
 	std::vector<std::string> alts;
 	std::function<void()> callback;
 	bool required;
+	bool set;
 	enum ArgumentType type;
 
 	std::reference_wrapper<std::string> string_value;
@@ -63,22 +66,17 @@ enum RequestResult {
 
 class Util{
 private:
-	static std::vector<struct Argument> arguments;
+	static std::vector<struct Argument*> arguments;
 
 public:
 	static bool verbose;
 	static std::string config_path;
+	static std::string libjaypea_path;
 	static JsonObject config_object;
 
 	static void define_argument(std::string name, std::string& value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, int* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, bool* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
-
-/*
-	static size_t read_size_t(const char* data);
-	static void write_size_t(size_t value, char* data);
-*/
-
 
 	static void write_file(std::string filename, std::string content);
 
@@ -91,5 +89,7 @@ public:
 	static std::string get_redirection_html(const std::string& hostname);
 
 	static enum RequestResult parse_http_api_request(const char* request, JsonObject* request_obj);
+
+	static void print_bits(const char* data, size_t data_length);
 };
 

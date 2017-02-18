@@ -1,7 +1,7 @@
 #include <csignal>
 
 #include "util.hpp"
-#include "private-tcp-server.hpp"
+#include "tls-epoll-server.hpp"
 
 /**
  * /implements EpollServer
@@ -16,8 +16,8 @@
  * Disables OpenSSL SSLv3.
  * Users the cipher list: "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS"
  */
-PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections)
-:EpollServer(port, max_connections, "PrivateEpollServer"){
+TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections)
+:EpollServer(port, max_connections, "TlsEpollServer"){
 	SSL_library_init();
 	SSL_load_error_strings();
 
@@ -66,7 +66,7 @@ PrivateEpollServer::PrivateEpollServer(std::string certificate, std::string priv
  *
  * See EpollServer::close_client
  */
-void PrivateEpollServer::close_client(int* fd, std::function<void(int*)> callback){
+void TlsEpollServer::close_client(int* fd, std::function<void(int*)> callback){
 	PRINT("SSL_free'd " << *fd)
 	SSL_free(this->client_ssl[*fd]);
 	callback(fd);
@@ -77,7 +77,7 @@ void PrivateEpollServer::close_client(int* fd, std::function<void(int*)> callbac
  *
  * See EpollServer::send
  */
-bool PrivateEpollServer::send(int fd, const char* data, size_t data_length){
+bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 	int len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
 	switch(SSL_get_error(this->client_ssl[fd], len)){
 	case SSL_ERROR_NONE:
@@ -94,12 +94,12 @@ bool PrivateEpollServer::send(int fd, const char* data, size_t data_length){
 }
 
 /**
- * @brief This is nessary for HTTPS multi-part requests.
+ * @brief This is useful for HTTPS multi-part requests.
  * Google chrome requires this funtionality to piece together POST headers and body.
  *
  * See EpollServer::recv
  */
-ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length,
+ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length,
 std::function<ssize_t(int, char*, size_t)> callback){
 	int len;
 	len = SSL_read(this->client_ssl[fd], data, static_cast<int>(data_length));
@@ -122,15 +122,6 @@ std::function<ssize_t(int, char*, size_t)> callback){
 }
 
 /**
- * @brief Uses SSL_read instead of a regular read.
- *
- * See EpollServer::recv
- */
-ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
-	return this->recv(fd, data, data_length, this->on_read);
-}
-
-/**
  * @brief Importantly implements @see EpollServer::accept_continuation.
  *
  * See EpollServer::accept_continuation
@@ -138,7 +129,7 @@ ssize_t PrivateEpollServer::recv(int fd, char* data, size_t data_length){
  * Completed the SSL handshake as defined by the SSL context.
  * If the SSL handshake fails, the the client did *not* successfully connect and is dumped.
  */
-bool PrivateEpollServer::accept_continuation(int* new_client_fd){
+bool TlsEpollServer::accept_continuation(int* new_client_fd){
 	if((this->client_ssl[*new_client_fd] = SSL_new(this->ctx)) == 0){
 		ERROR("SSL_new")
 		ERR_print_errors_fp(stdout);
@@ -160,7 +151,7 @@ bool PrivateEpollServer::accept_continuation(int* new_client_fd){
 }
 
 /// Simply cleans up the OpenSSL context.
-PrivateEpollServer::~PrivateEpollServer(){
+TlsEpollServer::~TlsEpollServer(){
 	SSL_CTX_free(this->ctx);
 	EVP_cleanup();
 }

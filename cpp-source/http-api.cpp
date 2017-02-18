@@ -1,16 +1,16 @@
 #include <random>
 
-#include "https-api.hpp"
+#include "http-api.hpp"
 
-HttpsApi::HttpsApi(std::string new_public_directory, std::string ssl_certificate, std::string ssl_private_key, uint16_t https_port)
+HttpApi::HttpApi(std::string new_public_directory, EpollServer* new_server)
 :public_directory(new_public_directory),
-server(new PrivateEpollServer(ssl_certificate, ssl_private_key, https_port, 10))
+server(new_server)
 {
 	// 30 MB cache size by default.
 	this->set_file_cache_size(30);
 }
 
-void HttpsApi::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires, bool requires_human){
+void HttpApi::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires, bool requires_human){
 	if(path[path.length() - 1] != '/'){
 		path += '/';
 	}
@@ -37,7 +37,7 @@ static struct Question* get_question(){
 }
 static std::unordered_map<int, struct Question*> client_questions;
 
-void HttpsApi::start(){
+void HttpApi::start(){
 	std::string response_header = "HTTP/1.1 200 OK\n"
 		"Accept-Ranges: bytes\n"
 		"Content-Type: text\n";
@@ -293,7 +293,7 @@ void HttpsApi::start(){
 	ERROR("something super broke")
 }
 
-void HttpsApi::set_file_cache_size(int megabytes){
+void HttpApi::set_file_cache_size(int megabytes){
 	this->file_cache_remaining_bytes = megabytes * 1024 * 1024;
 }
 

@@ -7,17 +7,17 @@
 
 #include "tcp-server.hpp"
 
-class PrivateEpollServer : public EpollServer{
+class TlsEpollServer : public EpollServer{
 private:
 	SSL_CTX* ctx;
 	std::unordered_map<int, SSL*> client_ssl;
 
 	void close_client(int* fd, std::function<void(int*)> callback);
-	ssize_t recv(int fd, char* data, size_t data_length);
 	bool accept_continuation(int* new_client_fd);
 public:
-	PrivateEpollServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections);
-	~PrivateEpollServer();
-	ssize_t recv(int fd, char* data, size_t data_length, std::function<ssize_t(int, char*, size_t)> callback);
+	TlsEpollServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections);
+	~TlsEpollServer();
+
 	bool send(int fd, const char* data, size_t data_length);
+	ssize_t recv(int fd, char* data, size_t data_length, std::function<ssize_t(int, char*, size_t)> callback);
 };
