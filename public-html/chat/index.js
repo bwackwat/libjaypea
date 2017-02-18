@@ -16,11 +16,14 @@ ws.onopen = function(e){
 }
 
 ws.onmessage = function(e){
-	console.log("RECV:" + JSON.stringify(e.data));
-	if(typeof e.data.handle !== 'undefined' && typeof e.data.message !== 'undefined'){
-		messages.innerHTML = "<p>" + e.data.handle + ": " + e.data.message + "</p>" + messages.innerHTML;
-	}else if(typeof e.data.status !== 'undefined'){
-		status.innerHTML = e.data.status;
+	msg = JSON.parse(e.data);
+	console.log("RECV:" + e.data);
+	if(typeof msg.handle !== 'undefined' && typeof msg.message !== 'undefined'){
+		messages.innerHTML = "<p>" + msg.handle + ": " + msg.message + "</p>" + messages.innerHTML;
+	}else if(typeof msg.status !== 'undefined'){
+		status.innerHTML = msg.status;
+	}else{
+		console.log("Received junk?");
 	}
 }
 
@@ -35,6 +38,7 @@ ws.onerror = function(e){
 }
 
 submitButton.onclick = function(e){
+	status.innerHTML = "";
 	msg = {};
 	msg.handle = handleField.value;
 	msg.message = messageField.value;

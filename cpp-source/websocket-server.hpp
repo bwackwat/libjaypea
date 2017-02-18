@@ -1,13 +1,19 @@
 #pragma once
 
-#include "util.hpp"
+#include <functional>
 
-class WebsocketServer: public EpollServer{
+#include "util.hpp"
+#include "tcp-server.hpp"
+#include "websocket.hpp"
+
+class WebsocketServer : public EpollServer{
 public:
-	WebsocketServer(uint16_t port, size_t max_connections, std::string name);
+	WebsocketServer(uint16_t port, size_t max_connections);
+
 	bool send(int fd, const char* data, size_t data_length);
 	ssize_t recv(int fd, char* data, size_t data_length);
 private:
-	std::unordered_map<int, bool> client_handshaked;
+	Websocket websocket;
+
 	bool accept_continuation(int* fd);
 };

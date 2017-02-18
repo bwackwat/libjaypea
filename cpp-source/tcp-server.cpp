@@ -75,8 +75,8 @@ void EpollServer::close_client(int* fd, std::function<void(int*)> callback){
 	callback(fd);
 }
 
-bool EpollServer::send(int fd, const std::string& data){
-	this->send(fd, data.c_str(), static_cast<size_t>(data.length()));
+bool EpollServer::send(int fd, std::string data){
+	return this->send(fd, data.c_str(), static_cast<size_t>(data.length()));
 }
 
 /**
