@@ -33,8 +33,8 @@ ws.onmessage = function(e){
 	if(e.data == "pong"){
 		return;
 	}
-	msg = JSON.parse(e.data);
 	console.log("RECV:" + e.data);
+	msg = JSON.parse(e.data);
 	if(typeof msg.handle !== 'undefined' && typeof msg.message !== 'undefined'){
 		messages.innerHTML = "<p>" + msg.handle + ": " + msg.message + "</p>" + messages.innerHTML;
 	}else if(typeof msg.status !== 'undefined'){

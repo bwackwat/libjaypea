@@ -16,8 +16,8 @@
  * Disables OpenSSL SSLv3.
  * Users the cipher list: "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS"
  */
-TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections)
-:EpollServer(port, max_connections, "TlsEpollServer"){
+TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key, uint16_t port, size_t max_connections, std::string name)
+:EpollServer(port, max_connections, name){
 	SSL_library_init();
 	SSL_load_error_strings();
 
@@ -91,6 +91,10 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 	}
 	this->write_counter[fd]++;
 	return false;
+}
+
+ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length){
+	return this->recv(fd, data, data_length, this->on_read);
 }
 
 /**

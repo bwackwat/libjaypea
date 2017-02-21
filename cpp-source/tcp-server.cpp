@@ -167,7 +167,7 @@ void EpollServer::set_timeout(time_t seconds){
 void EpollServer::run_thread(unsigned int thread_id){
 	int num_fds, num_timeouts, new_fd, the_fd, timer_fd, i, j, epoll_fd, timeout_epoll_fd;
 	unsigned long num_connections = 0;
-	char packet[PACKET_LIMIT];
+	char packet[PACKET_LIMIT + 1];
 	ssize_t len;
 	struct itimerspec timer_spec;
 	

@@ -20,7 +20,7 @@ private:
 
 		if(len == 126){
 			payload_length = *(reinterpret_cast<const uint16_t*>(data + 2));
-			//payload_length = static_cast<unsigned char>(data[2]) + (static_cast<unsigned char>(data[3]) << 8);
+			//payload_length = static_cast<uint16_t>(data[2]) + (static_cast<uint16_t>(data[3]) << 8);
 			offset = 4;
 		}else if(len == 127){
 			//TODO: read uint64_t not uint16_t
@@ -79,32 +79,25 @@ public:
 	std::unordered_map<int, bool> client_handshake_complete;
 
 	std::string create_frame(const char* data, size_t data_length){
-		std::stringstream frame;
-		//char frame[data_length + 10];
+		char frame[data_length + 10];
 		char ssize[2] = {0, 0};
 		char lsize[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 		size_t offset;
 
 		// Basic binary frame.
-		frame << static_cast<char>(0x81);
-		//frame[0]i = static_cast<char>(0x82);
+		frame[0] = static_cast<char>(0x81);
 		if(data_length <= 125){
-			frame << static_cast<char>(data_length);
-			//frame[1] = static_cast<char>(data_length);
+			frame[1] = static_cast<char>(data_length);
 			offset = 2;
 		}else if(data_length <= 65535){
-			*(reinterpret_cast<uint16_t*>(ssize)) = static_cast<uint16_t>(data_length);
-			frame << static_cast<char>(126);
-			frame.write(ssize, 2);
-			/*frame[1] = 126;
-			frame[2] = ssize[0];
-			frame[3] = ssize[1];*/
+			DEBUG("DL:" << data_length)
+			frame[1] = 126;
+			frame[2] = (static_cast<uint16_t>(data_length) >> 8) & 0xFF;
+			frame[3] = static_cast<uint16_t>(data_length) & 0xFF;
 			offset = 4;
 		}else{
 			*(reinterpret_cast<uint64_t*>(lsize)) = static_cast<uint64_t>(data_length);
-			frame << 127;
-			frame.write(lsize, 8);
-			/*frame[1] = 127;
+			frame[1] = 127;
 			frame[2] = lsize[0];
 			frame[3] = lsize[1];
 			frame[4] = lsize[2];
@@ -112,15 +105,19 @@ public:
 			frame[6] = lsize[4];
 			frame[7] = lsize[5];
 			frame[8] = lsize[6];
-			frame[9] = lsize[7];*/
+			frame[9] = lsize[7];
 			offset = 10;
 		}
 
-		frame << std::string(data, data_length);
-		//std::memcpy(frame + offset, data, data_length);
+		std::memcpy(frame + offset, data, data_length);
+		frame[data_length + offset] = 0;
+		
+		#if defined(_DO_DEBUG)
+			PRINT("SDATA:")
+			Util::print_bits(frame, data_length + offset);
+		#endif
 
-		return frame.str();
-		//return std::string(frame, data_length + offset);
+		return std::string(frame, data_length + offset);
 	}
 
 	ssize_t recv(int fd, const char* data, size_t data_length){
@@ -130,7 +127,7 @@ public:
 			if(message == "ping"){
 				message = "pong";
 				if(this->server->send(fd, message.c_str(), message.length())){
-					PRINT("Send handshake failed.")
+					DEBUG("Send handshake failed.")
 					return -1;
 				}
 				return static_cast<ssize_t>(data_length);
@@ -140,18 +137,18 @@ public:
 
 		JsonObject request_obj(OBJECT);
 		Util::parse_http_api_request(data, &request_obj);
-		PRINT("JPON: " << request_obj.stringify(true))
+		DEBUG("JPON: " << request_obj.stringify(true))
 		if(!request_obj.HasObj("Sec-WebSocket-Key", STRING)){
-			PRINT("Bad websocket request.")
+			DEBUG("Bad websocket request.")
 			return -1;
 		}
 
 		std::string response = this->get_handshake_response(request_obj.GetStr("Sec-WebSocket-Key"));
 		if(this->server->send(fd, response.c_str(), response.length())){
-			PRINT("Send handshake failed.")
+			DEBUG("Send handshake failed.")
 			return -1;
 		}
-		PRINT("DELI: " << response)
+		DEBUG("DELI: " << response)
 		this->client_handshake_complete[fd] = true;
 		return 1;
 	}
