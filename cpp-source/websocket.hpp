@@ -133,7 +133,7 @@ public:
 					PRINT("Send handshake failed.")
 					return -1;
 				}
-				return data_length;
+				return static_cast<ssize_t>(data_length);
 			}
 			return this->server->on_read(fd, message.c_str(), static_cast<size_t>(message.length()));
 		}

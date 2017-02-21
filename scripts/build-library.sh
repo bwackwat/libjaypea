@@ -4,7 +4,7 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 source scripts/build-prefix.sh
 
-echo "building libjaypea.so"
+echo "compiling artifacts/libjaypea.so"
 eval $libcompiler
 
 #ldconfig

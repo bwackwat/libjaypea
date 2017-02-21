@@ -27,11 +27,17 @@
 class Route{
 public:
 	std::function<std::string(JsonObject*)> function;
+	std::function<ssize_t(JsonObject*, int)> raw_function;
+
 	std::unordered_map<std::string, JsonType> requires;
 	bool requires_human;
 
 	Route(std::function<std::string(JsonObject*)> new_function, std::unordered_map<std::string, JsonType> new_requires, bool new_requires_human)
 	:function(new_function), requires(new_requires), requires_human(new_requires_human)
+	{}
+
+	Route(std::function<ssize_t(JsonObject*, int)> new_raw_function, std::unordered_map<std::string, JsonType> new_requires, bool new_requires_human)
+	:raw_function(new_raw_function), requires(new_requires), requires_human(new_requires_human)
 	{}
 };
 
@@ -47,7 +53,11 @@ public:
 	std::string routes_string;
 
 	HttpApi(std::string new_public_directory, EpollServer* new_server);
+
 	void route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(), bool requires_human = false);
+
+	void route(std::string method, std::string path, std::function<ssize_t(JsonObject*, int)> function, std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(), bool requires_human = false);
+
 	void start();
 	void set_file_cache_size(int megabytes);
 private:

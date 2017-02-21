@@ -13,7 +13,7 @@ int main(int argc, char **argv){
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
 	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("http", &http);
-	Util::define_argument("cache_megabytes", &cache_megabytes,{"-cm"});
+	Util::define_argument("cache_megabytes", &cache_megabytes, {"-cm"});
 	Util::parse_arguments(argc, argv, "This serves files over HTTPS , and JSON (with or without HTTP headers) through an API.");
 
 	EpollServer* server;

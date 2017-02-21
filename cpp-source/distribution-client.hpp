@@ -11,7 +11,6 @@ public:
 private:
 	std::string keyfile;
 	std::string password;
-	uint16_t port;
 
 	std::unordered_map<std::string, SymmetricTcpClient*> hosts;
 };

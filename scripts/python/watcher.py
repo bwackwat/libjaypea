@@ -55,6 +55,8 @@ def file_changed(file):
 
 def dir_changed(dir):
 	for file in os.listdir(dir):
+		if not os.path.isfile(dir + file):
+			continue
 		if not file.endswith(".swp") and file_changed(dir + file):
 			return True
 	return False
@@ -68,10 +70,16 @@ def any_changed():
 			return True
 	return False
 
+done = False;
 while True:
 	changed = False
 	while not changed:
+		if process.poll() is not None and not done:
+			done = True
+			print "DONE!"
 		time.sleep(1)
 		if any_changed():
-			stop_process()
+			if not done:
+				stop_process()
 			process = start_process()
+			done = False

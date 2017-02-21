@@ -25,7 +25,7 @@ int main(int argc, char** argv){
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
 	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("http", &http);
-	Util::parse_arguments(argc, argv, "This is a (Secure) WebSocketServer");
+	Util::parse_arguments(argc, argv, "This is a chat server.");
 	
 	std::unordered_map<std::string, Player*> player_data;
 	std::unordered_map<int /* fd */, std::string /* logged in handle */> client_player;
@@ -46,7 +46,7 @@ int main(int argc, char** argv){
 				response.objectValues["status"] = new JsonObject("Message too long.");
 			}else{
 				response.objectValues["status"] = new JsonObject("Sent.");
-				if(server->send(server->broadcast_fd(), data, data_length)){
+				if(server->send(server->broadcast_fd(), data, static_cast<size_t>(data_length))){
 					PRINT("broadcast fail")
 					return -1;
 				}

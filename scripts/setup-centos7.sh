@@ -1,5 +1,10 @@
 #!/bin/bash
 
+cd $(dirname "${BASH_SOURCE[0]}")/../
+
+mkdir -p logs
+mkdir -p artifacts
+
 yum makecache fast
 yum -y upgrade
 
@@ -17,15 +22,10 @@ systemctl restart firewalld
 rkhunter --update
 rkhunter --propupd
 
-if [ ! -d "/opt/argon2" ]; then
-	mkdir -p /opt/argon2
-        git clone https://github.com/P-H-C/phc-winner-argon2.git /opt/argon2
-	cp -n /opt/argon2/include/argon2.h /usr/include/
-	cd /opt/argon2
-	make
-	cp -n ./libargon2.so /usr/local/lib/
-	cp /usr/local/lib/libargon2.so /lib64/
-	cp /lib64/libargon2.so /lib64/libargon2.so.0
-	ldconfig
-	cd ../
+if [ -d "artifacts/argon2"]; then
+	rm -rf artifacts/argon2
 fi
+
+git clone https://github.com/P-H-C/phc-winner-argon2.git artifacts/argon2
+cd artifacts/argon2
+make

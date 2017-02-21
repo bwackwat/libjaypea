@@ -17,6 +17,13 @@ void HttpApi::route(std::string method, std::string path, std::function<std::str
 	this->routemap[method + " /api" + path] = new Route(function, requires, requires_human);
 }
 
+void HttpApi::route(std::string method, std::string path, std::function<ssize_t(JsonObject*, int)> function, std::unordered_map<std::string, JsonType> requires, bool requires_human){
+	if(path[path.length() - 1] != '/'){
+		path += '/';
+	}
+	this->routemap[method + " /api" + path] = new Route(function, requires, requires_human);
+}
+
 struct Question{
 	std::string q;
 	std::vector<std::string> a;
@@ -256,7 +263,16 @@ void HttpApi::start(){
 							}
 						}
 					}else{
-						response_body = this->routemap[route]->function(&r_obj);
+						if(this->routemap[route]->function != nullptr){
+							response_body = this->routemap[route]->function(&r_obj);
+						}else{
+							if(this->routemap[route]->raw_function(&r_obj, fd) <= 0){
+								PRINT("RAW FUNCTION BAD")
+								return -1;
+							}else{
+								r_type = JSON;
+							}
+						}
 					}
 					if(response_body.empty()){
 						response_body = "{\"error\":\"The data could not be acquired.\"}";

@@ -7,8 +7,7 @@
 
 DistributionClient::DistributionClient(std::string new_keyfile, std::string new_password)
 :keyfile(new_keyfile),
-password(new_password),
-port(10000){}
+password(new_password){}
 
 std::string DistributionClient::get(){
 	JsonObject distribution(ARRAY);
