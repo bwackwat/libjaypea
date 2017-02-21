@@ -79,25 +79,31 @@ public:
 	std::unordered_map<int, bool> client_handshake_complete;
 
 	std::string create_frame(const char* data, size_t data_length){
-		char frame[data_length + 10];
+		//char frame[data_length + 10];
+		std::stringstream frame;
 		char ssize[2] = {0, 0};
 		char lsize[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 		size_t offset;
 
 		// Basic binary frame.
-		frame[0] = static_cast<char>(0x81);
+		//frame[0] = static_cast<char>(0x81);
+		frame << static_cast<char>(0x81);
 		if(data_length <= 125){
-			frame[1] = static_cast<char>(data_length);
+			frame << static_cast<char>(data_length);
+			//frame[1] = static_cast<char>(data_length);
 			offset = 2;
 		}else if(data_length <= 65535){
 			DEBUG("DL:" << data_length)
-			frame[1] = 126;
-			frame[2] = (static_cast<uint16_t>(data_length) >> 8) & 0xFF;
-			frame[3] = static_cast<uint16_t>(data_length) & 0xFF;
+			frame << static_cast<char>(126);
+			//frame[1] = 126;
+			frame << static_cast<char>((static_cast<uint16_t>(data_length) >> 8) & 0xFF);
+			//frame[2] = static_cast<char>((static_cast<uint16_t>(data_length) >> 8) & 0xFF);
+			frame << static_cast<char>(static_cast<uint16_t>(data_length) & 0xFF);
+			//frame[3] = static_cast<char>(static_cast<uint16_t>(data_length) & 0xFF);
 			offset = 4;
 		}else{
 			*(reinterpret_cast<uint64_t*>(lsize)) = static_cast<uint64_t>(data_length);
-			frame[1] = 127;
+			/*frame[1] = 127;
 			frame[2] = lsize[0];
 			frame[3] = lsize[1];
 			frame[4] = lsize[2];
@@ -105,19 +111,20 @@ public:
 			frame[6] = lsize[4];
 			frame[7] = lsize[5];
 			frame[8] = lsize[6];
-			frame[9] = lsize[7];
+			frame[9] = lsize[7];*/
 			offset = 10;
 		}
 
-		std::memcpy(frame + offset, data, data_length);
-		frame[data_length + offset] = 0;
+		frame << std::string(data, data_length);
+		//std::memcpy(frame + offset, data, data_length);
+		//frame[data_length + offset] = 0;
 		
 		#if defined(_DO_DEBUG)
 			PRINT("SDATA:")
-			Util::print_bits(frame, data_length + offset);
+			Util::print_bits(frame.str().c_str(), frame.str().length());
 		#endif
 
-		return std::string(frame, data_length + offset);
+		return frame.str();
 	}
 
 	ssize_t recv(int fd, const char* data, size_t data_length){

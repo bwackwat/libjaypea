@@ -12,6 +12,10 @@ var msg = {};
 
 function ping(){
 	console.log("ping " + ws.readyState);
+	// 0 - Connecting
+	// 1 - Open
+	// 2 - Closing
+	// 3 - Closed
 	if(ws.readyState === ws.CLOSED){
 		ws = new WebSocket("ws://" + window.location.hostname + ":11000/");
 		status.innerHTML = "Connecting...";
