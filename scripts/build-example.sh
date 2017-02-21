@@ -16,7 +16,7 @@ function build {
 build music
 build json-test
 build queue-test
-build pgsql-provider "-lcryptopp"
+build pgsql-provider "-lcryptopp artifacts/argon2/libargon2.a"
 build read-stdin-tty
 build keyfile-gen "-lcryptopp"
 
