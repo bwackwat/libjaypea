@@ -21,12 +21,7 @@ print "DIRECTORIES: " + ", ".join(directories)
 print "FILES: " + ", ".join(files)
 print "COMMAND: " + sys.argv[2]
 
-print "------------------------------------------------------------------"
-
-def start_process():
-	return subprocess.Popen(sys.argv[2], shell=True, stdout=sys.stdout, stderr=sys.stderr)
-
-process = start_process()
+process = None
 
 # "&&" within the command spawns children. Must vanquish all.
 def stop_process():
@@ -46,10 +41,7 @@ def file_changed(file):
 	else:
 		if filetime[file] != mtime:
 			filetime[file] = mtime
-			print "------------------------------------------------------------------"
 			print "CHANGE: " + file
-			print "RESTARTING"
-			print "------------------------------------------------------------------"
 			return True
 	return False
 
@@ -70,16 +62,23 @@ def any_changed():
 			return True
 	return False
 
+print "WATCHING FOR CHANGES!"
+print "------------------------------------------------------------------"
+
 done = False;
 while True:
 	changed = False
 	while not changed:
-		if process.poll() is not None and not done:
+		if process and process.poll() is not None and not done:
 			done = True
-			print "DONE!"
+			print "------------------------------------------------------------------"
+			print "DONE, WATCHING FOR CHANGES!"
+			print "------------------------------------------------------------------"
 		time.sleep(1)
 		if any_changed():
-			if not done:
+			if process and not done:
 				stop_process()
-			process = start_process()
+			print "RESTARTING COMMAND: " + sys.argv[2]
+			print "------------------------------------------------------------------"
+			process = subprocess.Popen(sys.argv[2], shell=True, stdout=sys.stdout, stderr=sys.stderr)
 			done = False
