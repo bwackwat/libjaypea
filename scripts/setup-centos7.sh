@@ -29,3 +29,10 @@ fi
 git clone https://github.com/P-H-C/phc-winner-argon2.git artifacts/argon2
 cd artifacts/argon2
 make
+cp -f artifacts/argon2/libargon2.so.0 artifacts/argon2/libargon2.so
+cp -f artifacts/argon2/libargon2.so.0 /usr/local/lib/
+cp -f artifacts/argon2/libargon2.so.0 /lib/
+cp -f artifacts/argon2/libargon2.so /usr/local/lib/
+cp -f artifacts/argon2/libargon2.so /lib/
+
+ldconfig

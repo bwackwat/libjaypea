@@ -40,4 +40,4 @@ libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \
 $dir/cpp-source/*.cpp -o $dir/artifacts/libjaypea.so"
 
-compiler="clang++ -std=c++11 -I$dir/cpp-source $dir/artifacts/libjaypea.so $dir/artifacts/argon2/libargon2.so.0 -lcryptopp -lpqxx $warn $extra"
+compiler="clang++ -std=c++11 -I$dir/cpp-source $dir/artifacts/libjaypea.so -lcryptopp -lpqxx $warn $extra"
