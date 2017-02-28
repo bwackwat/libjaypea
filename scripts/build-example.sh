@@ -8,6 +8,7 @@ function build {
 	if [ $argc -eq 0 ] || [[ "$1" = *"$argv"* ]]; then
 		echo "compiling binaries/$1"
 		eval "$compiler $2 $dir/cpp-source/examples/$1.cpp -o $dir/binaries/$1"
+		cp $dir/binaries/$1 $dir/public-html/build/$1
 	fi
 }
 
@@ -39,3 +40,5 @@ build http-redirecter
 build echo-server
 build tcp-client
 build tcp-event-client
+
+rm artifacts/build.lock

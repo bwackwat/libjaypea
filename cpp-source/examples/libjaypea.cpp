@@ -1,4 +1,5 @@
 #include "http-api.hpp"
+#include "shell.hpp"
 
 int main(int argc, char **argv){
 	std::string public_directory;
@@ -7,6 +8,7 @@ int main(int argc, char **argv){
 	int port = 443;
 	bool http = false;
 	int cache_megabytes = 30;
+	std::string password = "abc123";
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
@@ -14,7 +16,8 @@ int main(int argc, char **argv){
 	Util::define_argument("port", &port, {"-p"});
 	Util::define_argument("http", &http);
 	Util::define_argument("cache_megabytes", &cache_megabytes, {"-cm"});
-	Util::parse_arguments(argc, argv, "This serves files over HTTPS , and JSON (with or without HTTP headers) through an API.");
+	Util::define_argument("password", password, {"-pw"});
+	Util::parse_arguments(argc, argv, "This serves files over HTTP(S), and JSON (with or without HTTP headers) through an API.");
 
 	EpollServer* server;
 	if(http){
@@ -24,15 +27,34 @@ int main(int argc, char **argv){
 	}
 	
 	HttpApi api(public_directory, server);
-
 	api.set_file_cache_size(cache_megabytes);
+
+	std::mutex message_mutex;
+	std::deque<std::string> messages;
+	
+	Shell shell;
+	if(shell.sopen()){
+		ERROR("Shell failed.")
+		return -1;
+	}
+	std::string pwd = Util::exec_and_wait("pwd");
+	pwd.pop_back();
+	std::string redeploy = pwd + "/scripts/redeploy.sh 2>&1 " + pwd + " /logs/redeploy.log\n";
 	
 	api.route("GET", "/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + api.routes_string + "}";
 	});
 
-	std::mutex message_mutex;
-	std::deque<std::string> messages;
+	api.route("POST", "/build", [&](JsonObject* json)->std::string{
+		if(json->GetStr("token") == password){
+			PRINT("SHELL:" << redeploy)
+			if(write(shell.input, redeploy.c_str(), redeploy.length()) != static_cast<ssize_t>(redeploy.length())){
+				throw std::runtime_error("Couldn't write to shell.");
+			}
+			return "{\"result\":\"Building.\"}";
+		}
+		return std::string();
+	}, {{"token", STRING}});
 
 	api.route("GET", "/message", [&](JsonObject*)->std::string{
 		JsonObject result(OBJECT);
@@ -58,8 +80,8 @@ int main(int argc, char **argv){
 		return "{\"result\":\"Message posted.\"}";
 	}, {{"message", STRING}});
 
-	api.route("get", "/distribution", [&](JsonObject* json)->std::string{
-		return "{\"result\":\"Message posted.\"}";
+	api.route("GET", "/distribution", [&](JsonObject* json)->std::string{
+		return "{\"result\":\"dist\"}";
 	}, {{"token", STRING}});
 
 	api.start();

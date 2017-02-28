@@ -4,8 +4,6 @@ if len(sys.argv) < 3:
 	print "Usage: watcher.py <directories and/or files to watch, comma separated> <command to terminate and repeat>"
 	sys.exit(1)
 
-print "------------------------------------------------------------------"
-
 watch = sys.argv[1].split(",")
 directories = []
 files = []
@@ -59,8 +57,7 @@ def any_changed():
 			return True
 	return False
 
-print "WATCHING FOR CHANGES!"
-print "------------------------------------------------------------------"
+print "WATCHING FOR CHANGES: " + sys.argv[1]
 
 done = False;
 while True:
@@ -68,14 +65,11 @@ while True:
 	while not changed:
 		if process and process.poll() is not None and not done:
 			done = True
-			print "------------------------------------------------------------------"
-			print "DONE, WATCHING FOR CHANGES!"
-			print "------------------------------------------------------------------"
+			print "DONE, WATCHING FOR CHANGES: " + sys.argv[1]
 		time.sleep(1)
 		if any_changed():
 			if process and not done:
 				stop_process()
-			print "RESTARTING COMMAND: " + sys.argv[2]
-			print "------------------------------------------------------------------"
+			print "COMMAND: " + sys.argv[2]
 			process = subprocess.Popen(sys.argv[2], shell=True, stdout=sys.stdout, stderr=sys.stderr)
 			done = False

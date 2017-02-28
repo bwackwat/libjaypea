@@ -1,5 +1,7 @@
 #!/bin/bash
 
+touch artifacts/build.lock
+
 dir=$(pwd)
 
 mkdir -p $dir/binaries

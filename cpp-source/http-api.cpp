@@ -269,13 +269,12 @@ void HttpApi::start(){
 							if(this->routemap[route]->raw_function(&r_obj, fd) <= 0){
 								PRINT("RAW FUNCTION BAD")
 								return -1;
-							}else{
-								r_type = JSON;
 							}
+							r_type = JSON;
 						}
-					}
-					if(response_body.empty()){
-						response_body = "{\"error\":\"The data could not be acquired.\"}";
+						if(response_body.empty()){
+							response_body = "{\"error\":\"The data could not be acquired.\"}";
+						}
 					}
 				}
 			}else if(route == "GET /api/question/"){
