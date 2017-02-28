@@ -10,4 +10,3 @@ scripts/build-library.sh PROD
 scripts/build-example.sh PROD
 
 reboot
-

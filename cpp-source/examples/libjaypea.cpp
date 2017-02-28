@@ -39,7 +39,7 @@ int main(int argc, char **argv){
 	}
 	std::string pwd = Util::exec_and_wait("pwd");
 	pwd.pop_back();
-	std::string redeploy = pwd + "/scripts/redeploy.sh 2>&1 " + pwd + " /logs/redeploy.log\n";
+	std::string redeploy = pwd + "/scripts/extras/redeploy.sh 2>&1 | tee " + pwd + "/logs/redeploy.log\n";
 	
 	api.route("GET", "/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + api.routes_string + "}";

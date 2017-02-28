@@ -40,5 +40,3 @@ build http-redirecter
 build echo-server
 build tcp-client
 build tcp-event-client
-
-rm artifacts/build.lock
