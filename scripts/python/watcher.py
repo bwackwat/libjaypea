@@ -1,3 +1,5 @@
+#!/bin/python
+
 import subprocess, os, sys, time, atexit, signal, psutil
 
 if len(sys.argv) < 3:

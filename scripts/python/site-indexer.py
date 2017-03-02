@@ -1,3 +1,5 @@
+#!/bin/python
+
 import sys, os, datetime, shutil
 
 print "Arguments: %s" % (sys.argv)

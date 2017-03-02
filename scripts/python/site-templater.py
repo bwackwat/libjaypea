@@ -1,3 +1,5 @@
+#!/bin/python
+
 import os, sys
 
 print "Arguments: %s" % sys.argv
