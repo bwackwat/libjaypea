@@ -29,9 +29,14 @@ for droplet in droplets["droplets"]:
 
 print '-----------------------------------------------------------------'
 	
-newid = raw_input("Enter the id of the droplet which you want to assign a floating IP to: ");
-if not newid:
-	print "Bad id."
+dropletname = raw_input("Enter the name of the droplet which you want to assign a floating IP to: ");
+newid = 0
+for droplet in droplets["droplets"]:
+	if droplet["name"] == dropletname:
+		newid = droplet["id"]
+
+if newid == 0:
+	print "Bad droplet name."
 	sys.exit(0)
 
 print '-----------------------------------------------------------------'

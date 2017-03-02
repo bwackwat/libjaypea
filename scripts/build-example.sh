@@ -35,7 +35,7 @@ build com "-lcryptopp"
 build chat-client
 build distributed-client "-lcryptopp"
 
-build libjaypea
+build libjaypea-api
 build bwackwat "-lcryptopp"
 build chat "-lcryptopp"
 build http-redirecter

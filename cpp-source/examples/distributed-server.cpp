@@ -123,6 +123,7 @@ int main(int argc, char** argv){
 			setup_firewall_bash << "\nfirewall-cmd --reload\n";
 			Util::write_file(Util::libjaypea_path + "artifacts/setup-firewall.sh", setup_firewall_bash.str());
 			Util::write_file(Util::libjaypea_path + "artifacts/start-services.sh", start_services_bash.str());
+			Util::write_file(Util::libjaypea_path + services_path, services.stringify(true));
 			state = GET_ROUTINE;
 		}else if(state == IN_SHELL){
 			if(data == EXIT){
