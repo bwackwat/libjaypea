@@ -4,6 +4,8 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 source scripts/build-prefix.sh
 
+mkdir -p $dir/public-html/build
+
 function build {
 	if [ $argc -eq 0 ] || [[ "$1" = *"$argv"* ]]; then
 		echo "compiling binaries/$1"

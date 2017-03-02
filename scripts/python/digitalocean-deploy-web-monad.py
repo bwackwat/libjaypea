@@ -44,7 +44,7 @@ newkeyfile = scriptdir + "/../../artifacts/" + newname + ".deploy.keyfile"
 with open(newkeyfile, "w") as f:
 	f.write(newkey)
 
-# print "Key is written to " + newkeyfile + " and will be used with cloud-init."
+print newkeyfile + " can be used with distributed-client."
 # print "You can then use a local client to communciate."
 
 print '-----------------------------------------------------------------'

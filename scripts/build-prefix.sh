@@ -3,6 +3,7 @@
 dir=$(pwd)
 
 mkdir -p $dir/binaries
+mkdir -p $dir/artifacts
 
 argc=$#
 argv=($@)
