@@ -23,7 +23,7 @@ echo "$2" >> $1/artifacts/deploy.keyfile
 touch $1/artifacts/start-services.sh
 chmod +x $1/artifacts/start-services.sh
 
-cat <<EOF >> $1/artifacts/start.sh 
+cat <<EOF >> $1/artifacts/start.sh
 #!/bin/bash
 
 $1/scripts/build-example.sh distributed-server PROD > $1/logs/build-distributed-server.log 2>&1

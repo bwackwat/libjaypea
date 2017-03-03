@@ -1,3 +1,4 @@
 logs/*
 binaries/*
 artifacts/*
+.vagrant/
