@@ -4,10 +4,13 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 source scripts/build-prefix.sh
 
+mkdir -p $dir/public-html/build
+
 function build {
 	if [ $argc -eq 0 ] || [[ "$1" = *"$argv"* ]]; then
 		echo "compiling binaries/$1"
 		eval "$compiler $2 $dir/cpp-source/examples/$1.cpp -o $dir/binaries/$1"
+		cp $dir/binaries/$1 $dir/public-html/build/$1
 	fi
 }
 
@@ -16,7 +19,7 @@ function build {
 build music
 build json-test
 build queue-test
-build pgsql-provider "-lcryptopp"
+build pgsql-provider "-lcryptopp -largon2"
 build read-stdin-tty
 build keyfile-gen "-lcryptopp"
 
@@ -32,7 +35,7 @@ build com "-lcryptopp"
 build chat-client
 build distributed-client "-lcryptopp"
 
-build message-api
+build libjaypea-api
 build bwackwat "-lcryptopp"
 build chat "-lcryptopp"
 build http-redirecter

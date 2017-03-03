@@ -1,6 +1,6 @@
 window.onload = function() {
 
-var apiUrl = "https://" + window.location.hostname + "/api";
+var apiUrl = window.location.protocol + "//" + window.location.hostname + ":" + window.location.port + "/api";
 
 var messages = document.getElementById("messages");
 var submitButton = document.getElementById("submitButton");

@@ -1,9 +1,5 @@
 $script = <<SCRIPT
-yum -y install git
-mkdir -p /opt/web
-git clone -b distribution-work https://github.com/bwackwat/libjaypea /opt/web
-chmod +x /opt/web/scripts/deploy.sh
-/opt/web/scripts/deploy.sh /opt/web "A symmetrically encrypted epoll server from libjaypea can use any text like this basically for key file." deploy
+/vagrant/scripts/deploy.sh /vagrant "A symmetrically encrypted epoll server from libjaypea can use any text like this basically for key file." deploy
 SCRIPT
 
 Vagrant.configure("2") do |config|

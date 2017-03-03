@@ -3,6 +3,7 @@
 dir=$(pwd)
 
 mkdir -p $dir/binaries
+mkdir -p $dir/artifacts
 
 argc=$#
 argv=($@)
@@ -12,9 +13,12 @@ warn="-Wformat -Wformat-security -Werror=format-security \
 -Wno-c++98-compat -Wno-padded \
 -Wno-exit-time-destructors -Wno-global-constructors "
 
+library="$dir/artifacts/libjaypea.so"
+
 case "${argv[@]}" in
 	 *"PROD"*)
 		echo "PRODUCTION MODE"
+		library="$dir/artifacts/libjaypeap.so"
 		extra="-O3 -fsanitize=thread -fsanitize=undefined \
 		-D_FORTIFY_SOURCE=2 -fstack-protector-all "
 	
@@ -36,8 +40,8 @@ esac
 
 libs="-lpthread -lssl -lcryptopp"
 
-libcompiler="clang++ -std=c++11 -fPIC -shared $dir/artifacts/argon2/libargon2.a -I$dir/cpp-source \
+libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \
-$dir/cpp-source/*.cpp -o $dir/artifacts/libjaypea.so"
+$dir/cpp-source/*.cpp -o $library"
 
-compiler="clang++ -std=c++11 -I$dir/cpp-source $dir/artifacts/libjaypea.so $dir/artifacts/argon2/libargon2.a -lcryptopp -lpqxx $warn $extra"
+compiler="clang++ -std=c++11 -I$dir/cpp-source $library -lcryptopp -lpqxx $warn $extra"

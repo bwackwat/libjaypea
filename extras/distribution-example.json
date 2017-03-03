@@ -4,7 +4,7 @@
 		"port": "10080",
 		"hostname": "test.bwackwat.com"
 	},{
-		"name": "message-api",
+		"name": "libjaypea-api",
 		"port": "10443",
 		"public_directory": "public-html",
 		"ssl_certificate": "extras/self-signed-ssl/ssl.crt",
@@ -22,7 +22,7 @@
 		"name": "libjaypea-test",
 		"services": [
 			"http-redirecter",
-			"message-api"
+			"libjaypea-api"
 		]
 	},{
 		"name": "bwackwat-test",

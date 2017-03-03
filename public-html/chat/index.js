@@ -7,34 +7,20 @@ var messageField = document.getElementById("messageField");
 var submitButton = document.getElementById("submitButton");
 var messages = document.getElementById("messages");
 
-var ws = new WebSocket("ws://" + window.location.hostname + ":11000/");
+var ws;
 var msg = {};
 
-function ping(){
-	console.log("ping " + ws.readyState);
-	if(ws.readyState === ws.CLOSED){
-		ws = new WebSocket("ws://" + window.location.hostname + ":11000/");
-		status.innerHTML = "Connecting...";
-	}else if(ws.readyState === ws.OPEN){
-		status.innerHTML = "Connected.";
-		ws.send("ping")
-	}else{
-		status.innerHTML = "Working...";
-	}
-}
-var pinger = setInterval(ping, 1000);
-
-ws.onopen = function(e){
+function connected(e){
 	console.log(e);
 	status.innerHTML = "Connected.";
 }
 
-ws.onmessage = function(e){
+function receive(e){
 	if(e.data == "pong"){
 		return;
 	}
-	msg = JSON.parse(e.data);
 	console.log("RECV:" + e.data);
+	msg = JSON.parse(e.data);
 	if(typeof msg.handle !== 'undefined' && typeof msg.message !== 'undefined'){
 		messages.innerHTML = "<p>" + msg.handle + ": " + msg.message + "</p>" + messages.innerHTML;
 	}else if(typeof msg.status !== 'undefined'){
@@ -44,15 +30,43 @@ ws.onmessage = function(e){
 	}
 }
 
-ws.onclose = function(e){
+function closed(e){
 	console.log(e);
 	status.innerHTML = "Disconnected.";
 }
 
-ws.onerror = function(e){
+function errored(e){
 	console.log(e);
 	status.innerHTML = "Error.";
 }
+
+function setupWebsocket(){
+	ws = new WebSocket("ws://" + window.location.hostname + ":11000/");
+	ws.onopen = connected;
+	ws.onmessage = receive;
+	ws.onclose = closed;
+	ws.onerror = errored;
+}
+
+setupWebsocket();
+
+function ping(){
+	console.log("ping " + ws.readyState);
+	// 0 - Connecting
+	// 1 - Open
+	// 2 - Closing
+	// 3 - Closed
+	if(ws.readyState === ws.CLOSED){
+		setupWebsocket();
+		status.innerHTML = "Connecting...";
+	}else if(ws.readyState === ws.OPEN){
+		status.innerHTML = "Connected.";
+		ws.send("ping")
+	}else{
+		status.innerHTML = "Working...";
+	}
+}
+var pinger = setInterval(ping, 1000);
 
 function send(e){
 	status.innerHTML = "";
@@ -77,15 +91,5 @@ window.onkeypress = function(e){
 }
 
 submitButton.onclick = send;
-
-//function(e){
-//	status.innerHTML = "";
-//	msg = {};
-//	msg.handle = handleField.value;
-//	msg.message = messageField.value;
-
-//	console.log("SEND:" + JSON.stringify(msg));
-//	ws.send(JSON.stringify(msg));
-//}
 
 }

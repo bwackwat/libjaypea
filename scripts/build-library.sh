@@ -6,5 +6,3 @@ source scripts/build-prefix.sh
 
 echo "compiling artifacts/libjaypea.so"
 eval $libcompiler
-
-#ldconfig
