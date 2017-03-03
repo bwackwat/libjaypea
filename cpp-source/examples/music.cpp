@@ -87,7 +87,6 @@ int main(int argc, char **argv){
 	struct Songset* library = get_songset("../../Music");
 	
 	api.route("GET", "/", [&](JsonObject* json, int fd)->ssize_t{
-		
 		return 1;
 	}, {{"password", STRING}});
 

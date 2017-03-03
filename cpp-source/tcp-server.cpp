@@ -167,7 +167,7 @@ void EpollServer::set_timeout(time_t seconds){
 void EpollServer::run_thread(unsigned int thread_id){
 	int num_fds, num_timeouts, new_fd, the_fd, timer_fd, i, j, epoll_fd, timeout_epoll_fd;
 	unsigned long num_connections = 0;
-	char packet[PACKET_LIMIT];
+	char packet[PACKET_LIMIT + 1];
 	ssize_t len;
 	struct itimerspec timer_spec;
 	
@@ -334,49 +334,52 @@ void EpollServer::run_thread(unsigned int thread_id){
 								this->close_client(&new_fd, [&](int* fd){
 									close(*fd);
 								});
+								break;
+							}
+							Util::set_non_blocking(new_fd);
+							new_event.events = EVENTS;
+							new_event.data.fd = new_fd;
+							if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, new_fd, &new_event) < 0){
+								perror("epoll_ctl add client");
+								this->close_client(&new_fd, [&](int* fd){
+									close(*fd);
+								});
+								break;
 							}else{
-								Util::set_non_blocking(new_fd);
-								new_event.events = EVENTS;
-								new_event.data.fd = new_fd;
-								if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, new_fd, &new_event) < 0){
-									perror("epoll_ctl add client");
-									close(new_fd);
+								if((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) < 0){
+									perror("timerfd_create");
 								}else{
-									if((timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK)) < 0){
-										perror("timerfd_create");
+									timer_spec.it_interval.tv_sec = 0;
+									timer_spec.it_interval.tv_nsec = 0;
+									timer_spec.it_value.tv_sec = this->timeout;
+									timer_spec.it_value.tv_nsec = 0;
+									//PRINT("TIME " << timer_fd)
+									if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
+										perror("timerfd_settime");
 									}else{
-										timer_spec.it_interval.tv_sec = 0;
-										timer_spec.it_interval.tv_nsec = 0;
-										timer_spec.it_value.tv_sec = this->timeout;
-										timer_spec.it_value.tv_nsec = 0;
-										//PRINT("TIME " << timer_fd)
-										if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
-											perror("timerfd_settime");
-										}else{
-											timer_to_client_map[timer_fd] = new_fd;
-											client_to_timer_map[new_fd] = timer_fd;
-											new_event.events = EVENTS;
-											new_event.data.fd = timer_fd;
-											//PRINT("new tfd " << timer_fd)
-											if(epoll_ctl(timeout_epoll_fd, EPOLL_CTL_ADD, timer_fd, &new_event) < 0){
-												perror("epoll_ctl timer add");
-											}
+										timer_to_client_map[timer_fd] = new_fd;
+										client_to_timer_map[new_fd] = timer_fd;
+										new_event.events = EVENTS;
+										new_event.data.fd = timer_fd;
+										//PRINT("new tfd " << timer_fd)
+										if(epoll_ctl(timeout_epoll_fd, EPOLL_CTL_ADD, timer_fd, &new_event) < 0){
+											perror("epoll_ctl timer add");
 										}
 									}
-									/*
-									I found some docs that said this should work (and thus replace all these timerfds), but it doesn't?
-									recv_timeout.tv_sec = 10;
-									recv_timeout.tv_usec = 0;
-									if(setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&recv_timeout), sizeof(struct timeval)) < 0){
-										perror("setsockopt new connection timeout");
-									}*/
-									this->read_counter[new_fd] = 0;
-									this->write_counter[new_fd] = 0;
-									if(this->on_connect != nullptr){
-										this->on_connect(new_fd);
-									}
-									num_connections++;
 								}
+								/*
+								I found some docs that said this should work (and thus replace all these timerfds), but it doesn't?
+								recv_timeout.tv_sec = 10;
+								recv_timeout.tv_usec = 0;
+								if(setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&recv_timeout), sizeof(struct timeval)) < 0){
+									perror("setsockopt new connection timeout");
+								}*/
+								this->read_counter[new_fd] = 0;
+								this->write_counter[new_fd] = 0;
+								if(this->on_connect != nullptr){
+									this->on_connect(new_fd);
+								}
+								num_connections++;
 							}
 						}
 					}

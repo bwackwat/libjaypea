@@ -1,6 +1,7 @@
 #include "json.hpp"
 #include "util.hpp"
 #include "websocket-server.hpp"
+#include "tls-websocket-server.hpp"
 
 class Player{
 public:
@@ -30,7 +31,13 @@ int main(int argc, char** argv){
 	std::unordered_map<std::string, Player*> player_data;
 	std::unordered_map<int /* fd */, std::string /* logged in handle */> client_player;
 
-	WebsocketServer* server = new WebsocketServer(static_cast<uint16_t>(port), 10);
+	EpollServer* server;
+
+	if(http){
+		server = new WebsocketServer(static_cast<uint16_t>(port), 10);
+	}else{
+		server = new TlsWebsocketServer(ssl_certificate, ssl_private_key, static_cast<uint16_t>(port), 10);
+	}
 
 	server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		JsonObject msg;
