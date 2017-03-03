@@ -14,7 +14,7 @@ fi
 systemctl start postgresql
 systemctl enable postgresql
 
-cp ./bin/tables.sql /tables.sql
+cp ./scripts/extras/tables.sql /tables.sql
 chmod 666 /tables.sql
 chown postgres:postgres /tables.sql
 
@@ -24,7 +24,7 @@ su postgres
 psql -U postgres -c "CREATE DATABASE webservice OWNER postgres;"
 psql -U postgres -d webservice -a -f /tables.sql
 
-su root
+exit
 rm /tables.sql
 
 #Only change is 

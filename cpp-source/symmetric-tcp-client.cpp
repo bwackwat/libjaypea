@@ -36,7 +36,7 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 	if(this->encryptor.send(this->fd, request, length, &this->writes)){
 		this->close_client();
 		ERROR("SymmetricTcpClient send")
-		return response_string;
+		return this->communicate(request, length);
 	}
 
 	std::function<ssize_t(int, const char*, size_t)> set_response_callback = [&](int, const char* data, size_t data_length)->ssize_t{

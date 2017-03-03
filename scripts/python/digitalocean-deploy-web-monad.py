@@ -44,7 +44,7 @@ newkeyfile = scriptdir + "/../../artifacts/" + newname + ".deploy.keyfile"
 with open(newkeyfile, "w") as f:
 	f.write(newkey)
 
-# print "Key is written to " + newkeyfile + " and will be used with cloud-init."
+print newkeyfile + " can be used with distributed-client."
 # print "You can then use a local client to communciate."
 
 print '-----------------------------------------------------------------'
@@ -66,7 +66,7 @@ cloud_config = """
 runcmd:
  - yum -y install git
  - mkdir -p {0}
- - git clone -b distribution-work https://github.com/bwackwat/libjaypea {0}
+ - git clone -b develop https://github.com/bwackwat/libjaypea {0}
  - chmod +x {0}/scripts/deploy.sh
  - {0}/scripts/deploy.sh {0} "{1}" {2} {3}
 
@@ -85,6 +85,7 @@ if(raw_input("Cloud init good to go? [y]: ") or "y" != "y"):
 
 print '-----------------------------------------------------------------'
 
+newestimageid = 0
 images = rprint(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers))
 for image in images["images"]:
 	if image["distribution"] == "CentOS":
@@ -92,14 +93,17 @@ for image in images["images"]:
 		print "id: " + str(image["id"])
 		print "name: " + image["name"]
 		print "created_at: " + image["created_at"]
+		if image["id"] > newestimageid:
+			newestimageid = image["id"]
 
 print '-----------------------------------------------------------------'
 
+newdropletid = raw_input("Enter an image id (newest is recommended) [" + str(newestimageid) + "]: ") or str(newestimageid)
 newdroplet = rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers, json={
 	"name":newname,
 	"region":"sfo1",
 	"size":"512mb",
-	"image":raw_input("Enter an image id from above (newest is recommended): "),
+	"image":newdropletid,
 	"ssh_keys":None,
 	"backups":False,
 	"ipv6":False,
