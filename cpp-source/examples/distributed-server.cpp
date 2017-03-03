@@ -115,8 +115,6 @@ int main(int argc, char** argv){
 						setup_firewall_bash << "firewall-cmd --permanent --zone=public --add-port=" << service->GetStr("port") << "/tcp\n";
 					}
 				}
-				// Build service
-				start_services_bash << Util::libjaypea_path << "scripts/build-example.sh " << service->GetStr("name") << " PROD > " << Util::libjaypea_path << "logs/build-" << service->GetStr("name") << ".log 2>&1\n\n";
 				// Run service.
 				start_services_bash << Util::libjaypea_path << "binaries/" << service->GetStr("name") << " --configuration_file " << service_configuration_path << " > " << Util::libjaypea_path << "logs/" << service->GetStr("name") << ".log 2>&1 &\n\n";
 			}

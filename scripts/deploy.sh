@@ -14,8 +14,6 @@ chmod +x $1/scripts/setup-centos7.sh
 $1/scripts/setup-centos7.sh 2>&1 | tee $1/logs/setup-centos7.log
 
 chmod +x $1/scripts/build-library.sh
-$1/scripts/build-library.sh PROD 2>&1 | tee $1/logs/build-library.log
-
 chmod +x $1/scripts/build-example.sh
 
 echo "$2" >> $1/artifacts/deploy.keyfile
@@ -26,14 +24,20 @@ chmod +x $1/artifacts/start-services.sh
 cat <<EOF >> $1/artifacts/start.sh
 #!/bin/bash
 
-$1/scripts/build-example.sh distributed-server PROD > $1/logs/build-distributed-server.log 2>&1
+cd $1
 
-$1/binaries/distributed-server \
+git fetch
+git pull origin master
+
+scripts/build-library.sh PROD > logs/build-library.log 2>&1
+scripts/build-example.sh PROD > logs/build-example.log 2>&1
+
+binaries/distributed-server \
 --port 10000 \
---keyfile $1/artifacts/deploy.keyfile \
-> $1/logs/distributed-server.log 2>&1 &
+--keyfile artifacts/deploy.keyfile \
+> logs/distributed-server.log 2>&1 &
 
-$1/artifacts/start-services.sh
+artifacts/start-services.sh
 
 EOF
 
@@ -48,7 +52,7 @@ firewall-cmd --zone=public --permanent --add-port=10000/tcp
 firewall-cmd --reload
 
 # certbot certonly --standalone --tls-sni-01-port 10443 --domain test.bwackwat.com
-# cp /etc/letsencrypt/live/$4/fullchain.pem $1/artifacts/ssl.crt
-# cp /etc/letsencrypt/live/$4/privkey.pem $1/artifacts/ssl.key
+# cp /etc/letsencrypt/live/test.bwackwat.com/fullchain.pem artifacts/ssl.crt
+# cp /etc/letsencrypt/live/test.bwackwat.com/privkey.pem artifacts/ssl.key
 
 chown -R $3:$3 $1
