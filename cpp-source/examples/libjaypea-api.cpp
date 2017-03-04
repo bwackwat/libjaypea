@@ -80,7 +80,7 @@ int main(int argc, char **argv){
 		return "{\"result\":\"Message posted.\"}";
 	}, {{"message", STRING}});
 
-	api.route("GET", "/distribution", [&](JsonObject* json)->std::string{
+	api.route("GET", "/configuration", [&](JsonObject* json)->std::string{
 		return "{\"result\":\"dist\"}";
 	}, {{"token", STRING}});
 

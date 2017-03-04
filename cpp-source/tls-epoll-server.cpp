@@ -84,6 +84,7 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 		break;
 	default:
 		ERROR("SSL_write")
+		ERR_print_errors_fp(stdout);
 		return true;
 	}
 	if(len != static_cast<int>(data_length)){
