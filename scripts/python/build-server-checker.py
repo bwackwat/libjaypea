@@ -1,11 +1,11 @@
 #!/bin/python
 
-import sys, requests, json, time, datetime
+import sys, requests, time
 
 branch = sys.argv[1]
 print "Checking commit for latest build for branch " + branch
 commit_file = "artifacts/" + branch + ".latest.commit"
-url = "https://test.bwacwkat.com/build/" + branch + ".latest.commit"
+url = "https://test.bwackwat.com/build/" + branch + ".latest.commit"
 last_commit = ""
 
 while True:

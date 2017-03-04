@@ -173,6 +173,9 @@ int main(int argc, char** argv){
 		std::getline(std::cin, request);
 		
 		if(in_shell){
+			if(request == EXIT){
+				in_shell = false;
+			}
 			send(request);
 		}else if(request == HELP){
 			PRINT(commands)

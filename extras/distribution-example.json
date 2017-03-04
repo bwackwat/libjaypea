@@ -19,27 +19,13 @@
 		"keyfile": "database.keyfile",
 	}],
 	"node-definitions": [{
-		"name": "libjaypea-test",
+		"name": "localhost-test",
 		"services": [
 			"http-redirecter",
 			"libjaypea-api"
 		]
-	},{
-		"name": "bwackwat-test",
-		"services": [
-			"http-redirecter",
-			"bwackwat"
-		]
-	},{
-		"name": "localhost-test",
-		"services": [
-			"http-redirecter"
-		]
 	}],	
 	"live-nodes": [{
-		"hostname": "bwackwat.com",
-		"node": "bwackwat-test"
-	},{
 		"hostname": "localhost",
 		"node": "localhost-test"
 	}],

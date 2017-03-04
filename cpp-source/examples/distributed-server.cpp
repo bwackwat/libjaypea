@@ -90,7 +90,7 @@ int main(int argc, char** argv){
 				}
 				state = IN_SHELL;
 			}else{
-				PRINT("unknown command" << data)
+				PRINT("unknown command " << data)
 				return -1;
 			}
 		}else if(state == SET_SERVICES){

@@ -8,8 +8,9 @@ verbose(new_verbose),
 requests(0){
 	struct hostent* host;
 	if((host = gethostbyname(hostname.c_str())) == 0){
-		perror("ctor gethostbyname");
-		throw std::runtime_error(this->name + " gethostbyname " + std::to_string(errno).c_str());
+		perror("Could not get host by name.");
+		this->connected = false;
+		return;
 	}
 	this->remote_address = *reinterpret_cast<struct in_addr*>(host->h_addr);
 
