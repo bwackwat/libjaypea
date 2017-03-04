@@ -4,5 +4,5 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 source scripts/build-prefix.sh
 
-echo "compiling artifacts/libjaypea.so"
+echo "compiling $library"
 eval $libcompiler

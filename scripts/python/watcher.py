@@ -22,9 +22,12 @@ print "FILES: " + ", ".join(files)
 print "COMMAND: " + sys.argv[2]
 
 process = None
+done = False;
 
 # "&&" within the command spawns children. Must vanquish all.
 def stop_process():
+	if done:
+		return
 	temp = psutil.Process(process.pid)
 	for proc in temp.children(recursive=True):
 		proc.kill()
@@ -61,7 +64,6 @@ def any_changed():
 
 print "WATCHING FOR CHANGES: " + sys.argv[1]
 
-done = False;
 while True:
 	changed = False
 	while not changed:
@@ -70,7 +72,7 @@ while True:
 			print "DONE, WATCHING FOR CHANGES: " + sys.argv[1]
 		time.sleep(1)
 		if any_changed():
-			if process and not done:
+			if process:
 				stop_process()
 			print "COMMAND: " + sys.argv[2]
 			process = subprocess.Popen(sys.argv[2], shell=True, stdout=sys.stdout, stderr=sys.stderr)

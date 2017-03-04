@@ -37,18 +37,15 @@ int main(int argc, char **argv){
 		ERROR("Shell failed.")
 		return -1;
 	}
-	std::string pwd = Util::exec_and_wait("pwd");
-	pwd.pop_back();
-	std::string redeploy = pwd + "/scripts/extras/redeploy.sh 2>&1 | tee " + pwd + "/logs/redeploy.log\n";
 	
 	api.route("GET", "/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + api.routes_string + "}";
 	});
 
-	api.route("POST", "/build", [&](JsonObject* json)->std::string{
+	api.route("POST", "/reboot", [&](JsonObject* json)->std::string{
 		if(json->GetStr("token") == password){
-			PRINT("SHELL:" << redeploy)
-			if(write(shell.input, redeploy.c_str(), redeploy.length()) != static_cast<ssize_t>(redeploy.length())){
+			PRINT("REBOOT!")
+			if(write(shell.input, "reboot\n", 7) != 7){
 				throw std::runtime_error("Couldn't write to shell.");
 			}
 			return "{\"result\":\"Building.\"}";
