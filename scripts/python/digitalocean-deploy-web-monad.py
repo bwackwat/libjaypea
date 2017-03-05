@@ -74,7 +74,25 @@ power_state:
    mode: reboot
 """
 
-cloud_config = cloud_config.format(newdir, newkey, newuser, newpass)
+minimal_config = """
+#cloud-config
+
+runcmd:
+ - yum -y install wget
+ - mkdir -p {0}
+ - cd {0}
+ - wget https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/deploy-binaries.sh
+ - chmod +x {0}/deploy-binaries.sh
+ - {0}/deploy-binaries.sh {0} {1}
+
+power_state:
+   mode: reboot
+"""
+
+if(raw_input("Do you want to deploy a minimal server? (get binaries and configuration from build server) [y]") or "y" == "y"):
+	cloud_config = minimal_config.format(newdir, newuser)
+else:
+	cloud_config = cloud_config.format(newdir, newkey, newuser, newpass)
 print cloud_config
 
 print '-----------------------------------------------------------------'

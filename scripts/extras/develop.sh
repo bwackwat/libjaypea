@@ -14,8 +14,7 @@ xterm -geometry 100x5 \
 
 echo "--------------------------------------------------"
 
-wl="scripts/python/watcher.py cpp-source/examples/,artifacts/libjaypea.so,scripts/build-
-example.sh scripts/build-example.sh $1"
+wl="scripts/python/watcher.py cpp-source/examples/,artifacts/libjaypea.so,scripts/build-example.sh scripts/build-example.sh $1"
 
 echo $wl
 
