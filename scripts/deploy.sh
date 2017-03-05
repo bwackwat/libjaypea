@@ -51,8 +51,8 @@ firewall-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:top
 firewall-cmd --zone=public --permanent --add-port=10000/tcp
 firewall-cmd --reload
 
-# certbot certonly --standalone --tls-sni-01-port 10443 --domain test.bwackwat.com
-# cp /etc/letsencrypt/live/test.bwackwat.com/fullchain.pem artifacts/ssl.crt
-# cp /etc/letsencrypt/live/test.bwackwat.com/privkey.pem artifacts/ssl.key
+# certbot certonly --standalone --tls-sni-01-port 10443 --domain build.bwackwat.com
+# cp /etc/letsencrypt/live/build.bwackwat.com/fullchain.pem artifacts/ssl.crt
+# cp /etc/letsencrypt/live/build.bwackwat.com/privkey.pem artifacts/ssl.key
 
 chown -R $3:$3 $1
