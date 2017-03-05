@@ -31,9 +31,13 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 
 std::string SymmetricEncryptor::encrypt(std::string data){
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encryptor(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
+	
+	byte salt[CryptoPP::AES::BLOCKSIZE];
+	this->random_pool.GenerateBlock(salt, CryptoPP::AES::BLOCKSIZE);
+	std::string salts(reinterpret_cast<const char*>(salt), CryptoPP::AES::BLOCKSIZE);
 
 	std::string encrypted_data;
-	CryptoPP::StringSource pipeline1(data, true,
+	CryptoPP::StringSource pipeline1(salts + data, true,
 		new CryptoPP::StreamTransformationFilter(encryptor,
 		new CryptoPP::StringSink(encrypted_data)));
 
@@ -71,20 +75,18 @@ std::string SymmetricEncryptor::decrypt(std::string data){
 	CryptoPP::StringSource pipeline3(encrypted_data.substr(32), true,
 		new CryptoPP::StreamTransformationFilter(decryptor,
 		new CryptoPP::StringSink(decrypted_data)));
+		
+	decrypted_data.erase(0, CryptoPP::AES::BLOCKSIZE);
 	return decrypted_data;
 }
 
 std::string SymmetricEncryptor::encrypt(std::string data, int transaction){
-	byte salt[CryptoPP::AES::BLOCKSIZE];
-	this->random_pool.GenerateBlock(salt, CryptoPP::AES::BLOCKSIZE);
-	std::string salts(reinterpret_cast<const char*>(salt), CryptoPP::AES::BLOCKSIZE);
-
 	DEBUG("STRANS:" << static_cast<unsigned char>(transaction % 255))
 	DEBUG("STRANS:" << static_cast<char>(transaction % 255))
 	DEBUG("STRANS:" << static_cast<int>(transaction % 255))
-	DEBUG("STEXT:" << std::string(static_cast<char>(transaction % 255) + salts + data))
+	DEBUG("STEXT:" << std::string(static_cast<char>(transaction % 255) + data))
 
-	return this->encrypt(static_cast<char>(transaction % 255) + salts + data);
+	return this->encrypt(static_cast<char>(transaction % 255) + data);
 }
 
 std::string SymmetricEncryptor::decrypt(std::string data, int transaction){
@@ -99,7 +101,7 @@ std::string SymmetricEncryptor::decrypt(std::string data, int transaction){
 		PRINT("got " << static_cast<int>(new_data[0]) << " expected " << transaction)
 		throw CryptoPP::Exception(CryptoPP::BERDecodeErr::INVALID_DATA_FORMAT, "Bad transaction number.");
 	}
-	new_data.erase(0, CryptoPP::AES::BLOCKSIZE + 1);
+	new_data.erase(0, 1);
 	return new_data;
 }
 

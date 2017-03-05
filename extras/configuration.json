@@ -2,7 +2,7 @@
 	"hostname": "localhost",
 	"public_directory": "public-html/",
 	"port": "4096",
-	"postgresql_connection": "host=localhost dbname=test user=admin password=abc123",
+	"postgresql_connection": "dbname=webservice user=postgres password=abc123",
 	"ssl_certificate": "extras/self-signed-ssl/ssl.crt",
 	"ssl_private_key":"extras/self-signed-ssl/ssl.key",
 	"keyfile":"extras/keyfile"

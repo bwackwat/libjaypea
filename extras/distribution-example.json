@@ -2,7 +2,7 @@
 	"service-definitions":[{
 		"name": "http-redirecter",
 		"port": "10080",
-		"hostname": "test.bwackwat.com"
+		"hostname": "libjaypea.bwackwat.com"
 	},{
 		"name": "libjaypea-api",
 		"port": "10443",

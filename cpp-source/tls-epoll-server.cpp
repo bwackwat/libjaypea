@@ -79,12 +79,12 @@ void TlsEpollServer::close_client(int* fd, std::function<void(int*)> callback){
  */
 bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 	int len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
-	switch(SSL_get_error(this->client_ssl[fd], len)){
+	int err = SSL_get_error(this->client_ssl[fd], len);
+	switch(err){
 	case SSL_ERROR_NONE:
 		break;
 	default:
-		ERROR("SSL_write")
-		ERR_print_errors_fp(stdout);
+		ERROR("SSL_write: " << err)
 		return true;
 	}
 	if(len != static_cast<int>(data_length)){
@@ -138,7 +138,6 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 	if((this->client_ssl[*new_client_fd] = SSL_new(this->ctx)) == 0){
 		ERROR("SSL_new")
 		ERR_print_errors_fp(stdout);
-		*new_client_fd = -1;
 		return true;
 	}
 
@@ -148,7 +147,6 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 	if(SSL_accept(this->client_ssl[*new_client_fd]) <= 0){
 		ERROR("SSL_accept")
 		ERR_print_errors_fp(stdout);
-		*new_client_fd = -1;
 		return true;
 	}
 
