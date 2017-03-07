@@ -1,5 +1,4 @@
 #include "http-api.hpp"
-#include "shell.hpp"
 
 int main(int argc, char **argv){
 	std::string public_directory;
@@ -32,26 +31,9 @@ int main(int argc, char **argv){
 	std::mutex message_mutex;
 	std::deque<std::string> messages;
 	
-	Shell shell;
-	if(shell.sopen()){
-		ERROR("Shell failed.")
-		return -1;
-	}
-	
 	api.route("GET", "/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API!\",\n\"routes\":" + api.routes_string + "}";
 	});
-
-	api.route("POST", "/reboot", [&](JsonObject* json)->std::string{
-		if(json->GetStr("token") == password){
-			PRINT("REBOOT!")
-			if(write(shell.input, "reboot\n", 7) != 7){
-				throw std::runtime_error("Couldn't write to shell.");
-			}
-			return "{\"result\":\"Building.\"}";
-		}
-		return std::string();
-	}, {{"token", STRING}});
 
 	api.route("GET", "/message", [&](JsonObject*)->std::string{
 		JsonObject result(OBJECT);
