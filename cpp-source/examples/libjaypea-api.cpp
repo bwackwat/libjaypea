@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "http-api.hpp"
 
 int main(int argc, char **argv){
@@ -8,6 +10,7 @@ int main(int argc, char **argv){
 	bool http = false;
 	int cache_megabytes = 30;
 	std::string password = "abc123";
+	std::string services_path = "artifacts/services.json";
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
@@ -16,7 +19,17 @@ int main(int argc, char **argv){
 	Util::define_argument("http", &http);
 	Util::define_argument("cache_megabytes", &cache_megabytes, {"-cm"});
 	Util::define_argument("password", password, {"-pw"});
+	Util::define_argument("services_file", services_path, {"-sf"});
 	Util::parse_arguments(argc, argv, "This serves files over HTTP(S), and JSON (with or without HTTP headers) through an API.");
+
+	std::ifstream services_file(services_path);
+	JsonObject services;
+	if(services_file.is_open()){
+		std::string services_data((std::istreambuf_iterator<char>(services_file)), (std::istreambuf_iterator<char>()));
+		services.parse(services_data.c_str());
+		PRINT("LOADED SERVICES FILE: " << services_path)
+		PRINT(services.stringify(true));
+	}
 
 	EpollServer* server;
 	if(http){
@@ -59,9 +72,26 @@ int main(int argc, char **argv){
 		return "{\"result\":\"Message posted.\"}";
 	}, {{"message", STRING}});
 
-	api.route("GET", "/configuration", [&](JsonObject* json)->std::string{
-		return "{\"result\":\"dist\"}";
-	}, {{"token", STRING}});
+	api.route("GET", "/services", [&](JsonObject* json)->std::string{
+		if(json->GetStr("token") != password){
+			return std::string();
+		}
+		if(services.HasObj("hosts", ARRAY)){
+			for(auto& host : services.objectValues["hosts"]->arrayValues){
+				if(host->HasObj("name", STRING) &&
+				host->GetStr("name") == json->GetStr("host") &&
+				host->HasObj("services", ARRAY)){
+					for(auto& service : host->objectValues["services"]->arrayValues){
+						if(service->HasObj("name", STRING) &&
+						service->GetStr("name") == json->GetStr("service")){
+							return host->objectValues["services"]->stringify(true);
+						}
+					}
+				}
+			}
+		}
+		return std::string();
+	}, {{"token", STRING}, {"host", STRING}, {"service", STRING}});
 
 	api.start();
 }

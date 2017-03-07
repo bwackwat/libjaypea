@@ -83,6 +83,9 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 	switch(err){
 	case SSL_ERROR_NONE:
 		break;
+	case SSL_ERROR_WANT_WRITE:
+		PRINT("SSL_ERROR_WANT_WRITE: I think this happens because the data gets read and sent across too fast.")
+		return this->send(fd, data, data_length);
 	default:
 		ERROR("SSL_write: " << err)
 		return true;
