@@ -49,8 +49,8 @@ runcmd:
  - mkdir -p {0}
  - cd {0}
  - wget https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/deploy-minimal.sh
- - chmod +x {0}/deploy-minimal.sh
- - {0}/deploy-minimal.sh {0} {1} > {0}/deploy-minimal.log 2>&1
+ - chmod +x deploy-minimal.sh
+ - deploy-minimal.sh {0} {1} > deploy-minimal.log 2>&1
 """
 
 if(raw_input("Do you want to deploy a full server? (includes development tools) [n]: ") == "y"):
