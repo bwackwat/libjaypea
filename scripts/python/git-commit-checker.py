@@ -25,5 +25,5 @@ while True:
 			commit_file = "artifacts/" + branch + ".latest.commit"
 			with open(commit_file, "w") as f:
 				f.write(latest_commit)
-			print "Wrote " + latest_commit + " to " + commit_file
+			print "Wrote " + latest_commit + " to " + commit_file + " (" + datetime.datetime.now() + ")"
 	time.sleep(60)

@@ -1,6 +1,6 @@
 #!/bin/python
 
-import subprocess, os, sys, time, atexit, signal, psutil
+import subprocess, os, sys, time, atexit, signal, psutil, datetime
 
 if len(sys.argv) < 3:
 	print "Usage: watcher.py <directories and/or files to watch, comma separated> <command to terminate and repeat>"
@@ -69,7 +69,7 @@ while True:
 	while not changed:
 		if process and process.poll() is not None and not done:
 			done = True
-			print "DONE, WATCHING FOR CHANGES: " + sys.argv[1]
+			print "DONE"  + " (" + datetime.datetime.now() + "), WATCHING FOR CHANGES: " + sys.argv[1]
 		time.sleep(1)
 		if any_changed():
 			if process:

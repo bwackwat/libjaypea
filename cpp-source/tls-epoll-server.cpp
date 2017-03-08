@@ -76,17 +76,19 @@ void TlsEpollServer::close_client(int* fd, std::function<void(int*)> callback){
  * @brief Uses SSL_write instead of a regular write.
  *
  * See EpollServer::send
- */
+ */ 
 bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
-	int len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
-	int err = SSL_get_error(this->client_ssl[fd], len);
-	switch(err){
-	case SSL_ERROR_NONE:
-		break;
-	case SSL_ERROR_WANT_WRITE:
-		PRINT("SSL_ERROR_WANT_WRITE: I think this happens because the data gets read and sent across too fast.")
-		return this->send(fd, data, data_length);
-	default:
+	int len = 0, err = SSL_ERROR_WANT_WRITE, count = 0;
+	//TODO: A malicious SSL client could continously request the same bytes (keep ACKing received bytes).
+	std::cout << "SSL_write";
+	while(err == SSL_ERROR_WANT_WRITE){
+		std::cout << '.';
+		len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
+		err = SSL_get_error(this->client_ssl[fd], len);
+		count++;
+	}
+	std::cout << std::to_string(count) << std::endl;
+	if(err != SSL_ERROR_NONE){
 		ERROR("SSL_write: " << err)
 		return true;
 	}
@@ -94,10 +96,12 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 		ERROR("Invalid number of bytes written...")
 	}
 	this->write_counter[fd]++;
+	std::cout << std::endl;
 	return false;
 }
 
 ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length){
+	std::cout << "SSL_write";
 	return this->recv(fd, data, data_length, this->on_read);
 }
 

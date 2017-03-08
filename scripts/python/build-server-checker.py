@@ -2,7 +2,7 @@
 
 # TODO: Also check for configuration changes
 
-import sys, requests, time
+import sys, requests, time, datetime
 
 branch = sys.argv[1]
 print "Checking commit for latest build for branch " + branch
@@ -16,5 +16,5 @@ while True:
 		with open(commit_file, "w") as f:
 			f.write(latest_commit)
 		last_commit = latest_commit
-		print "Wrote " + latest_commit + " to " + commit_file
+		print "Wrote " + latest_commit + " to " + commit_file + " (" + datetime.datetime.now() + ")"
 	time.sleep(60)
