@@ -42,12 +42,12 @@ cd $1
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/build-server-checker.py
 chmod +x build-server-checker.py
 
-build-server-checker.py > build-server-checker.log 2>&1 &
+python -u build-server-checker.py > build-server-checker.log 2>&1 &
 
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/watcher.py
 chmod +x watcher.py
 
-watcher.py master.latest.commit "wget -N https://build.bwackwat.com/build/libjaypeap.so -O $1/artifacts/libjaypeap.so && wget -N https://build.bwackwat.com/build/libjaypea-api && chmod +x libjaypea-api && libjaypea-api --configuration-file libjaypea-api.configuration.json" > libjaypea-api-watcher.log 2>&1 &
+python -u watcher.py master.latest.commit "wget -N https://build.bwackwat.com/build/libjaypeap.so -O $1/artifacts/libjaypeap.so && wget -N https://build.bwackwat.com/build/libjaypea-api && chmod +x libjaypea-api && libjaypea-api --configuration-file libjaypea-api.configuration.json" > libjaypea-api-watcher.log 2>&1 &
 
 EOF
 
