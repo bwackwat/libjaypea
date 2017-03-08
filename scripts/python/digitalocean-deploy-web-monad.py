@@ -30,8 +30,6 @@ if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
 newname = raw_input("Enter a name for the droplet [" + newuser + "]: ") or newuser
 newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/libjaypea]: ") or "/opt/libjaypea"
 
-print '-----------------------------------------------------------------'
-
 cloud_config = """
 #cloud-config
 
@@ -40,10 +38,7 @@ runcmd:
  - mkdir -p {0}
  - git clone https://github.com/bwackwat/libjaypea {0}
  - chmod +x {0}/scripts/deploy.sh
- - {0}/scripts/deploy.sh {0} {1} {2}
-
-power_state:
-   mode: reboot
+ - {0}/scripts/deploy.sh {0} {1} {2} > {0}/deploy.log 2>&1
 """
 
 minimal_config = """
@@ -55,25 +50,21 @@ runcmd:
  - cd {0}
  - wget https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/deploy-minimal.sh
  - chmod +x {0}/deploy-minimal.sh
- - {0}/deploy-minimal.sh {0} {1}
-
-power_state:
-   mode: reboot
+ - {0}/deploy-minimal.sh {0} {1} > {0}/deploy-minimal.log 2>&1
 """
 
-if(raw_input("Do you want to deploy a minimal server? (get binaries and configuration from build server) [y]") or "y" == "y"):
-	cloud_config = minimal_config.format(newdir, newuser)
-else:
+if(raw_input("Do you want to deploy a full server? (includes development tools) [n]: ") == "y"):
 	cloud_config = cloud_config.format(newdir, newuser, newpass)
-print cloud_config
+else:
+	cloud_config = minimal_config.format(newdir, newuser)
 
+print '-----------------------------------------------------------------'
+print cloud_config
 print '-----------------------------------------------------------------'
 
 if(raw_input("Cloud init good to go? [y]: ") or "y" != "y"):
 	print "Exiting."
 	sys.exit(0)
-
-print '-----------------------------------------------------------------'
 
 newestimageid = 0
 images = rprint(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers))
