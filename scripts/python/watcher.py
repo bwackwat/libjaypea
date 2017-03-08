@@ -62,7 +62,7 @@ def any_changed():
 			return True
 	return False
 
-print "WATCHING FOR CHANGES(" + str(datetime.datetime.now()) + "): " + sys.argv[1]
+print "WATCHING FOR CHANGES (" + str(datetime.datetime.now()) + "): " + sys.argv[1]
 
 while True:
 	changed = False

@@ -89,7 +89,7 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 		ERROR("SSL_write: " << err)
 		return true;
 	}
-	PRINT("SSL_write: " << std::to_string(count))
+	PRINT("SSL_write: " << count)
 	if(len != static_cast<int>(data_length)){
 		ERROR("Invalid number of bytes written...")
 	}
@@ -110,9 +110,9 @@ ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length){
  */
 ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length,
 std::function<ssize_t(int, char*, size_t)> callback){
-	int len;
-	len = SSL_read(this->client_ssl[fd], data, static_cast<int>(data_length));
-	switch(SSL_get_error(this->client_ssl[fd], len)){
+	int len = SSL_read(this->client_ssl[fd], data, static_cast<int>(data_length));
+	int err = SSL_get_error(this->client_ssl[fd], len);
+	switch(err){
 	case SSL_ERROR_NONE:
 		break;
 	case SSL_ERROR_WANT_READ:
@@ -122,7 +122,7 @@ std::function<ssize_t(int, char*, size_t)> callback){
 		ERROR("server read zero")
 		return -2;
 	default:
-		ERROR("other SSL_read")
+		ERROR("other SSL_read " << err)
 		ERR_print_errors_fp(stdout);
 		return -1;
 	}

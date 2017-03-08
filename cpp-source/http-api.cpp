@@ -74,7 +74,7 @@ void HttpApi::start(){
 		std::string response = std::string();
 		
 		if(r_type == JSON){
-			char json_data[PACKET_LIMIT];
+			char json_data[PACKET_LIMIT + 32];
 			
 			auto get_body_callback = [&](int, const char*, size_t dl)->ssize_t{
 				PRINT("GOT JSON:" << json_data);
@@ -164,7 +164,7 @@ void HttpApi::start(){
 
 						int file_fd;
 						ssize_t len;
-						char buffer[BUFFER_LIMIT];
+						char buffer[BUFFER_LIMIT + 32];
 						if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
 							ERROR("open file")
 							this->file_cache_mutex.unlock();
@@ -199,7 +199,7 @@ void HttpApi::start(){
 						// Send the file read-buffer style
 						int file_fd;
 						ssize_t len;
-						char buffer[BUFFER_LIMIT];
+						char buffer[BUFFER_LIMIT + 32];
 						if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
 							ERROR("open file")
 							return 0;

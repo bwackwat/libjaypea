@@ -11,6 +11,7 @@ def get_commit(branch):
 		return json.loads(requests.get(url).content)["object"]["sha"]
 	except:
 		print "-" * 60
+		print str(datetime.datetime.now())
 		traceback.print_exc(file=sys.stdout)
 		print "-" * 60
 		return 0
@@ -26,4 +27,4 @@ while True:
 			with open(commit_file, "w") as f:
 				f.write(latest_commit)
 			print "Wrote " + latest_commit + " to " + commit_file + " (" + str(datetime.datetime.now()) + ")"
-	time.sleep(60)
+	time.sleep(120)
