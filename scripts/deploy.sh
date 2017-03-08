@@ -14,15 +14,18 @@ mkdir -p public-html/build
 scripts/setup-centos7.sh > logs/setup-centos7.log 2>&1
 
 touch artifacts/host-services.json
+touch artifacts/master.latest.commit
 
 cat <<EOF >> artifacts/start.sh
 #!/bin/bash
 
 cd $1
 
+scripts/extras/update-build.sh > logs/initial-update-build.log 2>&1
+
 scripts/python/git-commit-checker.py > logs/git-commit-checker.log 2>&1 &
 
-scripts/python/watcher.py artifacts/master.latest.commit "scripts/update-build.sh" > logs/master-commit-watcher.log 2>&1 &
+scripts/python/watcher.py artifacts/master.latest.commit "scripts/extras/update-build.sh" > logs/master-commit-watcher.log 2>&1 &
 
 scripts/python/watcher.py binaries/libjaypea-api,artifacts/host-services.json "binaries/libjaypea-api --port 10443" > logs/libjaypea-api-watcher.log 2>&1 &
 
