@@ -1,6 +1,6 @@
 #!/bin/python
 
-import requests, json, time, datetime
+import requests, json, time, datetime, traceback
 
 branches = ["master"]
 latest_commits = {}
@@ -10,9 +10,9 @@ def get_commit(branch):
 	try:
 		return json.loads(requests.get(url).content)["object"]["sha"]
 	except:
-		response = requests.get(url)
-		print response.content
-		print datetime.timedelta(milliseconds=response.headers["x-ratelimit-reset"])
+		print "-" * 60
+		traceback.print_exc(file=sys.stdout)
+		print "-" * 60
 		return 0
 
 while True:
@@ -25,5 +25,5 @@ while True:
 			commit_file = "artifacts/" + branch + ".latest.commit"
 			with open(commit_file, "w") as f:
 				f.write(latest_commit)
-			print "Wrote " + latest_commit + " to " + commit_file + " (" + datetime.datetime.now() + ")"
+			print "Wrote " + latest_commit + " to " + commit_file + " (" + str(datetime.datetime.now()) + ")"
 	time.sleep(60)

@@ -62,14 +62,14 @@ def any_changed():
 			return True
 	return False
 
-print "WATCHING FOR CHANGES: " + sys.argv[1]
+print "WATCHING FOR CHANGES(" + str(datetime.datetime.now()) + "): " + sys.argv[1]
 
 while True:
 	changed = False
 	while not changed:
 		if process and process.poll() is not None and not done:
 			done = True
-			print "DONE"  + " (" + datetime.datetime.now() + "), WATCHING FOR CHANGES: " + sys.argv[1]
+			print "DONE" + " (" + str(datetime.datetime.now()) + "), WATCHING FOR CHANGES: " + sys.argv[1]
 		time.sleep(1)
 		if any_changed():
 			if process:
