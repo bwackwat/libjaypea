@@ -1,6 +1,6 @@
 #!/bin/python
 
-import requests, json, time, datetime, traceback
+import requests, json, time, datetime, traceback, sys
 
 branches = ["master"]
 latest_commits = {}
