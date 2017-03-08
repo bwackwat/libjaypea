@@ -9,20 +9,23 @@ yum -y install epel-release
 yum -y install libpqxx cryptopp
 yum -y install firewalld fail2ban
 
-mkdir -p $1/artifacts/
-mkdir -p $1/public-html/
+cd $1
 
-git clone https://github.com/phc-hash-winner/argon2 $1/argon2
-cd $1/argon2
+git clone https://github.com/phc-hash-winner/argon2 argon2
+cd argon2
 make
 make install
+cd ../
 
-wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/extras/self-signed-ssl/ssl.crt -O $1/ssl.crt
-wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/extras/self-signed-ssl/ssl.key -O $1/ssl.key
+mkdir -p artifacts/
+mkdir -p public-html/
 
-echo "<h1>Hello, World!</h1>" >> $1/public-html/index.html
+wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/extras/self-signed-ssl/ssl.crt -O ssl.crt
+wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/extras/self-signed-ssl/ssl.key -O ssl.key
 
-cat <<EOF >> $1/libjaypea-api.configuration.json
+echo "<h1>Hello, World!</h1>" >> public-html/index.html
+
+cat <<EOF >> libjaypea-api.configuration.json
 {
 	"ssl_cerificate":"ssl.crt",
 	"ssl_private_key":"ssl.key",
@@ -31,22 +34,24 @@ cat <<EOF >> $1/libjaypea-api.configuration.json
 }
 EOF
 
-cat <<EOF >> $1/start.sh
+cat <<EOF >> start.sh
 #!/bin/bash
 
 cd $1
 
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/build-server-checker.py
+chmod +x build-server-checker.py
 
-python build-server-checker.py > build-server-checker.log 2>&1 &
+build-server-checker.py > build-server-checker.log 2>&1 &
 
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/watcher.py
+chmod +x watcher.py
 
-python watcher.py master.latest.commit "wget -N https://build.bwackwat.com/build/libjaypeap.so -O $1/artifacts/libjaypeap.so && wget -N https://build.bwackwat.com/build/libjaypea-api && libjaypea-api --configuration-file libjaypea-api.configuration.json" > libjaypea-api-watcher.log 2>&1 &
+watcher.py master.latest.commit "wget -N https://build.bwackwat.com/build/libjaypeap.so -O $1/artifacts/libjaypeap.so && wget -N https://build.bwackwat.com/build/libjaypea-api && chmod +x libjaypea-api && libjaypea-api --configuration-file libjaypea-api.configuration.json" > libjaypea-api-watcher.log 2>&1 &
 
 EOF
 
-chmod +x $1/start.sh
+chmod +x start.sh
 
 echo -e "\n@reboot deploy $1/start.sh\n" >> /etc/crontab
 

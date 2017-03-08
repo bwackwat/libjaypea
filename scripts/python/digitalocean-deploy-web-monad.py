@@ -30,34 +30,6 @@ if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
 newname = raw_input("Enter a name for the droplet [" + newuser + "]: ") or newuser
 newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/libjaypea]: ") or "/opt/libjaypea"
 
-# Replaced by distribution JSON details.
-# newhost = raw_input("Enter a hostname [bwackwat.com]: ") or "bwackwat.com"
-
-newkey = raw_input("Enter a 96 byte key for secure communication [pads random letters]: \n")
-
-newkeylen = len(newkey)
-if newkeylen < 96:
-	newkey += ''.join(random.choice(string.ascii_letters) for x in range(96 - newkeylen))
-	print "Appended " + str(96 - newkeylen) + " characters to the key."
-
-newkeyfile = scriptdir + "/../../artifacts/" + newname + ".deploy.keyfile"
-with open(newkeyfile, "w") as f:
-	f.write(newkey)
-
-print newkeyfile + " can be used with distributed-client."
-# print "You can then use a local client to communciate."
-
-print '-----------------------------------------------------------------'
-
-with open(scriptdir + "/../deploy.sh") as f:
-	print f.read()
-
-print '-----------------------------------------------------------------'
-
-if(raw_input("Deploy script good to go? [y]: ") or "y" != "y"):
-	print "Exiting."
-	sys.exit(0)
-
 print '-----------------------------------------------------------------'
 
 cloud_config = """
@@ -66,9 +38,9 @@ cloud_config = """
 runcmd:
  - yum -y install git
  - mkdir -p {0}
- - git clone -b develop https://github.com/bwackwat/libjaypea {0}
+ - git clone https://github.com/bwackwat/libjaypea {0}
  - chmod +x {0}/scripts/deploy.sh
- - {0}/scripts/deploy.sh {0} "{1}" {2} {3}
+ - {0}/scripts/deploy.sh {0} {1} {2}
 
 power_state:
    mode: reboot
@@ -81,9 +53,9 @@ runcmd:
  - yum -y install wget
  - mkdir -p {0}
  - cd {0}
- - wget https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/deploy-binaries.sh
- - chmod +x {0}/deploy-binaries.sh
- - {0}/deploy-binaries.sh {0} {1}
+ - wget https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/deploy-minimal.sh
+ - chmod +x {0}/deploy-minimal.sh
+ - {0}/deploy-minimal.sh {0} {1}
 
 power_state:
    mode: reboot
@@ -92,7 +64,7 @@ power_state:
 if(raw_input("Do you want to deploy a minimal server? (get binaries and configuration from build server) [y]") or "y" == "y"):
 	cloud_config = minimal_config.format(newdir, newuser)
 else:
-	cloud_config = cloud_config.format(newdir, newkey, newuser, newpass)
+	cloud_config = cloud_config.format(newdir, newuser, newpass)
 print cloud_config
 
 print '-----------------------------------------------------------------'

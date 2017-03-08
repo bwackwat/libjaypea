@@ -1,7 +1,5 @@
 #!/bin/python
 
-# TODO: Also check for configuration changes
-
 import sys, requests, time, datetime
 
 branch = sys.argv[1]

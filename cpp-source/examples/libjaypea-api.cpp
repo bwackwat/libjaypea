@@ -10,7 +10,7 @@ int main(int argc, char **argv){
 	bool http = false;
 	int cache_megabytes = 30;
 	std::string password = "abc123";
-	std::string services_path = "artifacts/services.json";
+	std::string services_path = "artifacts/host-services.json";
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
@@ -72,23 +72,13 @@ int main(int argc, char **argv){
 		return "{\"result\":\"Message posted.\"}";
 	}, {{"message", STRING}});
 
-	api.route("GET", "/services", [&](JsonObject* json)->std::string{
+	api.route("GET", "/host-service", [&](JsonObject* json)->std::string{
 		if(json->GetStr("token") != password){
 			return std::string();
 		}
-		if(services.HasObj("hosts", ARRAY)){
-			for(auto& host : services.objectValues["hosts"]->arrayValues){
-				if(host->HasObj("name", STRING) &&
-				host->GetStr("name") == json->GetStr("host") &&
-				host->HasObj("services", ARRAY)){
-					for(auto& service : host->objectValues["services"]->arrayValues){
-						if(service->HasObj("name", STRING) &&
-						service->GetStr("name") == json->GetStr("service")){
-							return host->objectValues["services"]->stringify(true);
-						}
-					}
-				}
-			}
+		if(services.HasObj(json->GetStr("host"), OBJECT) &&
+		services.objectValues[json->GetStr("host")]->objectValues.count(json->GetStr("service"))){
+			return services.objectValues[json->GetStr("host")]->objectValues[json->GetStr("service")]->stringify(true);
 		}
 		return std::string();
 	}, {{"token", STRING}, {"host", STRING}, {"service", STRING}});

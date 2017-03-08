@@ -80,23 +80,20 @@ void TlsEpollServer::close_client(int* fd, std::function<void(int*)> callback){
 bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 	int len = 0, err = SSL_ERROR_WANT_WRITE, count = 0;
 	//TODO: A malicious SSL client could continously request the same bytes (keep ACKing received bytes).
-	std::cout << "SSL_write";
 	while(err == SSL_ERROR_WANT_WRITE){
-		std::cout << '.';
 		len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
 		err = SSL_get_error(this->client_ssl[fd], len);
 		count++;
 	}
-	std::cout << std::to_string(count) << std::endl;
 	if(err != SSL_ERROR_NONE){
 		ERROR("SSL_write: " << err)
 		return true;
 	}
+	PRINT("SSL_write: " << std::to_string(count))
 	if(len != static_cast<int>(data_length)){
 		ERROR("Invalid number of bytes written...")
 	}
 	this->write_counter[fd]++;
-	std::cout << std::endl;
 	return false;
 }
 
