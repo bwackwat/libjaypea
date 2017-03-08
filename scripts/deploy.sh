@@ -22,11 +22,11 @@ cd $1
 
 scripts/python/git-commit-checker.py > logs/git-commit-checker.log 2>&1 &
 
-scripts/python/watcher.py artifacts/master.latest.commit "scripts/update-build.sh > logs/update-build.log 2>&1" > logs/master-commit-watcher.log 2>&1 &
+scripts/python/watcher.py artifacts/master.latest.commit "scripts/update-build.sh" > logs/master-commit-watcher.log 2>&1 &
 
-scripts/python/watcher.py binaries/libjaypea-api,artifacts/host-services.json "binaries/libjaypea-api --port 10443 > logs/libjaypea-api.log 2>&1" > logs/libjaypea-api-watcher.log 2>&1 &
+scripts/python/watcher.py binaries/libjaypea-api,artifacts/host-services.json "binaries/libjaypea-api --port 10443" > logs/libjaypea-api-watcher.log 2>&1 &
 
-scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --port 10080 > logs/http-redirecter.log 2>&1" > logs/http-redirecter-watcher.log 2>&1 &
+scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --port 10080" > logs/http-redirecter-watcher.log 2>&1 &
 
 EOF
 
