@@ -98,7 +98,6 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 }
 
 ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length){
-	std::cout << "SSL_write";
 	return this->recv(fd, data, data_length, this->on_read);
 }
 
@@ -116,11 +115,15 @@ std::function<ssize_t(int, char*, size_t)> callback){
 	case SSL_ERROR_NONE:
 		break;
 	case SSL_ERROR_WANT_READ:
+		PRINT("WANT READ")
 		// Nothing to read, nonblocking mode.
 		return 0;
 	case SSL_ERROR_ZERO_RETURN:
 		ERROR("server read zero")
 		return -2;
+	case SSL_ERROR_SYSCALL:
+		perror("SSL_ERROR_SYSCALL");
+		ERR_print_errors_fp(stdout);
 	default:
 		ERROR("other SSL_read " << err)
 		ERR_print_errors_fp(stdout);
