@@ -46,7 +46,7 @@ cat <<EOF >> start.sh
 
 cd $1
 
-python -u watcher.py master.latest.commit "wget -N https://build.bwackwat.com/build/libjaypeap.so -O artifacts/libjaypeap.so && wget -N https://build.bwackwat.com/api/host-service?token=abc123&host=dev.bwackwat.com&service=libjaypea-api -O libjaypea-api.configuration.json && wget -N https://build.bwackwat.com/build/libjaypea-api && chmod +x libjaypea-api && wget -N https://build.bwackwat.com/api/host-service?token=abc123&host=dev.bwackwat.com&service=http-redirecter -O http-redirecter.configuration.json && wget -N https://build.bwackwat.com/build/http-redirecter && chmod +x http-redirecter" > master-commit-watcher.log 2>&1 &
+python -u watcher.py master.latest.commit "wget -N https://build.bwackwat.com/build/libjaypeap.so -O artifacts/libjaypeap.so && wget -N https://build.bwackwat.com/api/host-service?token=abc123%26host=dev.bwackwat.com%26service=libjaypea-api -O libjaypea-api.configuration.json && wget -N https://build.bwackwat.com/build/libjaypea-api && chmod +x libjaypea-api && wget -N https://build.bwackwat.com/api/host-service?token=abc123%26host=dev.bwackwat.com%26service=http-redirecter -O http-redirecter.configuration.json && wget -N https://build.bwackwat.com/build/http-redirecter && chmod +x http-redirecter" > master-commit-watcher.log 2>&1 &
 
 python -u watcher.py libjaypea-api "libjaypea-api --configuration-file libjaypea-api.configuration.json" > libjaypea-api-watcher.log 2>&1 &
 	

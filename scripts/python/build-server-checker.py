@@ -21,5 +21,5 @@ while True:
 		with open(commit_file, "w") as f:
 			f.write(latest_commit)
 		last_commit = latest_commit
-		print "Wrote " + latest_commit + " to " + commit_file + " (" + datetime.datetime.now() + ")"
+		print "Wrote " + latest_commit + " to " + commit_file + " (" + str(datetime.datetime.now()) + ")"
 	time.sleep(60)
