@@ -2,6 +2,7 @@
 
 cd $(dirname "${BASH_SOURCE[0]}")/../
 
+# openssl req -x509 -new -nodes -keyout extras/self-signed-ssl/ssl.key -out extras/self-signed-ssl/ssl.crt
 
 yum -y install epel-release
 

@@ -89,7 +89,9 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 		ERROR("SSL_write: " << err)
 		return true;
 	}
-	PRINT("SSL_write: " << count)
+	if(count != 1){
+		PRINT("SSL_write: " << count)
+	}
 	if(len != static_cast<int>(data_length)){
 		ERROR("Invalid number of bytes written...")
 	}

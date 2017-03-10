@@ -81,7 +81,6 @@ public:
 	std::string create_frame(const char* data, size_t data_length){
 		//char frame[data_length + 10];
 		std::stringstream frame;
-		char ssize[2] = {0, 0};
 		char lsize[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 		size_t offset;
 

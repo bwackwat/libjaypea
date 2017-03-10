@@ -45,7 +45,7 @@ int main(int argc, char **argv){
 	std::deque<std::string> messages;
 	
 	api.route("GET", "/", [&](JsonObject*)->std::string{
-		return "{\"result\":\"Welcome to the API! V3\",\n\"routes\":" + api.routes_string + "}";
+		return "{\"result\":\"Welcome to the API! V1\",\n\"routes\":" + api.routes_string + "}";
 	});
 
 	api.route("GET", "/message", [&](JsonObject*)->std::string{
