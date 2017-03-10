@@ -119,18 +119,19 @@ void HttpApi::start(){
 					return -1;
 				}
 				PRINT("DELI:" << response)
-
-				size_t buffer_size = BUFFER_LIMIT;
-				size_t offset = 0;
-				while(buffer_size == BUFFER_LIMIT){
-					if(offset + buffer_size > cached_file->data_length){
-						// Send final bytes.
-						buffer_size = cached_file->data_length % BUFFER_LIMIT;
+				if(r_obj.GetStr("method") != "HEAD"){
+					size_t buffer_size = BUFFER_LIMIT;
+					size_t offset = 0;
+					while(buffer_size == BUFFER_LIMIT){
+						if(offset + buffer_size > cached_file->data_length){
+							// Send final bytes.
+							buffer_size = cached_file->data_length % BUFFER_LIMIT;
+						}
+						if(this->server->send(fd, cached_file->data + offset, buffer_size)){
+							return -1;
+						}
+						offset += buffer_size;
 					}
-					if(this->server->send(fd, cached_file->data + offset, buffer_size)){
-						return -1;
-					}
-					offset += buffer_size;
 				}
 				PRINT("FILE CACHED |" << clean_route)
 			}else{
@@ -153,75 +154,77 @@ void HttpApi::start(){
 					}
 					PRINT("DELI:" << response)
 
-					if(this->file_cache_remaining_bytes > route_stat.st_size && this->file_cache_mutex.try_lock()){
-						// Stick the file into the cache AND send it
-						CachedFile* cached_file = new CachedFile();
-						cached_file->data_length = static_cast<size_t>(route_stat.st_size);
-						cached_file->data = new char[route_stat.st_size];
-						int offset = 0;
-						this->file_cache[clean_route] = cached_file;
-						this->file_cache_remaining_bytes -= cached_file->data_length;
+					if(r_obj.GetStr("method") != "HEAD"){
+						if(this->file_cache_remaining_bytes > route_stat.st_size && this->file_cache_mutex.try_lock()){
+							// Stick the file into the cache AND send it
+							CachedFile* cached_file = new CachedFile();
+							cached_file->data_length = static_cast<size_t>(route_stat.st_size);
+							cached_file->data = new char[route_stat.st_size];
+							int offset = 0;
+							this->file_cache[clean_route] = cached_file;
+							this->file_cache_remaining_bytes -= cached_file->data_length;
 
-						int file_fd;
-						ssize_t len;
-						char buffer[BUFFER_LIMIT + 32];
-						if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
-							ERROR("open file")
-							this->file_cache_mutex.unlock();
-							return 0;
-						}
-						while(file_fd > 0){
-							if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-								ERROR("read file")
-							this->file_cache_mutex.unlock();
-								return 0;
-							}
-							buffer[len] = 0;
-							// Only different line (copy into memory)
-							std::memcpy(cached_file->data + offset, buffer, static_cast<size_t>(len));
-							offset += len;
-							if(this->server->send(fd, buffer, static_cast<size_t>(len))){
+							int file_fd;
+							ssize_t len;
+							char buffer[BUFFER_LIMIT + 32];
+							if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
+								ERROR("open file")
 								this->file_cache_mutex.unlock();
-								return -1;
-							}
-							if(len < BUFFER_LIMIT){
-								break;
-							}
-						}
-						if(close(file_fd) < 0){
-							ERROR("close file")
-							this->file_cache_mutex.unlock();
-							return 0;
-						}
-						PRINT("FILE DONE AND CACHED |" << clean_route)
-						this->file_cache_mutex.unlock();
-					}else{
-						// Send the file read-buffer style
-						int file_fd;
-						ssize_t len;
-						char buffer[BUFFER_LIMIT + 32];
-						if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
-							ERROR("open file")
-							return 0;
-						}
-						while(file_fd > 0){
-							if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-								ERROR("read file")
 								return 0;
 							}
-							buffer[len] = 0;
-							if(this->server->send(fd, buffer, static_cast<size_t>(len))){
-								return -1;
+							while(file_fd > 0){
+								if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
+									ERROR("read file")
+								this->file_cache_mutex.unlock();
+									return 0;
+								}
+								buffer[len] = 0;
+								// Only different line (copy into memory)
+								std::memcpy(cached_file->data + offset, buffer, static_cast<size_t>(len));
+								offset += len;
+								if(this->server->send(fd, buffer, static_cast<size_t>(len))){
+									this->file_cache_mutex.unlock();
+									return -1;
+								}
+								if(len < BUFFER_LIMIT){
+									break;
+								}
 							}
-							if(len < BUFFER_LIMIT){
-								break;
+							if(close(file_fd) < 0){
+								ERROR("close file")
+								this->file_cache_mutex.unlock();
+								return 0;
 							}
+							PRINT("FILE DONE AND CACHED |" << clean_route)
+							this->file_cache_mutex.unlock();
+						}else{
+							// Send the file read-buffer style
+							int file_fd;
+							ssize_t len;
+							char buffer[BUFFER_LIMIT + 32];
+							if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
+								ERROR("open file")
+								return 0;
+							}
+							while(file_fd > 0){
+								if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
+									ERROR("read file")
+									return 0;
+								}
+								buffer[len] = 0;
+								if(this->server->send(fd, buffer, static_cast<size_t>(len))){
+									return -1;
+								}
+								if(len < BUFFER_LIMIT){
+									break;
+								}
+							}
+							if(close(file_fd) < 0){
+								ERROR("close file")
+								return 0;
+							}
+							PRINT("FILE DONE |" << clean_route)
 						}
-						if(close(file_fd) < 0){
-							ERROR("close file")
-							return 0;
-						}
-						PRINT("FILE DONE |" << clean_route)
 					}
 				}else{
 					PRINT("Something other than a regular file was requested...")

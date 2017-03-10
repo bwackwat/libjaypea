@@ -124,6 +124,7 @@ std::function<ssize_t(int, char*, size_t)> callback){
 	case SSL_ERROR_SYSCALL:
 		perror("SSL_ERROR_SYSCALL");
 		ERR_print_errors_fp(stdout);
+		return -3;
 	default:
 		ERROR("other SSL_read " << err)
 		ERR_print_errors_fp(stdout);

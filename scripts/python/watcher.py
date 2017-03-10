@@ -7,22 +7,10 @@ if len(sys.argv) < 3:
 	sys.exit(1)
 
 watch = sys.argv[1].split(",")
-directories = []
-files = []
-for item in watch:
-	if os.path.isdir(item):
-		directories.append(item)
-	elif os.path.isfile(item):
-		files.append(item)
-	else:
-		print "BAD DIRECTORY OR FILE: " + item
 
-print "DIRECTORIES: " + ", ".join(directories)
-print "FILES: " + ", ".join(files)
 print "COMMAND: " + sys.argv[2]
-
-process = None
-done = False;
+process = subprocess.Popen(sys.argv[2], shell=True, stdout=sys.stdout, stderr=sys.stderr)
+done = False
 
 # "&&" within the command spawns children. Must vanquish all.
 def stop_process():
@@ -54,12 +42,13 @@ def any_changed():
 			if not file.endswith(".swp") and file_changed(dir + file):
 				return True
 		return False
-	for dir in directories:
-		if dir_changed(dir):
-			return True
-	for file in files:
-		if file_changed(file):
-			return True
+	for item in watch:
+		if os.path.isfile(item):
+			if file_changed(item):
+				return True
+		elif os.path.isdir(item):
+			if dir_changed(item):
+				return True
 	return False
 
 print "WATCHING FOR CHANGES (" + str(datetime.datetime.now()) + "): " + sys.argv[1]

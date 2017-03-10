@@ -339,6 +339,9 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 
 	if(!strict_compare_inequal(request, "GET /", 5)){
 		it += 5;
+	}else if(!strict_compare_inequal(request, "HEAD /", 6)){
+		request_obj->objectValues["method"]->stringValue = "HEAD";
+		it += 6;
 	}else if(!strict_compare_inequal(request, "POST /", 6)){
 		request_obj->objectValues["method"]->stringValue = "POST";
 		it += 6;
