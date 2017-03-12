@@ -32,7 +32,7 @@ def any_changed():
 		else:
 			if filetime[file] != mtime:
 				filetime[file] = mtime
-				print "CHANGE: " + file
+				print "CHANGE" + " (" + str(datetime.datetime.now()) + "): " + file
 				return True
 		return False
 	def dir_changed(dir):

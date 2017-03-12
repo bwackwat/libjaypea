@@ -1,5 +1,18 @@
 # TODO
 
+## 3/12/2017
+
+1. Use const for unchanging methods.
+2. Use PVS Studio for static analysis.
+3. Create a pure interface for the TCP server/endpoint.
+4. Verify UTF-8 works across JPON usage.
+5. Setup API rate limiting via IP tracking.
+6. Record code activity for statistical purposes. Record in DB.
+7. Create base DB interface, backup to simple C++ DB.
+8. Use separate key for symmetric encyption HMAC.
+9. Dump distributed server code.
+10. Create integration tests for continuously integrating code. Libjaypea becomes a build server by default?
+
 ## 2/4/2017
 
 1. Comd block-size based reading doesn't read newlines? Something is up.
