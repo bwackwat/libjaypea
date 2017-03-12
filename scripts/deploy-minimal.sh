@@ -35,6 +35,9 @@ chmod +x build-server-checker.py
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/watcher.py
 chmod +x watcher.py
 
+wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/extras/update-deployment.sh
+chmod +x update-deployment.sh
+
 echo "<h1>Hello, World!</h1>" >> public-html/index.html
 
 touch libjaypea-api.configuration.json
@@ -46,7 +49,7 @@ cat <<EOF >> start.sh
 
 cd $1
 
-python -u watcher.py master.latest.commit "wget -N https://build.bwackwat.com/build/libjaypeap.so -O artifacts/libjaypeap.so && wget -N https://build.bwackwat.com/api/host-service?token=abc123%26host=dev.bwackwat.com%26service=libjaypea-api -O libjaypea-api.configuration.json && rm libjaypea-api && wget -N https://build.bwackwat.com/build/libjaypea-api && wget -N https://build.bwackwat.com/api/host-service?token=abc123%26host=dev.bwackwat.com%26service=http-redirecter -O http-redirecter.configuration.json && rm http-redirecter && wget -N https://build.bwackwat.com/build/http-redirecter && touch ready.lock" > master-commit-watcher.log 2>&1 &
+python -u watcher.py master.latest.commit "update-deployment.sh" > master-commit-watcher.log 2>&1 &
 
 python -u watcher.py ready.lock "chmod +x libjaypea-api && ./libjaypea-api --configuration_file libjaypea-api.configuration.json" > libjaypea-api-watcher.log 2>&1 &
 	
