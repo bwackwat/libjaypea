@@ -49,13 +49,13 @@ cat <<EOF >> start.sh
 
 cd $1
 
-python -u watcher.py master.latest.commit "update-deployment.sh" > master-commit-watcher.log 2>&1 &
+python -u watcher.py libjaypea.master.latest.commit "./update-deployment.sh" > master-commit-watcher.log 2>&1 &
 
 python -u watcher.py ready.lock "chmod +x libjaypea-api && ./libjaypea-api --configuration_file libjaypea-api.configuration.json" > libjaypea-api-watcher.log 2>&1 &
 	
 python -u watcher.py ready.lock "chmod +x http-redirecter && ./http-redirecter --configuration_file http-redirecter.configuration.json" > http-redirecter-watcher.log 2>&1 &
 
-python -u build-server-checker.py master > build-server-checker.log 2>&1 &
+python -u build-server-checker.py libjaypea master > build-server-checker.log 2>&1 &
 
 EOF
 

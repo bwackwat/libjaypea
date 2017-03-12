@@ -93,5 +93,3 @@ newdroplet = rprint(requests.post("https://api.digitalocean.com/v2/droplets", he
 }))
 
 print '-----------------------------------------------------------------'
-
-print "Deployed! Check your DigitalOcean dashboard for the new droplet."
