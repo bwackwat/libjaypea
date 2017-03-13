@@ -8,4 +8,6 @@ scripts/build-example.sh PROD
 
 cp -f artifacts/libjaypeap.so public-html/build/
 cp -f binaries/* public-html/build/
-cp -f artifacts/master.latest.commit public-html/build/
+
+# TODO: Only master for now, develop is important, however.
+cp -f artifacts/libjaypea.master.latest.commit public-html/build/

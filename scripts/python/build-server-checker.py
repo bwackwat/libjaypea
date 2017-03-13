@@ -4,8 +4,8 @@ import sys, requests, time, datetime, traceback
 
 branch = sys.argv[1]
 print "Checking commit for latest build for branch " + branch
-commit_file = branch + ".latest.commit"
-url = "https://build.bwackwat.com/build/" + branch + ".latest.commit"
+commit_file = "libjaypea." + branch + ".latest.commit"
+url = "https://build.bwackwat.com/build/libjaypea." + branch + ".latest.commit"
 last_commit = ""
 
 while True:

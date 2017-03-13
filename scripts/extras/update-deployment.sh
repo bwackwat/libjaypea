@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# Update scripts
+
+# TODO: File updates itself, does this work?
+wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/extras/update-deployment.sh
+chmod +x update-deployment.sh
+
+wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/build-server-checker.py
+chmod +x build-server-checker.py
+
+wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/watcher.py
+chmod +x watcher.py
+
+# Update library, binaries, and configuration.
+
 wget -N https://build.bwackwat.com/build/libjaypeap.so -O artifacts/libjaypeap.so
 
 wget -N https://build.bwackwat.com/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=libjaypea-api -O libjaypea-api.configuration.json

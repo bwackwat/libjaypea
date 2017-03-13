@@ -55,7 +55,7 @@ python -u watcher.py ready.lock "chmod +x libjaypea-api && ./libjaypea-api --con
 	
 python -u watcher.py ready.lock "chmod +x http-redirecter && ./http-redirecter --configuration_file http-redirecter.configuration.json" > http-redirecter-watcher.log 2>&1 &
 
-python -u build-server-checker.py libjaypea master > build-server-checker.log 2>&1 &
+python -u build-server-checker.py master > build-server-checker.log 2>&1 &
 
 EOF
 
