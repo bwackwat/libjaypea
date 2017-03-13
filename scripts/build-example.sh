@@ -26,13 +26,11 @@ build tcp-poll-server
 build ponal-server
 build comd "-lcryptopp"
 build chat-server
-build distributed-server "-lcryptopp"
 
 build tcp-poll-client
 build ponal-client
 build com "-lcryptopp"
 build chat-client
-build distributed-client "-lcryptopp"
 
 build libjaypea-api
 build bwackwat "-lcryptopp"

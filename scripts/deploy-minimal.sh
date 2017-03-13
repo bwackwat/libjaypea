@@ -42,7 +42,7 @@ echo "<h1>Hello, World!</h1>" >> public-html/index.html
 
 touch libjaypea-api.configuration.json
 touch http-redirecter.configuration.json
-touch master.latest.commit
+touch libjaypea.master.latest.commit
 
 cat <<EOF >> start.sh
 #!/bin/bash

@@ -2,10 +2,6 @@
 
 # Update scripts
 
-# TODO: File updates itself, does this work?
-wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/extras/update-deployment.sh
-chmod +x update-deployment.sh
-
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/build-server-checker.py
 chmod +x build-server-checker.py
 
