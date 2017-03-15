@@ -55,7 +55,7 @@ int main(int argc, char **argv){
 	api.set_file_cache_size(cache_megabytes);
 
 	api.route("GET", "/", [&](JsonObject*)->std::string{
-		return "{\"result\":\"Welcome to the API V4!\",\n\"routes\":" + api.routes_string + "}";
+		return "{\"result\":\"Welcome to the API V15!\",\n\"routes\":" + api.routes_string + "}";
 	});
 
 	/*
