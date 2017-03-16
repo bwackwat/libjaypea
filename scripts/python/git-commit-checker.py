@@ -11,7 +11,15 @@ name = sys.argv[2]
 branches = ["master"]
 latest_commits = {}
 
-def get_commit(branch):
+for branch in branches:
+	commit_file = "artifacts/" + name + "." + branch + ".latest.commit"
+	try:
+		with open(commit_file, "r") as f:
+			latest_commits[branch] = f.read()
+	except:
+		pass
+
+def get_latest_commit(branch):
 	url = "https://api.github.com/repos/" + owner + "/" + name + "/git/refs/heads/" + branch
 	try:
 		return json.loads(requests.get(url).content)["object"]["sha"]
@@ -24,13 +32,12 @@ def get_commit(branch):
 
 while True:
 	for branch in branches:
-		latest_commit = get_commit(branch)
-		if latest_commit == 0:
+		new_commit = get_latest_commit(branch)
+		if new_commit == 0 || new_commit == latest_commits[branch]:
 			continue
-		if branch not in latest_commits or latest_commits[branch] != latest_commit:
-			latest_commits[branch] = latest_commit
-			commit_file = "artifacts/" + name + "." + branch + ".latest.commit"
-			with open(commit_file, "w") as f:
-				f.write(latest_commit)
-			print "Wrote " + latest_commit + " to " + commit_file + " (" + str(datetime.datetime.now()) + ")"
+		commit_file = "artifacts/" + name + "." + branch + ".latest.commit"
+		with open(commit_file, "w") as f:
+			f.write(new_commit)
+		print "Wrote " + new_commit + " to " + commit_file + " (" + str(datetime.datetime.now()) + ")"
+		latest_commits[branch] = new_commit
 	time.sleep(120)

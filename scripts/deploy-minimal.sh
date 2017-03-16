@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 2 ]; then
-	echo "Usage: <install directory> <username>"
+	echo "Usage: deploy-minimal.sh <install directory> <username>"
 	exit
 fi
 
@@ -29,33 +29,48 @@ mkdir -p public-html/
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/extras/self-signed-ssl/ssl.crt -O ssl.crt
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/extras/self-signed-ssl/ssl.key -O ssl.key
 
+echo "<h1>Hello, World!</h1>" >> public-html/index.html
+
+cat <<EOF >> update-deployment.sh
+#!/bin/bash
+
+# Update scripts
+
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/build-server-checker.py
 chmod +x build-server-checker.py
 
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/watcher.py
 chmod +x watcher.py
 
-wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/extras/update-deployment.sh
-chmod +x update-deployment.sh
+# Update library, binaries, and configuration.
 
-echo "<h1>Hello, World!</h1>" >> public-html/index.html
+wget -N https://build.bwackwat.com/build/libjaypeap.so -O artifacts/libjaypeap.so
 
-touch libjaypea-api.configuration.json
-touch http-redirecter.configuration.json
-touch libjaypea.master.latest.commit
+wget -N https://build.bwackwat.com/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=libjaypea-api -O libjaypea-api.configuration.json
+rm libjaypea-api
+wget -N https://build.bwackwat.com/build/libjaypea-api
+chmod +x libjaypea-api
+
+wget -N https://build.bwackwat.com/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=http-redirecter -O http-redirecter.configuration.json
+rm http-redirecter
+wget -N https://build.bwackwat.com/build/http-redirecter
+chmod +x http-redirecter
+
+touch ready.lock
+EOF
 
 cat <<EOF >> start.sh
 #!/bin/bash
 
 cd $1
 
+python -u build-server-checker.py master > build-server-checker.log 2>&1 &
+
 python -u watcher.py libjaypea.master.latest.commit "./update-deployment.sh" > master-commit-watcher.log 2>&1 &
 
-python -u watcher.py ready.lock "chmod +x libjaypea-api && ./libjaypea-api --configuration_file libjaypea-api.configuration.json" > libjaypea-api-watcher.log 2>&1 &
-	
-python -u watcher.py ready.lock "chmod +x http-redirecter && ./http-redirecter --configuration_file http-redirecter.configuration.json" > http-redirecter-watcher.log 2>&1 &
+python -u watcher.py ready.lock "./libjaypea-api --configuration_file libjaypea-api.configuration.json" > libjaypea-api-watcher.log 2>&1 &
 
-python -u build-server-checker.py master > build-server-checker.log 2>&1 &
+python -u watcher.py ready.lock "./http-redirecter --configuration_file http-redirecter.configuration.json" > http-redirecter-watcher.log 2>&1 &
 
 EOF
 
