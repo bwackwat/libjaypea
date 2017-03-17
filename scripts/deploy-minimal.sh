@@ -87,5 +87,5 @@ firewall-cmd --reload
 # cp /etc/letsencrypt/live/dev.bwackwat.com/fullchain.pem ssl.crt
 # cp /etc/letsencrypt/live/dev.bwackwat.com/privkey.pem ssl.key
 
-useradd $2
-chown -R $2.$2 $1
+useradd -d /dev/null -s /bin/false -r $2
+chown -R $2:$2 $1

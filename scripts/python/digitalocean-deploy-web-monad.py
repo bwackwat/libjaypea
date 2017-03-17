@@ -28,17 +28,16 @@ if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
 	newpass = raw_input("Password: ")
 
 newname = raw_input("Enter a name for the droplet [" + newuser + "]: ") or newuser
-newdir = raw_input("Enter a directory for the deployment (be absolute) [/opt/libjaypea]: ") or "/opt/libjaypea"
 
 cloud_config = """
 #cloud-config
 
 runcmd:
  - yum -y install git
- - mkdir -p {0}
- - git clone https://github.com/bwackwat/libjaypea {0}
- - chmod +x {0}/scripts/deploy.sh
- - {0}/scripts/deploy.sh {0} {1} {2} > {0}/deploy.log 2>&1
+ - mkdir -p /opt/libjaypea
+ - git clone https://github.com/bwackwat/libjaypea /opt/libjaypea
+ - chmod +x /opt/libjaypea/scripts/deploy.sh
+ - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} > /opt/libjaypea/deploy.log 2>&1
 """
 
 minimal_config = """
@@ -46,17 +45,17 @@ minimal_config = """
 
 runcmd:
  - yum -y install wget
- - mkdir -p {0}
- - cd {0}
+ - mkdir -p /opt/libjaypea
+ - cd /opt/libjaypea
  - wget https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/deploy-minimal.sh
  - chmod +x deploy-minimal.sh
- - {0}/deploy-minimal.sh {0} {1} > {0}/deploy-minimal.log 2>&1
+ - /opt/libjaypea/deploy-minimal.sh /opt/libjaypea {0} > /opt/libjaypea/deploy-minimal.log 2>&1
 """
 
 if(raw_input("Do you want to deploy a full server? (includes development tools) [n]: ") == "y"):
-	cloud_config = cloud_config.format(newdir, newuser, newpass)
+	cloud_config = cloud_config.format(newuser, newpass)
 else:
-	cloud_config = minimal_config.format(newdir, newuser)
+	cloud_config = minimal_config.format(newuser)
 
 print '-----------------------------------------------------------------'
 print cloud_config
@@ -67,7 +66,7 @@ if(raw_input("Cloud init good to go? [y]: ") or "y" != "y"):
 	sys.exit(0)
 
 newestimageid = 0
-images = rprint(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers))
+images = json.loads(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers).content)
 for image in images["images"]:
 	if image["distribution"] == "CentOS":
 		print "\nCentOS Image"

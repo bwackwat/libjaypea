@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 2 ]; then
-	echo "Usage: deploy.sh <install directory> <username> <optional password>"
+	echo "Usage: deploy.sh <install directory> <username>"
 	exit
 fi
 
@@ -12,9 +12,6 @@ mkdir -p artifacts
 mkdir -p public-html/build
 
 scripts/setup-centos7.sh > logs/setup-centos7.log 2>&1
-
-touch artifacts/host-services.json
-touch artifacts/master.latest.commit
 
 cat <<EOF >> artifacts/start.sh
 #!/bin/bash
@@ -44,8 +41,5 @@ firewall-cmd --reload
 # cp /etc/letsencrypt/live/build.bwackwat.com/fullchain.pem artifacts/ssl.crt
 # cp /etc/letsencrypt/live/build.bwackwat.com/privkey.pem artifacts/ssl.key
 
-useradd $2
-if ! [ -z $3 ]; then
-	echo "$3" | passwd "$2" --stdin
-fi
+useradd -d /dev/null -s /bin/false -r $2
 chown -R $2:$2 $1

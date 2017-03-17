@@ -3,7 +3,7 @@
 import sys, requests, time, datetime, traceback
 
 branch = sys.argv[1]
-print "Checking commit for latest build for branch " + branch
+print "Checking commit for latest build for branch: " + branch
 commit_file = "libjaypea." + branch + ".latest.commit"
 url = "https://build.bwackwat.com/build/libjaypea." + branch + ".latest.commit"
 latest_commit = ""
@@ -17,7 +17,7 @@ except:
 
 while True:
 	try:
-		new_commit = requests.get(url).content
+		new_commit = requests.get(url, timeout=5).content
 	except:
 		print "-" * 60
 		print str(datetime.datetime.now())

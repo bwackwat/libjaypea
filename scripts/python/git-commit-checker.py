@@ -22,7 +22,7 @@ for branch in branches:
 def get_latest_commit(branch):
 	url = "https://api.github.com/repos/" + owner + "/" + name + "/git/refs/heads/" + branch
 	try:
-		return json.loads(requests.get(url).content)["object"]["sha"]
+		return json.loads(requests.get(url, timeout=5).content)["object"]["sha"]
 	except:
 		print "-" * 60
 		print str(datetime.datetime.now())
@@ -33,7 +33,7 @@ def get_latest_commit(branch):
 while True:
 	for branch in branches:
 		new_commit = get_latest_commit(branch)
-		if new_commit == 0 || new_commit == latest_commits[branch]:
+		if new_commit == 0 or (branch in latest_commits and new_commit == latest_commits[branch]):
 			continue
 		commit_file = "artifacts/" + name + "." + branch + ".latest.commit"
 		with open(commit_file, "w") as f:
