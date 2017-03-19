@@ -25,3 +25,4 @@ git clone https://github.com/P-H-C/phc-winner-argon2.git artifacts/argon2
 cd artifacts/argon2
 make
 make install
+ldconfig

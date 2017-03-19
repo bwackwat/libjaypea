@@ -5,7 +5,7 @@ if [ $# -lt 2 ]; then
 	exit
 fi
 
-yum -y install epel-release git
+yum -y install epel-release git gcc
 yum -y install libpqxx cryptopp certbot
 yum -y install firewalld fail2ban
 
@@ -20,6 +20,7 @@ git clone https://github.com/P-H-C/phc-winner-argon2.git argon2
 cd argon2
 make
 make install
+ldconfig
 
 cd $1
 

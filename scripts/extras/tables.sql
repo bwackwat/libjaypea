@@ -32,3 +32,10 @@ CREATE TABLE posts (
 	created_on TIMESTAMP NOT NULL
 );
 ALTER TABLE posts ALTER created_on SET DEFAULT now();
+
+ALTER ROLE postgres PASSWORD 'abc123';
+CREATE ROLE bwackwat WITH LOGIN;
+ALTER ROLE bwackwat PASSWORD 'abc123';
+GRANT SELECT, INSERT, UPDATE ON users TO bwackwat;
+GRANT SELECT, INSERT, UPDATE ON poi TO bwackwat;
+GRANT SELECT, INSERT, UPDATE ON posts TO bwackwat;

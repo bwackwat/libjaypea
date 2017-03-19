@@ -7,8 +7,8 @@ yum -y install postgresql-server postgresql-contrib postgresql-libs postgis
 
 export PGDATA=/data
 if [ ! -d "/data" ]; then
-        mkdir -p /data
-        postgresql-setup initdb
+	mkdir -p /data
+	postgresql-setup initdb
 fi
 
 systemctl start postgresql
