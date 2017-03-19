@@ -19,7 +19,7 @@ case "${argv[@]}" in
 	 *"PROD"*)
 		echo "PRODUCTION MODE"
 		library="$dir/artifacts/libjaypeap.so"
-		extra="-O3 -fsanitize=thread -fsanitize=undefined \
+		extra="-O3 -fsanitize=undefined \
 		-D_FORTIFY_SOURCE=2 -fstack-protector-all "
 	
 		((argc-=1))
@@ -40,8 +40,8 @@ esac
 
 libs="-lpthread -lssl -lcryptopp"
 
-libcompiler="clang++ -std=c++11 -fPIE -shared -I$dir/cpp-source \
+libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \
 $dir/cpp-source/*.cpp -o $library"
 
-compiler="clang++ -std=c++11 -I$dir/cpp-source $library -pie -lcryptopp -lpqxx $warn $extra"
+compiler="clang++ -std=c++11 -I$dir/cpp-source $library -lcryptopp -lpqxx $warn $extra"
