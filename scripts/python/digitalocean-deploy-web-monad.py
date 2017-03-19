@@ -45,7 +45,7 @@ runcmd:
  - cd /opt/libjaypea
  - wget https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/deploy-minimal.sh
  - chmod +x deploy-minimal.sh
- - /opt/libjaypea/deploy-minimal.sh /opt/libjaypea {0} > /opt/libjaypea/logs/deploy-minimal.log 2>&1
+ - /opt/libjaypea/deploy-minimal.sh /opt/libjaypea {0} > /opt/libjaypea/deploy-minimal.log 2>&1
 """
 
 if(raw_input("Do you want to deploy a full server? (includes development tools) [n]: ") == "y"):

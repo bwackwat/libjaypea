@@ -60,6 +60,10 @@ chmod +x http-redirecter
 touch ready.lock
 EOF
 
+chmod +x update-deployment.sh
+
+./update-deployment
+
 cat <<EOF >> start.sh
 #!/bin/bash
 
@@ -77,7 +81,7 @@ EOF
 
 chmod +x start.sh
 
-echo -e "\n@reboot $2 $1/start.sh > $1/logs/start.log 2>&1\n" >> /etc/crontab
+echo -e "\n@reboot $2 $1/start.sh > $1/start.log 2>&1\n" >> /etc/crontab
 
 firewall-cmd --zone=public --permanent --add-masquerade
 firewall-cmd --zone=public --permanent --add-forward-port=port=80:proto=tcp:toport=10080
