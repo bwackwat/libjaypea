@@ -41,5 +41,5 @@ firewall-cmd --reload
 # cp /etc/letsencrypt/live/build.bwackwat.com/fullchain.pem artifacts/ssl.crt
 # cp /etc/letsencrypt/live/build.bwackwat.com/privkey.pem artifacts/ssl.key
 
-useradd -d /dev/null -s /bin/false -r $2
+useradd -d /opt/libjaypea -s /bin/false -r $2
 chown -R $2:$2 $1
