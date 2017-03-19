@@ -24,7 +24,7 @@ python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "sc
 
 python -u scripts/python/watcher.py binaries/libjaypea-api,artifacts/host-services.json "binaries/libjaypea-api --port 10443" > logs/libjaypea-api-watcher.log 2>&1 &
 
-python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --port 10080" > logs/http-redirecter-watcher.log 2>&1 &
+python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname dev.bwackwat.com --port 10080" > logs/http-redirecter-watcher.log 2>&1 &
 
 EOF
 

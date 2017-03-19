@@ -16,7 +16,7 @@ systemctl restart firewalld
 
 cd $1
 
-git clone https://github.com/phc-hash-winner/argon2 argon2
+git clone https://github.com/P-H-C/phc-winner-argon2.git argon2
 cd argon2
 make
 make install
