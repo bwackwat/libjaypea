@@ -23,10 +23,6 @@ if not newuser:
 	print "Please provide a username."
 	sys.exit(1)
 
-newpass = ""
-if(raw_input("Want to set password for " + newuser + "? [n]: ") == "y"):
-	newpass = raw_input("Password: ")
-
 newname = raw_input("Enter a name for the droplet [" + newuser + "]: ") or newuser
 
 cloud_config = """
@@ -37,7 +33,7 @@ runcmd:
  - mkdir -p /opt/libjaypea
  - git clone https://github.com/bwackwat/libjaypea /opt/libjaypea
  - chmod +x /opt/libjaypea/scripts/deploy.sh
- - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} > /opt/libjaypea/deploy.log 2>&1
+ - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} > /opt/libjaypea/deploy.log 2>&1
 """
 
 minimal_config = """
@@ -53,7 +49,7 @@ runcmd:
 """
 
 if(raw_input("Do you want to deploy a full server? (includes development tools) [n]: ") == "y"):
-	cloud_config = cloud_config.format(newuser, newpass)
+	cloud_config = cloud_config.format(newuser)
 else:
 	cloud_config = minimal_config.format(newuser)
 
