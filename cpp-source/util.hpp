@@ -21,7 +21,12 @@
 #include <string.h>
 #include <signal.h>
 
+#include "cryptopp/sha.h"
+#include "cryptopp/filters.h"
+#include "cryptopp/base64.h"
+
 #include "json.hpp"
+#include "distributed-node.hpp"
 
 #define PACKET_LIMIT 8096
 #define CONNECTIONS_LIMIT 2048
@@ -74,6 +79,11 @@ public:
 	static std::string libjaypea_path;
 	static JsonObject config_object;
 
+	static std::string distribution_keyfile;
+	static std::string distribution_start_ip_address;
+	static int distribution_start_port;
+	static DistributedNode* distribution_node;
+
 	static void define_argument(std::string name, std::string& value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, int* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, bool* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
@@ -91,6 +101,8 @@ public:
 	static std::string get_redirection_html(const std::string& hostname);
 
 	static enum RequestResult parse_http_api_request(const char* request, JsonObject* request_obj);
+
+	static std::string sha256_hash(std::string data);
 
 	static void print_bits(const char* data, size_t data_length);
 };

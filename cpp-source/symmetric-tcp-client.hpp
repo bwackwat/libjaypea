@@ -2,7 +2,6 @@
 
 #include <mutex>
 
-#include "util.hpp"
 #include "simple-tcp-client.hpp"
 #include "symmetric-encryptor.hpp"
 

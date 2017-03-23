@@ -21,10 +21,13 @@ std::vector<struct Argument*> Util::arguments;
 
 bool Util::verbose = false;
 std::string Util::config_path = "extras/configuration.json";
-
 std::string Util::libjaypea_path;
-
 JsonObject Util::config_object;
+
+std::string Util::distribution_keyfile = std::string();
+std::string Util::distribution_start_ip_address = std::string();
+int Util::distribution_start_port = 0;
+DistributedNode* Util::distribution_node = 0;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
 	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_STRING, std::ref(value), 0, 0}));
@@ -105,6 +108,9 @@ std::string Util::exec_and_wait(const char* cmd){
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
 	define_argument("configuration_file", config_path, {"-cf"});
+	define_argument("distribution_keyfile", distribution_keyfile, {"-cf"});
+	define_argument("distribution_start_ip_address", distribution_start_ip_address, {"-cf"});
+	define_argument("distribution_start_port", &distribution_start_port, {"-dsp"});
 	
 	PRINT("------------------------------------------------------")
 
@@ -269,6 +275,14 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 	}
 
 	PRINT("------------------------------------------------------")
+	
+	if(distribution_keyfile.empty() ||
+	distribution_start_ip_address.empty() ||
+	distribution_start_port == 0){
+		PRINT("NOT RUNNING AS DISTRIBUTED NODE.")
+	}else{
+		distribution_node = new DistributedNode(distribution_keyfile, distribution_start_ip_address.c_str(), static_cast<uint16_t>(distribution_start_port));
+	}
 }
 
 /*
@@ -466,7 +480,7 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 		case 1:
 		case 3:
 		case 4:
-		case 6:
+		case 6: //TODO: Other escape sequences. (e.g. '&' cannot exist in URL param value)
 			if(*it == '%' && *(it + 1) == '2' && *(it + 1) == '2'){
 				it++;
 				it++;
@@ -503,6 +517,18 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 	}
 
 	return HTTP;
+}
+
+std::string Util::sha256_hash(std::string data){
+	std::string hash;
+	CryptoPP::SHA256 hasher;
+
+	CryptoPP::StringSource source(data, true,
+		new CryptoPP::HashFilter(hasher,
+		new CryptoPP::Base64Encoder(
+		new CryptoPP::StringSink(hash))));
+
+	return hash;
 }
 
 void Util::print_bits(const char* data, size_t data_length){

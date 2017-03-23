@@ -25,8 +25,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "simple-tcp-client.hpp"
-
 class SimpleTcpClient{
 protected:
 	uint16_t port;

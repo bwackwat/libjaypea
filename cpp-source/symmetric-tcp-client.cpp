@@ -1,3 +1,4 @@
+#include "util.hpp"
 #include "symmetric-tcp-client.hpp"
 
 SymmetricTcpClient::SymmetricTcpClient(std::string hostname, uint16_t port, std::string keyfile)

@@ -60,6 +60,38 @@ int main(int argc, char **argv){
 
 		return result.stringify();
 	});
+	
+	api.route("GET", "distribution", [&](JsonObject* json)->std::string{
+		if(json->GetStr("token") != password){
+			return std::string();
+		}
+		
+		if(Util::distribution_node == 0){
+			return "{\"error\":\"Not a distributed node.\"}";
+		}
+		
+		return Util::distribution_node->ddata.stringify(false);
+	}, {{"token", STRING}});
+	
+	api.route("POST", "distribution", [&](JsonObject* json)->std::string{
+		if(json->GetStr("token") != password){
+			return std::string();
+		}
+		
+		if(Util::distribution_node == 0){
+			return "{\"error\":\"Not a distributed node.\"}";
+		}
+		
+		if(Util::distribution_node->set_ddata(json->objectValues["data"]->stringify(false))){
+			return "{\"error\":\"Storing data failed.\"}";
+		}
+
+		JsonObject response(OBJECT);
+		response.objectValues["result"] = new JsonObject("Data stored.");
+		response.objectValues["hash"] = new JsonObject(Util::distribution_node->status.objectValues["hash"]->stringValue);
+		
+		return response.stringify(false);
+	}, {{"token", STRING}, {"data", OBJECT}});
 
 	api.route("POST", "/message", [&](JsonObject* json)->std::string{
 		message_mutex.lock();
