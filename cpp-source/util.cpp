@@ -108,8 +108,8 @@ std::string Util::exec_and_wait(const char* cmd){
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
 	define_argument("configuration_file", config_path, {"-cf"});
-	define_argument("distribution_keyfile", distribution_keyfile, {"-cf"});
-	define_argument("distribution_start_ip_address", distribution_start_ip_address, {"-cf"});
+	define_argument("distribution_keyfile", distribution_keyfile, {"-dk"});
+	define_argument("distribution_start_ip_address", distribution_start_ip_address, {"-dsip"});
 	define_argument("distribution_start_port", &distribution_start_port, {"-dsp"});
 	
 	PRINT("------------------------------------------------------")

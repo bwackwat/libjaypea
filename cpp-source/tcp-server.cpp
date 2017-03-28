@@ -403,6 +403,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				timer_spec.it_value.tv_sec = this->timeout;
 				timer_spec.it_value.tv_nsec = 0;
 				if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
+					PRINT("timerfd_setting error" << the_fd << " and timer " << timer_fd)
 					perror("timerfd_settime update");
 				}
 				if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){

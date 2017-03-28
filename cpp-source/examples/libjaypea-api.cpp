@@ -61,7 +61,7 @@ int main(int argc, char **argv){
 		return result.stringify();
 	});
 	
-	api.route("GET", "distribution", [&](JsonObject* json)->std::string{
+	api.route("GET", "/distribution", [&](JsonObject* json)->std::string{
 		if(json->GetStr("token") != password){
 			return std::string();
 		}
@@ -73,7 +73,7 @@ int main(int argc, char **argv){
 		return Util::distribution_node->ddata.stringify(false);
 	}, {{"token", STRING}});
 	
-	api.route("POST", "distribution", [&](JsonObject* json)->std::string{
+	api.route("POST", "/distribution", [&](JsonObject* json)->std::string{
 		if(json->GetStr("token") != password){
 			return std::string();
 		}
