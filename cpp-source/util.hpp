@@ -89,7 +89,7 @@ public:
 	static void define_argument(std::string name, bool* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 
 	static void write_file(std::string filename, std::string content);
-	static std::string read_from_file(std::string filename);
+	static std::string read_file(std::string filename);
 	static std::string exec_and_wait(const char* cmd);
 	
 	static void parse_arguments(int argc, char** argv, std::string description);

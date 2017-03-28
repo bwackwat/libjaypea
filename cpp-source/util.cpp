@@ -82,7 +82,7 @@ void Util::write_file(std::string filename, std::string content){
 	file.close();
 }
 
-std::string Util::read_from_file(std::string filename){
+std::string Util::read_file(std::string filename){
 	std::fstream file(filename.c_str(), std::ios::binary | std::ios::in);
 	if(!file){
 		throw std::runtime_error("Could not read " + filename);
