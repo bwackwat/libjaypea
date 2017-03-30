@@ -1,5 +1,20 @@
 # TODO
 
+This is where my TODO list piles up forever. It is basically a detailed log of the sticky notes which I write improvements on, collect on my desk, and begin to ignore.
+
+## 3/29/2017
+
+1. Check out "Metasploit" to do some generic penetration testing.
+2. Use "chmod -R go-rwx ./" to remove read, write, and execute permissions from group and other for the whole current directory. Security!
+3. Erase yum packages that unnecessary, "yum erase inetd xinetd ypserv tftp-server telnet-server".
+4. Implement Paxos for distributed node configuration.
+5. Clean up the homepage.
+6. Recruit some folks to do penetration testing! :D
+7. Run integration tests upon starting a new build. Just do it from the build server.
+8. IP-based API rate-limiting. HttpApi can record the time since last request and enforce a minimum time difference between requests.
+9. Yuck, clean up /etc/ssh/sshd_config on all deployments. No password authentication, add a banner, disable X11 forwarding, and use protocol 2.
+10. Implement numbers for JSON, just don't parse them to keep it simple.
+
 ## 3/12/2017
 
 1. Use const for unchanging methods.
