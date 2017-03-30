@@ -23,6 +23,7 @@ int main(int, char**){
 	hex.Put(iv, CryptoPP::AES::BLOCKSIZE);
 	hex.MessageEnd();
 	write(keyfile, keystr.c_str(), keystr.length());
+	std::cout << "Wrote " << std::to_string(keystr.length()) << " bytes." << std::endl;
 	close(keyfile);
 	return 0;
 }

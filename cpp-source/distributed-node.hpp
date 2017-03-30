@@ -6,13 +6,15 @@
 
 class DistributedNode{
 public:
-	DistributedNode(std::string keyfile, const char* start_ip_address, uint16_t start_port);
+	DistributedNode(std::string keyfile);
 	bool set_ddata(std::string data);
+	void add_client(const char* ip_address, uint16_t port);
 	
 	JsonObject status;
 	JsonObject ddata;
 private:
 	SymmetricEpollServer* server;
+	std::string keyfile;
 	
 	std::mutex clients_mutex;
 	std::unordered_map<std::string, SymmetricTcpClient*> clients;

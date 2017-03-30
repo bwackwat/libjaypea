@@ -215,14 +215,10 @@ int main(int argc, char** argv){
 				if(table_name == "users"){
 					if(request->HasObj("username", STRING) &&
 					request->HasObj("password", STRING)){
-		      			JsonObject* token = table->Access("username", request->GetStr("username"), hash_value_argon2d(request->GetStr("password")));
+						JsonObject* token = table->Access("username", request->GetStr("username"), hash_value_argon2d(request->GetStr("password")));
 						if(token->objectValues.count("error")){
 							response = token;
-						}else{
-							// Is it unnecessary to verify the password on each token use? I guess successful decryption of the token is good enough.
-			      			// std::string password = hash_value_argond2d(request->GetStr("password"));
-							// token->objectValues["verify"] = new JsonObject(hash_value_sha256(password.substr(password.length() / 2)));
-						
+						}else{						
 							response = new JsonObject(OBJECT);
 							response->objectValues["id"] = new JsonObject(token->GetStr("id"));
 							response->objectValues["token"] = new JsonObject(encryptor.encrypt(token->stringify()));

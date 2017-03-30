@@ -274,14 +274,14 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		PRINT("Could not open " << config_path << ", ignoring.")
 	}
 
+	
 	PRINT("------------------------------------------------------")
 	
-	if(distribution_keyfile.empty() ||
-	distribution_start_ip_address.empty() ||
-	distribution_start_port == 0){
-		PRINT("NOT RUNNING AS DISTRIBUTED NODE.")
-	}else{
-		distribution_node = new DistributedNode(distribution_keyfile, distribution_start_ip_address.c_str(), static_cast<uint16_t>(distribution_start_port));
+	distribution_node = new DistributedNode(distribution_keyfile);
+
+	if(!distribution_start_ip_address.empty() &&
+	distribution_start_port != 0){
+		distribution_node->add_client(distribution_start_ip_address.c_str(), static_cast<uint16_t>(distribution_start_port));
 	}
 }
 

@@ -69,10 +69,10 @@ int main(int argc, char **argv){
 
 	api.route("GET", "/user", [&](JsonObject* json)->std::string{	
 		return provider.communicate(Where("users",
-			json->GetStr("key"),
-			json->GetStr("value"),
+			"username",
+			json->GetStr("username"),
 			json->GetStr("token")));
-	}, {{"key", STRING}, {"value", STRING}, {"token", STRING}});
+	}, {{"username", STRING}, {"token", STRING}});
 	
 	api.route("POST", "/user", [&](JsonObject* json)->std::string{	
 		return provider.communicate(Insert("users",

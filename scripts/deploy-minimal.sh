@@ -35,6 +35,8 @@ echo "<h1>Hello, World!</h1>" >> public-html/index.html
 cat <<EOF >> update-deployment.sh
 #!/bin/bash
 
+set -e
+
 # Update scripts
 
 wget -N https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/python/build-server-checker.py
@@ -45,14 +47,14 @@ chmod +x watcher.py
 
 # Update library, binaries, and configuration.
 
-wget -N https://build.bwackwat.com/build/libjaypeap.so -O artifacts/libjaypeap.so
+wget https://build.bwackwat.com/build/libjaypeap.so -O artifacts/libjaypeap.so
 
-wget -N https://build.bwackwat.com/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=libjaypea-api -O libjaypea-api.configuration.json
+wget https://build.bwackwat.com/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=libjaypea-api -O libjaypea-api.configuration.json
 rm libjaypea-api
 wget -N https://build.bwackwat.com/build/libjaypea-api
 chmod +x libjaypea-api
 
-wget -N https://build.bwackwat.com/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=http-redirecter -O http-redirecter.configuration.json
+wget https://build.bwackwat.com/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=http-redirecter -O http-redirecter.configuration.json
 rm http-redirecter
 wget -N https://build.bwackwat.com/build/http-redirecter
 chmod +x http-redirecter

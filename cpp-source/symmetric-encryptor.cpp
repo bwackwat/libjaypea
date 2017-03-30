@@ -4,25 +4,63 @@
 #include "symmetric-encryptor.hpp"
 
 SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
-	std::string name = "SymmetricEncryptor";
 	if(keyfile.empty()){
 		this->random_pool.GenerateBlock(this->key, CryptoPP::AES::MAX_KEYLENGTH);
 		this->random_pool.GenerateBlock(this->iv, CryptoPP::AES::BLOCKSIZE);
-	}else{
-		int fd;
-		if((fd = open(keyfile.c_str(), O_RDONLY)) < 0){
-			throw std::runtime_error(name + " open keyfile");
-		}
-		if(read(fd, this->key, CryptoPP::AES::MAX_KEYLENGTH) < CryptoPP::AES::MAX_KEYLENGTH){
-			throw std::runtime_error(name + " read keyfile key");
-		}
-		if(read(fd, this->iv, CryptoPP::AES::BLOCKSIZE) < CryptoPP::AES::BLOCKSIZE){
-			throw std::runtime_error(name + " read keyfile iv");
-		}
-		if(close(fd) < 0){
-			throw std::runtime_error(name + " close keyfile");
-		}
+		
+		std::string keystr;
+		CryptoPP::HexEncoder hex(new CryptoPP::StringSink(keystr));
+		hex.Put(this->key, CryptoPP::AES::MAX_KEYLENGTH);
+		hex.Put(this->iv, CryptoPP::AES::BLOCKSIZE);
+		hex.MessageEnd();
+		PRINT("GENERATED DISTRIBUTED KEY: " << keystr)
+		//PRINT("GENERATED DISTRIBUTED KEY: " << this->key << this->iv)
+		return;
 	}
+
+	const size_t hex_key_length = (CryptoPP::AES::MAX_KEYLENGTH + CryptoPP::AES::BLOCKSIZE) * 2; // 96
+	byte hex_key[hex_key_length + 1];
+	int fd;
+	if((fd = open(keyfile.c_str(), O_RDONLY)) < 0){
+		throw std::runtime_error("SymmetricEncryptor open keyfile");
+	}
+	if(read(fd, hex_key, hex_key_length) < static_cast<ssize_t>(hex_key_length)){
+		throw std::runtime_error("SymmetricEncryptor read keyfile");
+	}
+	if(close(fd) < 0){
+		throw std::runtime_error("SymmetricEncryptor close keyfile");
+	}
+	hex_key[hex_key_length] = 0;
+	
+	PRINT("PROVIDED DISTRIBUTED KEY: " << hex_key)
+	
+	CryptoPP::ArraySource key_source(hex_key, CryptoPP::AES::MAX_KEYLENGTH * 2, true,
+		new CryptoPP::HexDecoder(
+		new CryptoPP::ArraySink(this->key, CryptoPP::AES::MAX_KEYLENGTH)));
+	
+	CryptoPP::ArraySource iv_source(hex_key + CryptoPP::AES::MAX_KEYLENGTH * 2, CryptoPP::AES::BLOCKSIZE * 2, true,
+		new CryptoPP::HexDecoder(
+		new CryptoPP::ArraySink(this->iv, CryptoPP::AES::BLOCKSIZE)));
+	
+	/*
+	
+	// TEST CODE
+	
+	std::string keystr;
+	CryptoPP::HexEncoder hex(new CryptoPP::StringSink(keystr));
+	hex.Put(this->key, CryptoPP::AES::MAX_KEYLENGTH);
+	hex.Put(this->iv, CryptoPP::AES::BLOCKSIZE);
+	hex.MessageEnd();
+	
+	PRINT("PROVIDED DISTRIBUTED KEY: " << this->key << this->iv)
+	PRINT("PROVIDED DISTRIBUTED KEY: " << keystr)
+	
+	if(std::strncmp(reinterpret_cast<char*>(hex_key), keystr.c_str(), 96) != 0){
+		throw std::runtime_error("Bad hex decoding.");
+	}
+	
+	*/
+	
 	this->hmac = CryptoPP::HMAC<CryptoPP::SHA256>(this->key, CryptoPP::AES::MAX_KEYLENGTH);
 
 	// Another random number tool.

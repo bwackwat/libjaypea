@@ -1,12 +1,11 @@
 #include "util.hpp"
 #include "distributed-node.hpp"
 
-DistributedNode::DistributedNode(std::string keyfile, const char* start_ip_address, uint16_t start_port)
+DistributedNode::DistributedNode(std::string new_keyfile)
 :status(OBJECT),
-ddata(OBJECT){
-	this->server = new SymmetricEpollServer(keyfile, 30000, 10);
-	std::string initializer = std::string(start_ip_address) + ':' + std::to_string(start_port);
-	this->clients[initializer] = new SymmetricTcpClient(start_ip_address, start_port, keyfile);
+ddata(OBJECT),
+keyfile(new_keyfile){
+	this->server = new SymmetricEpollServer(this->keyfile, 30000, 10);
 	
 	this->server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		PRINT(data)
@@ -41,6 +40,13 @@ ddata(OBJECT){
 	start_thread = std::thread(&DistributedNode::start, this);
 	
 	PRINT("DISTRIBUTED NODE INITIALIZED.")
+}
+
+void DistributedNode::add_client(const char* ip_address, uint16_t port){
+	std::string client = std::string(ip_address) + ':' + std::to_string(port);
+	this->clients_mutex.lock();
+	this->clients[client] = new SymmetricTcpClient(ip_address, port, this->keyfile);
+	this->clients_mutex.unlock();
 }
 
 bool DistributedNode::set_ddata(std::string data){
