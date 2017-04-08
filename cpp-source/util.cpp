@@ -154,7 +154,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 				case ARG_INTEGER:
 					PRINT("     --" << arg->name << " <integer>")
 					for(auto& alt : arg->alts){
-						PRINT("  OR " << alt << " <integer")
+						PRINT("  OR " << alt << " <integer>")
 					}
 					PRINT("     (Default value: " << *arg->integer_value << ")\n")
 					break;
