@@ -13,8 +13,8 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 		hex.Put(this->key, CryptoPP::AES::MAX_KEYLENGTH);
 		hex.Put(this->iv, CryptoPP::AES::BLOCKSIZE);
 		hex.MessageEnd();
-		PRINT("GENERATED DISTRIBUTED KEY: " << keystr)
-		//PRINT("GENERATED DISTRIBUTED KEY: " << this->key << this->iv)
+		PRINT("GENERATED KEY: " << keystr)
+		//PRINT("GENERATED KEY: " << this->key << this->iv)
 		return;
 	}
 
@@ -32,7 +32,7 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 	}
 	hex_key[hex_key_length] = 0;
 	
-	PRINT("PROVIDED DISTRIBUTED KEY: " << hex_key)
+	PRINT("PROVIDED KEY: " << hex_key)
 	
 	CryptoPP::ArraySource key_source(hex_key, CryptoPP::AES::MAX_KEYLENGTH * 2, true,
 		new CryptoPP::HexDecoder(
@@ -52,8 +52,8 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 	hex.Put(this->iv, CryptoPP::AES::BLOCKSIZE);
 	hex.MessageEnd();
 	
-	PRINT("PROVIDED DISTRIBUTED KEY: " << this->key << this->iv)
-	PRINT("PROVIDED DISTRIBUTED KEY: " << keystr)
+	PRINT("PROVIDED KEY: " << this->key << this->iv)
+	PRINT("PROVIDED KEY: " << keystr)
 	
 	if(std::strncmp(reinterpret_cast<char*>(hex_key), keystr.c_str(), 96) != 0){
 		throw std::runtime_error("Bad hex decoding.");

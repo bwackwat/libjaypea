@@ -6,7 +6,7 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 yum -y install epel-release
 
-yum -y install git firewalld fail2ban certbot
+yum -y install git firewalld fail2ban certbot ntp
 yum -y install clang gcc-c++ libpqxx-devel
 yum -y install libstdc++-static libstdc++ cryptopp cryptopp-devel openssl openssl-devel
 
@@ -14,6 +14,8 @@ systemctl enable fail2ban
 systemctl restart fail2ban
 systemctl enable firewalld
 systemctl restart firewalld
+systemctl enable ntpd
+systemctl restart ntpd
 
 mkdir -p artifacts
 

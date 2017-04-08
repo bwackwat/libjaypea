@@ -5,7 +5,19 @@ DistributedNode::DistributedNode(std::string new_keyfile)
 :status(OBJECT),
 ddata(OBJECT),
 keyfile(new_keyfile){
-	this->server = new SymmetricEpollServer(this->keyfile, 30000, 10);
+	uint16_t port = 30000;
+	while(true){
+		try{
+			this->server = new SymmetricEpollServer(this->keyfile, port, 10);	
+		}catch(std::runtime_error& e){
+			if(errno != 98){
+				throw e;
+			}
+			port++;
+			continue;
+		}
+		break;
+	}
 	
 	this->server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		PRINT(data)

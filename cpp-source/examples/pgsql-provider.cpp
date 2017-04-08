@@ -245,6 +245,7 @@ int main(int argc, char** argv){
 		std::string response_string = response->stringify();
 		delete response;
 
+		PRINT("DELI: " << response_string)
 		if(server.send(fd, response_string.c_str(), response_string.length())){
 			ERROR("server.send")
 			return -1;

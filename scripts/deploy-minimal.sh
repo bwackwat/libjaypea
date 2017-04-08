@@ -7,12 +7,15 @@ fi
 
 yum -y install epel-release git gcc
 yum -y install libpqxx cryptopp certbot
-yum -y install firewalld fail2ban
+yum -y install firewalld fail2ban ntp
+
 
 systemctl enable fail2ban
 systemctl restart fail2ban
 systemctl enable firewalld
 systemctl restart firewalld
+systemctl enable ntpd
+systemctl restart ntpd
 
 cd $1
 
