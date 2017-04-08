@@ -10,11 +10,12 @@ keyfile(new_keyfile){
 		try{
 			this->server = new SymmetricEpollServer(this->keyfile, port, 10);	
 		}catch(std::runtime_error& e){
-			if(errno != 98){
-				PRINT("ERROR: " << errno)
+			if(errno != 98 && errno != 22){
+				PRINT("ERROR: " << errno << ':' << port)
 				throw e;
 			}
 			port++;
+			sleep(1);
 			continue;
 		}
 		break;
