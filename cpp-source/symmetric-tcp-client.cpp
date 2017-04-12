@@ -16,7 +16,6 @@ void SymmetricTcpClient::close_client(){
 	}
 	this->writes = 0;
 	this->reads = 0;
-	this->retries = 0;
 }
 
 std::string SymmetricTcpClient::communicate(std::string request){
@@ -32,10 +31,6 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 		if(!(this->connected = this->reconnect())){
 			return response_string;
 		}
-	}
-	
-	if(retries++ >= 2){
-		return response_string;
 	}
 	
 	DEBUG("WRITES:" << this->writes)
@@ -54,7 +49,7 @@ std::string SymmetricTcpClient::communicate(const char* request, size_t length){
 		if((len = this->encryptor.recv(this->fd, response, PACKET_LIMIT, set_response_callback, &this->reads)) < 0){
 			this->close_client();
 			DEBUG("SymmetricTcpClient recv " << this->fd)
-			return this->communicate(request, length);
+			return response_string;
 		}
 	}while(len == 0);
 

@@ -6,7 +6,7 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 yum -y install epel-release
 
-yum -y install git firewalld fail2ban certbot ntp
+yum -y install git firewalld fail2ban certbot ntp gperftools
 yum -y install clang gcc-c++ libpqxx-devel
 yum -y install libstdc++-static libstdc++ cryptopp cryptopp-devel openssl openssl-devel
 

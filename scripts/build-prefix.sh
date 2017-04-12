@@ -19,23 +19,21 @@ case "${argv[@]}" in
 	 *"PROD"*)
 		echo "PRODUCTION MODE"
 		library="$dir/artifacts/libjaypeap.so"
-		extra="-O3 -fsanitize=undefined \
-		-D_FORTIFY_SOURCE=2 -fstack-protector-all "
+		extra="-O3 -fsanitize=undefined -D_FORTIFY_SOURCE=2 -fstack-protector-all "
 	
 		((argc-=1))
 		argv=( "${argv[@]/"PROD"}" )
 		;;
 	*"DEBUG"*)
 		echo "DEBUG MODE"
-		extra="-O0 -D_DO_DEBUG"
+		extra="-O0 -D_DO_DEBUG -g -pg -lprofiler -ltcmalloc -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free "
 	
 		((argc-=1))
 		argv=( "${argv[@]/"DEBUG"}" )
 		;;
 	*)
 		extra="-O0"
-		warn="$warn -Wno-unused-parameter -Wno-unused-exception-parameter \
-		-Wno-unused-variable "
+		warn="$warn -Wno-unused-parameter -Wno-unused-exception-parameter -Wno-unused-variable "
 esac
 
 libs="-lpthread -lssl -lcryptopp"
@@ -44,4 +42,4 @@ libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \
 $dir/cpp-source/*.cpp -o $library"
 
-compiler="clang++ -std=c++11 -I$dir/cpp-source $library -lcryptopp -lpqxx $warn $extra"
+compiler="clang++ -std=c++11 -I$dir/cpp-source $library  -lcryptopp -lpqxx $warn $extra"

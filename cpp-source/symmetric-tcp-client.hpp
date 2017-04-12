@@ -16,7 +16,6 @@ private:
 	SymmetricEncryptor encryptor;
 	int writes;
 	int reads;
-	int retries;
 	
 	std::mutex comm_mutex;
 	
