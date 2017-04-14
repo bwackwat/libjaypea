@@ -117,18 +117,18 @@ std::function<ssize_t(int, char*, size_t)> callback){
 	case SSL_ERROR_NONE:
 		break;
 	case SSL_ERROR_WANT_READ:
-		PRINT("WANT READ")
+		PRINT("WANT READ" << fd)
 		// Nothing to read, nonblocking mode.
 		return 0;
 	case SSL_ERROR_ZERO_RETURN:
-		ERROR("server read zero")
+		ERROR("server read zero " << fd)
 		return -2;
 	case SSL_ERROR_SYSCALL:
 		perror("SSL_ERROR_SYSCALL");
 		ERR_print_errors_fp(stdout);
 		return -3;
 	default:
-		ERROR("other SSL_read " << err)
+		ERROR("other SSL_read " << err << " from " << fd)
 		ERR_print_errors_fp(stdout);
 		return -1;
 	}
@@ -146,7 +146,7 @@ std::function<ssize_t(int, char*, size_t)> callback){
  */
 bool TlsEpollServer::accept_continuation(int* new_client_fd){
 	if((this->client_ssl[*new_client_fd] = SSL_new(this->ctx)) == 0){
-		ERROR("SSL_new")
+		ERROR("SSL_new " << *new_client_fd)
 		ERR_print_errors_fp(stdout);
 		return true;
 	}
@@ -155,7 +155,7 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 
 //	SSL_accept fails if socket is non_blocking.
 	if(SSL_accept(this->client_ssl[*new_client_fd]) <= 0){
-		ERROR("SSL_accept")
+		ERROR("SSL_accept " << *new_client_fd)
 		ERR_print_errors_fp(stdout);
 		return true;
 	}
