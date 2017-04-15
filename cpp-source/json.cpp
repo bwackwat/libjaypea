@@ -31,6 +31,7 @@ const char* JsonObject::parse(const char* str){
 		switch(*it){
 		case '\\':
 			++it;
+			DEBUG("ESCAPE TO: " << *it)
 			if(*it == 'n' ||
 			*it == 'r' ||
 			*it == 't'){
@@ -165,7 +166,8 @@ std::string JsonObject::escape(std::string value){
 		if(value[i] == '"' ||
 		value[i] == '\\'){			
 			escaped << '\\' << value[i];
-		}else if(value[i] > 31){
+			DEBUG("ESCAPED: \\")
+		}else{
 			escaped << value[i];
 		}
 	}
@@ -191,10 +193,9 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 				ss << std::string(depth, '\t');
 			}
 			ss << escape(it->first) << ':';
-			if(std::next(it) == this->objectValues.end()){
-				ss << it->second->stringify(pretty, depth);
-			}else{
-				ss << it->second->stringify(pretty, depth) << ',';
+			ss << it->second->stringify(pretty, depth);
+			if(std::next(it) != this->objectValues.end()){
+				ss << ',';
 			}
 			if(pretty){
 				ss << '\n';
