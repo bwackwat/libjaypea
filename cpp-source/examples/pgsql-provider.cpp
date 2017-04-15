@@ -140,7 +140,11 @@ int main(int argc, char** argv){
 					}else if(table->access_flags & ACCESS_USER &&
 					request->objectValues["key"]->stringValue == "username"){
 						JsonObject* user = users->Where("username", request->GetStr("value"));
-						response = table->Where("owner_id", user->arrayValues[0]->GetStr("id"));
+						if(user->objectValues.count("error")){
+							response = user;
+						}else{				
+							response = table->Where("owner_id", user->arrayValues[0]->GetStr("id"));
+						}
 						delete user;
 					}
 					if(response == 0){
