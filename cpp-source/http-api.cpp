@@ -114,7 +114,7 @@ void HttpApi::start(){
 				// Send the file from the cache.
 				CachedFile* cached_file = file_cache[clean_route];
 				
-				response = response_header + "Content-Length: " + std::to_string(cached_file->data_length) + "\n\n";
+				response = response_header + "Content-Length: " + std::to_string(cached_file->data_length) + "\r\n\r\n";
 				if(this->server->send(fd, response.c_str(), response.length())){
 					return -1;
 				}
@@ -148,7 +148,7 @@ void HttpApi::start(){
 				}
 			
 				if(response_body.empty() && S_ISREG(route_stat.st_mode)){
-					response = response_header + "Content-Length: " + std::to_string(route_stat.st_size) + "\n\n";
+					response = response_header + "Content-Length: " + std::to_string(route_stat.st_size) + "\r\n\r\n";
 					if(this->server->send(fd, response.c_str(), response.length())){
 						return -1;
 					}
@@ -294,7 +294,7 @@ void HttpApi::start(){
 				}
 				PRINT("DELI:" << response_body)
 			}else{			
-				response = response_header + "Content-Length: " + std::to_string(response_body.length()) + "\n\n" + response_body;
+				response = response_header + "Content-Length: " + std::to_string(response_body.length()) + "\r\n\r\n" + response_body;
 				if(this->server->send(fd, response.c_str(), response.length())){
 					return -1;
 				}

@@ -142,10 +142,10 @@ int main(int argc, char** argv){
 						JsonObject* user = users->Where("username", request->GetStr("value"));
 						if(user->objectValues.count("error")){
 							response = user;
-						}else{				
+						}else{
 							response = table->Where("owner_id", user->arrayValues[0]->GetStr("id"));
+							delete user;
 						}
-						delete user;
 					}
 					if(response == 0){
 						response = table->Where(request->GetStr("key"), request->GetStr("value"));
