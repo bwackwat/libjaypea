@@ -45,7 +45,7 @@ static struct Question* get_question(){
 static std::unordered_map<int, struct Question*> client_questions;
 
 void HttpApi::start(){
-	std::string response_header = "HTTP/1.1 200 OK\n"
+	std::string default_header = "HTTP/1.1 200 OK\n"
 		"Accept-Ranges: bytes\n"
 		"Content-Type: text\n";
 
@@ -70,6 +70,7 @@ void HttpApi::start(){
 		JsonObject r_obj(OBJECT);
 		enum RequestResult r_type = Util::parse_http_api_request(data, &r_obj);
 
+		std::string response_header = default_header;
 		std::string response_body = std::string();
 		std::string response = std::string();
 		
@@ -139,11 +140,13 @@ void HttpApi::start(){
 				if(lstat(clean_route.c_str(), &route_stat) < 0){
 					// perror("lstat");
 					response_body = HTTP_404;
+					response_header = response_header.replace(9, 6, "404 Not Found");
 				}else if(S_ISDIR(route_stat.st_mode)){
 					clean_route += "/index.html";
 					if(lstat(clean_route.c_str(), &route_stat) < 0){
 						// perror("lstat index.html");
 						response_body = HTTP_404;
+						response_header = response_header.replace(9, 6, "404 Not Found");
 					}
 				}
 			
@@ -229,6 +232,7 @@ void HttpApi::start(){
 				}else{
 					PRINT("Something other than a regular file was requested...")
 					response_body = HTTP_404;
+					response_header = response_header.replace(9, 6, "404 Not Found");
 				}
 			}
 		}else{

@@ -15,27 +15,30 @@ function build {
 
 # Some libs need to be linked again because they are static?
 
+build pgsql-provider "-largon2"
+build bwackwat
+
+build libjaypea-api
+build http-redirecter
+
 build music
+build chat
+
 build json-test
 build queue-test
-build pgsql-provider "-lcryptopp -largon2"
 build read-stdin-tty
-build keyfile-gen "-lcryptopp"
+build keyfile-gen
 
 build tcp-poll-server
 build ponal-server
-build comd "-lcryptopp"
+build comd
 build chat-server
 
 build tcp-poll-client
 build ponal-client
-build com "-lcryptopp"
+build com
 build chat-client
 
-build libjaypea-api
-build bwackwat "-lcryptopp"
-build chat "-lcryptopp"
-build http-redirecter
 build echo-server
 build tcp-client
 build tcp-event-client

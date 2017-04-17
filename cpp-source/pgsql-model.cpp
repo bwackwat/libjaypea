@@ -77,6 +77,7 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	
 	pqxx::work txn(this->conn);
 	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + " ORDER BY created_on DESC;");
+	
 	if(res.size() == 0){
 		return Error("Bad value.");
 	}

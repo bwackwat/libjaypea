@@ -84,7 +84,7 @@ int main(int argc, char **argv){
 	HttpApi api(public_directory, server);
 	api.set_file_cache_size(cache_megabytes);
 	
-	struct Songset* library = get_songset("../../Music");d
+	struct Songset* library = get_songset("../../Music");
 	
 	api.route("GET", "/", [&](JsonObject*, int)->ssize_t{
 		return 1;
