@@ -3,6 +3,7 @@ CREATE TABLE users (
 	id SERIAL PRIMARY KEY,
 	username VARCHAR(50) UNIQUE NOT NULL,
 	password TEXT NOT NULL,
+	token TEXT NOT NULL,
 	email VARCHAR(100) UNIQUE NOT NULL,
 	first_name VARCHAR(50) NOT NULL,
 	last_name VARCHAR(50) NOT NULL,
@@ -32,6 +33,30 @@ CREATE TABLE posts (
 	created_on TIMESTAMP NOT NULL
 );
 ALTER TABLE posts ALTER created_on SET DEFAULT now();
+
+DROP TABLE threads;
+CREATE TABLE threads (
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(50) UNIQUE NOT NULL,
+	created_on TIMESTAMP NOT NULL,
+);
+ALTER TABLE threads ALTER created_on SET DEFAULT now();
+
+DROP TABLE tags;
+CREATE TABLE tags (
+	tag VARCHAR(25) PRIMARY KEY UNIQUE NOT NULL,
+	id SERIAL UNIQUE NOT NULL
+);
+ALTER TABLE threads_tags ALTER created_on SET DEFAULT now();
+
+DROP TABLE messages;
+CREATE TABLE messages (
+	id SERIAL PRIMARY KEY,
+	owner_id SERIAL NOT NULL,
+	message TEXT NOT NULL,
+	created_on TIMESTAMP NOT NULL,
+);
+ALTER TABLE messages ALTER created_on SET DEFAULT now();
 
 ALTER ROLE postgres PASSWORD 'abc123';
 CREATE ROLE bwackwat WITH LOGIN;
