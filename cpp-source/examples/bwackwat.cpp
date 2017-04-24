@@ -77,7 +77,7 @@ int main(int argc, char **argv){
 	api.route("POST", "/user", [&](JsonObject* json)->std::string{	
 		return provider.communicate(Insert("users",
 			json->objectValues["values"]));
-	}, {{"values", ARRAY}}/*, true TODO ENABLE CAPTCHA LOL! */);
+	}, {{"values", ARRAY}}, std::chrono::hours(6)); // Can only register every 6 hours.
 	
 	api.route("PUT", "/user", [&](JsonObject* json)->std::string{	
 		return provider.communicate(Update("users",
@@ -90,7 +90,7 @@ int main(int argc, char **argv){
 		return provider.communicate(Login("users",
 			json->GetStr("username"),
 			json->GetStr("password")));
-	}, {{"username", STRING}, {"password", STRING}});
+	}, {{"username", STRING}, {"password", STRING}}, std::chrono::seconds(1));
 
 	/*
 		BLOG

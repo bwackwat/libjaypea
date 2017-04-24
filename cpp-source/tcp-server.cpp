@@ -174,14 +174,16 @@ void EpollServer::run_thread(unsigned int thread_id){
 	//struct timeval recv_timeout;
 
 	struct epoll_event new_event;
-	struct epoll_event* client_events = new struct epoll_event[this->max_connections + 3];
+	struct epoll_event* client_events = new struct epoll_event[this->max_connections + 4];
 						// + 1 for server_fd
 						// + 1 for timeout_epoll_fd
 						// + 1 for broadcast_pipe[0]
+						// + 1 for fun
 	struct epoll_event* timeout_events = new struct epoll_event[this->max_connections];
 	
 	std::unordered_map<int /* timer fd */, int /* client fd */> timer_to_client_map;
 	std::unordered_map<int /* client fd */, int /* timer fd */> client_to_timer_map;
+	char client_detail[INET_ADDRSTRLEN];
 
 	// Broken pipes will make SSL_write (or any write, actually) return with an error instead of interrupting the program.
 	signal(SIGPIPE, SIG_IGN);
@@ -322,13 +324,20 @@ void EpollServer::run_thread(unsigned int thread_id){
 			}else if(the_fd == this->server_fd){
 				if(this->accept_mutex.try_lock()){
 					while(num_connections < this->max_connections){
-						if((new_fd = accept(this->server_fd, 0, 0)) < 0){
+						if((new_fd = accept(this->server_fd, reinterpret_cast<struct sockaddr*>(&this->accept_client), &this->sockaddr_length)) < 0){
 							if(errno != EWOULDBLOCK && errno != EAGAIN){
 								perror("accept");
 								running = false;
 							}
 							break;
 						}else{
+							if(inet_ntop(AF_INET, &this->accept_client.sin_addr.s_addr, client_detail, sizeof(client_detail)) != 0){
+								PRINT("Connection from " << client_detail)
+								this->fd_to_details_map[the_fd] = std::string(client_detail);
+							}else{
+								perror("inet_ntop!");
+								this->fd_to_details_map[the_fd] = "NULL";
+							}
 							if(this->accept_continuation(&new_fd)){
 								DEBUG("accept continuation failed.")
 								this->close_client(&new_fd, [&](int* fd){
@@ -405,6 +414,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
 					PRINT("timerfd_setting error" << the_fd << " and timer " << timer_fd)
 					perror("timerfd_settime update");
+					this->close_client(&the_fd, close_client_callback);
 				}else if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
 					timer_to_client_map.erase(timer_fd);
 					client_to_timer_map.erase(the_fd);
@@ -421,7 +431,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 					client_events[i].events = EVENTS;
 					client_events[i].data.fd = the_fd;
 					if(epoll_ctl(epoll_fd, EPOLL_CTL_MOD, the_fd, &client_events[i]) < 0){
-					 	perror("epoll_ctl mod client");
+						perror("epoll_ctl mod client");
 					}
 				}
 			}

@@ -3,6 +3,7 @@
 #include <stack>
 #include <vector>
 #include <mutex>
+#include <ctime>
 #include <functional>
 #include <thread>
 #include <unordered_map>
@@ -10,10 +11,16 @@
 #include "signal.h"
 #include "sys/timerfd.h"
 #include "sys/epoll.h"
+#include <arpa/inet.h>
 
 #include "queue.hpp"
 
 #define EVENTS EPOLLIN | EPOLLET | EPOLLONESHOT | EPOLLERR | EPOLLHUP
+
+struct ClientDetails{
+	std::chrono::milliseconds ms_at_recv;
+	std::chrono::milliseconds ms_diff_at_last;
+};
 
 class EpollServer{
 protected:
@@ -22,12 +29,17 @@ protected:
 	unsigned int num_threads;
 	bool running;
 	time_t timeout;
+	socklen_t sockaddr_length;
 
 	std::unordered_map<int /* fd */, int> read_counter;
 	std::unordered_map<int /* fd */, int> write_counter;
+	//uint64_t represents millseconds since last recv
+	std::mutex client_time_mutex;
 
 	int server_fd;
 	std::mutex accept_mutex;
+	struct sockaddr_in accept_client;
+	
 	// Read from 0, write to 1.
 	int broadcast_pipe[2];
 
@@ -37,6 +49,8 @@ protected:
 public:
 	EpollServer(uint16_t port, size_t new_max_connections, std::string new_name = "EpollServer");
 	virtual ~EpollServer(){}
+
+	std::unordered_map<int /* client fd */, std::string> fd_to_details_map;
 
 	void set_timeout(time_t seconds);
 	int broadcast_fd();

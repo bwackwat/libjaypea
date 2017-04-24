@@ -10,18 +10,24 @@ server(new_server)
 	this->set_file_cache_size(30);
 }
 
-void HttpApi::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function, std::unordered_map<std::string, JsonType> requires, bool requires_human){
+void HttpApi::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function,
+std::unordered_map<std::string, JsonType> requires,
+std::chrono::milliseconds rate_limit,
+bool requires_human){
 	if(path[path.length() - 1] != '/'){
 		path += '/';
 	}
-	this->routemap[method + " /api" + path] = new Route(function, requires, requires_human);
+	this->routemap[method + " /api" + path] = new Route(function, requires, rate_limit, requires_human);
 }
 
-void HttpApi::route(std::string method, std::string path, std::function<ssize_t(JsonObject*, int)> function, std::unordered_map<std::string, JsonType> requires, bool requires_human){
+void HttpApi::route(std::string method, std::string path, std::function<ssize_t(JsonObject*, int)> function,
+std::unordered_map<std::string, JsonType> requires,
+std::chrono::milliseconds rate_limit,
+bool requires_human){
 	if(path[path.length() - 1] != '/'){
 		path += '/';
 	}
-	this->routemap[method + " /api" + path] = new Route(function, requires, requires_human);
+	this->routemap[method + " /api" + path] = new Route(function, requires, rate_limit, requires_human);
 }
 
 struct Question{
@@ -65,7 +71,7 @@ void HttpApi::start(){
 	};
 
 	this->server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
-		PRINT("RECV:" << data)
+		//PRINT("RECV:" << data)
 		
 		JsonObject r_obj(OBJECT);
 		enum RequestResult r_type = Util::parse_http_api_request(data, &r_obj);
@@ -92,7 +98,7 @@ void HttpApi::start(){
 			r_type = HTTP_API;
 		}
 		
-		PRINT("JSON:" << r_obj.stringify(true))
+		//PRINT("JSON:" << r_obj.stringify(true))
 		
 		std::string route = r_obj.GetStr("route");
 		
@@ -110,47 +116,51 @@ void HttpApi::start(){
 			if(this->file_cache.count(clean_route + "/index.html")){
 				clean_route += "/index.html";
 			}
-			
-			if(this->file_cache.count(clean_route)){
-				// Send the file from the cache.
-				CachedFile* cached_file = file_cache[clean_route];
-				
-				response = response_header + "Content-Length: " + std::to_string(cached_file->data_length) + "\r\n\r\n";
-				if(this->server->send(fd, response.c_str(), response.length())){
-					return -1;
-				}
-				PRINT("DELI:" << response)
-				if(r_obj.GetStr("method") != "HEAD"){
-					size_t buffer_size = BUFFER_LIMIT;
-					size_t offset = 0;
-					while(buffer_size == BUFFER_LIMIT){
-						if(offset + buffer_size > cached_file->data_length){
-							// Send final bytes.
-							buffer_size = cached_file->data_length % BUFFER_LIMIT;
-						}
-						if(this->server->send(fd, cached_file->data + offset, buffer_size)){
-							return -1;
-						}
-						offset += buffer_size;
-					}
-				}
-				PRINT("FILE CACHED |" << clean_route)
-			}else{
-				struct stat route_stat;
+
+			struct stat route_stat;
+			if(lstat(clean_route.c_str(), &route_stat) < 0){
+				// perror("lstat");
+				response_body = HTTP_404;
+				response_header = response_header.replace(9, 6, "404 Not Found");
+			}else if(S_ISDIR(route_stat.st_mode)){
+				clean_route += "/index.html";
 				if(lstat(clean_route.c_str(), &route_stat) < 0){
-					// perror("lstat");
+					// perror("lstat index.html");
 					response_body = HTTP_404;
 					response_header = response_header.replace(9, 6, "404 Not Found");
-				}else if(S_ISDIR(route_stat.st_mode)){
-					clean_route += "/index.html";
-					if(lstat(clean_route.c_str(), &route_stat) < 0){
-						// perror("lstat index.html");
-						response_body = HTTP_404;
-						response_header = response_header.replace(9, 6, "404 Not Found");
-					}
 				}
-			
-				if(response_body.empty() && S_ISREG(route_stat.st_mode)){
+			}
+
+			if(response_body.empty() && S_ISREG(route_stat.st_mode)){
+				if(this->file_cache.count(clean_route) &&
+				route_stat.st_mtime != this->file_cache[clean_route]->modified){
+					this->file_cache.erase(clean_route);
+				}
+				if(this->file_cache.count(clean_route)){
+					// Send the file from the cache.
+					CachedFile* cached_file = file_cache[clean_route];
+
+					response = response_header + "Content-Length: " + std::to_string(cached_file->data_length) + "\r\n\r\n";
+					if(this->server->send(fd, response.c_str(), response.length())){
+						return -1;
+					}
+					PRINT("DELI:" << response)
+					if(r_obj.GetStr("method") != "HEAD"){
+						size_t buffer_size = BUFFER_LIMIT;
+						size_t offset = 0;
+						while(buffer_size == BUFFER_LIMIT){
+							if(offset + buffer_size > cached_file->data_length){
+								// Send final bytes.
+								buffer_size = cached_file->data_length % BUFFER_LIMIT;
+							}
+							if(this->server->send(fd, cached_file->data + offset, buffer_size)){
+								return -1;
+							}
+							offset += buffer_size;
+						}
+					}
+					PRINT("FILE CACHED |" << clean_route)
+				}else{
 					response = response_header + "Content-Length: " + std::to_string(route_stat.st_size) + "\r\n\r\n";
 					if(this->server->send(fd, response.c_str(), response.length())){
 						return -1;
@@ -163,6 +173,7 @@ void HttpApi::start(){
 							CachedFile* cached_file = new CachedFile();
 							cached_file->data_length = static_cast<size_t>(route_stat.st_size);
 							cached_file->data = new char[route_stat.st_size];
+							cached_file->modified = route_stat.st_mtime;
 							int offset = 0;
 							this->file_cache[clean_route] = cached_file;
 							this->file_cache_remaining_bytes -= cached_file->data_length;
@@ -229,11 +240,11 @@ void HttpApi::start(){
 							PRINT("FILE DONE |" << clean_route)
 						}
 					}
-				}else{
-					PRINT("Something other than a regular file was requested...")
-					response_body = HTTP_404;
-					response_header = response_header.replace(9, 6, "404 Not Found");
 				}
+			}else{
+				PRINT("Something other than a regular file was requested...")
+				response_body = HTTP_404;
+				response_header = response_header.replace(9, 6, "404 Not Found");
 			}
 		}else{
 			if(route.length() >= 4 &&
@@ -247,12 +258,34 @@ void HttpApi::start(){
 			PRINT((r_type == API ? "APIR:" : "HTTPAPIR") << route)
 
 			if(this->routemap.count(route)){
-				for(auto iter = this->routemap[route]->requires.begin(); iter != this->routemap[route]->requires.end(); ++iter){
-					if(!r_obj.HasObj(iter->first, iter->second)){
-						response_body = "{\"error\":\"'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".\"}";
-						break;
+				if(this->routemap[route]->minimum_ms_between_call.count() > 0){
+					std::chrono::milliseconds now = std::chrono::duration_cast<std::chrono::milliseconds>(
+						std::chrono::system_clock::now().time_since_epoch());
+
+					if(this->routemap[route]->client_ms_at_call.count(this->server->fd_to_details_map[fd])){
+						std::chrono::milliseconds diff = now -
+						this->routemap[route]->client_ms_at_call[this->server->fd_to_details_map[fd]];
+
+						if(diff < this->routemap[route]->minimum_ms_between_call){
+							DEBUG("DIFF: " << diff.count() << "\nMINIMUM: " << this->routemap[route]->minimum_ms_between_call.count())
+							response_body = "{\"error\":\"This API route is rate-limited.\"}";
+						}else{
+							this->routemap[route]->client_ms_at_call[this->server->fd_to_details_map[fd]] = now;
+						}
+					}else{
+						this->routemap[route]->client_ms_at_call[this->server->fd_to_details_map[fd]] = now;
 					}
 				}
+
+				if(response_body.empty()){
+					for(auto iter = this->routemap[route]->requires.begin(); iter != this->routemap[route]->requires.end(); ++iter){
+						if(!r_obj.HasObj(iter->first, iter->second)){
+							response_body = "{\"error\":\"'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".\"}";
+							break;
+						}
+					}
+				}
+
 				if(response_body.empty()){
 					if(this->routemap[route]->requires_human){
 						if(!r_obj.HasObj("answer", STRING)){
