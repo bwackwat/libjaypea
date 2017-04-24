@@ -27,8 +27,8 @@
 EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
 :name(new_name),
 max_connections(new_max_connections),
-running(true),
-timeout(10){
+timeout(10),
+running(true){
 	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		perror("socket");
 		throw std::runtime_error(this->name + " socket");

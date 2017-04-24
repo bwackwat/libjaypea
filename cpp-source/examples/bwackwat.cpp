@@ -58,6 +58,16 @@ int main(int argc, char **argv){
 		return "{\"result\":\"Welcome to the API V1!\",\n\"routes\":" + api.routes_string + "}";
 	});
 
+	api.route("POST", "/end", [&](JsonObject* json)->std::string{
+		JsonObject res;
+		res.parse(provider.communicate(Login("users", "bwackwat",
+			json->GetStr("token"))).c_str());
+		if(!res.HasObj("error", STRING)){
+			server->running = false;
+		}
+		return res.stringify();
+	}, {{"token", STRING}});
+
 	/*
 		USER
 	*/
@@ -67,7 +77,7 @@ int main(int argc, char **argv){
 			json->GetStr("token")));
 	}, {{"token", STRING}});
 
-	api.route("GET", "/user", [&](JsonObject* json)->std::string{	
+	api.route("GET", "/user", [&](JsonObject* json)->std::string{
 		return provider.communicate(Where("users",
 			"username",
 			json->GetStr("username"),

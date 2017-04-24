@@ -27,7 +27,6 @@ protected:
 	std::string name;
 	unsigned long max_connections;
 	unsigned int num_threads;
-	bool running;
 	time_t timeout;
 	socklen_t sockaddr_length;
 
@@ -51,6 +50,7 @@ public:
 	virtual ~EpollServer(){}
 
 	std::unordered_map<int /* client fd */, std::string> fd_to_details_map;
+	bool running;
 
 	void set_timeout(time_t seconds);
 	int broadcast_fd();

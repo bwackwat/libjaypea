@@ -50,7 +50,7 @@ static struct Question* get_question(){
 }
 static std::unordered_map<int, struct Question*> client_questions;
 
-void HttpApi::start(){
+void HttpApi::start(void){
 	std::string default_header = "HTTP/1.1 200 OK\n"
 		"Accept-Ranges: bytes\n"
 		"Content-Type: text\n";
@@ -181,14 +181,14 @@ void HttpApi::start(){
 							int file_fd;
 							ssize_t len;
 							char buffer[BUFFER_LIMIT + 32];
-							if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
-								ERROR("open file")
+							if((file_fd = open(clean_route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
+								perror("open file");
 								this->file_cache_mutex.unlock();
 								return 0;
 							}
 							while(file_fd > 0){
 								if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-									ERROR("read file")
+									perror("read file");
 								this->file_cache_mutex.unlock();
 									return 0;
 								}
@@ -205,7 +205,7 @@ void HttpApi::start(){
 								}
 							}
 							if(close(file_fd) < 0){
-								ERROR("close file")
+								perror("close file");
 								this->file_cache_mutex.unlock();
 								return 0;
 							}
@@ -216,13 +216,13 @@ void HttpApi::start(){
 							int file_fd;
 							ssize_t len;
 							char buffer[BUFFER_LIMIT + 32];
-							if((file_fd = open(clean_route.c_str(), O_RDONLY)) < 0){
-								ERROR("open file")
+							if((file_fd = open(clean_route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
+								perror("open file");
 								return 0;
 							}
 							while(file_fd > 0){
 								if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-									ERROR("read file")
+									perror("read file");
 									return 0;
 								}
 								buffer[len] = 0;
@@ -234,7 +234,7 @@ void HttpApi::start(){
 								}
 							}
 							if(close(file_fd) < 0){
-								ERROR("close file")
+								perror("close file");
 								return 0;
 							}
 							PRINT("FILE DONE |" << clean_route)
@@ -345,7 +345,7 @@ void HttpApi::start(){
 	// Should not return.
 	this->server->run();
 
-	ERROR("something super broke")
+	PRINT("Goodbye!")
 }
 
 void HttpApi::set_file_cache_size(int megabytes){

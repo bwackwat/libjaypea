@@ -87,7 +87,7 @@ public:
 		bool requires_human = false
 	);
 
-	void start();
+	void start(void);
 	void set_file_cache_size(int megabytes);
 private:
 	std::unordered_map<std::string, CachedFile*> file_cache;

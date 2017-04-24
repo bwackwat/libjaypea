@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <iterator>
+
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -5,7 +8,8 @@
 #include "http-api.hpp"
 
 struct Songset{
-	std::unordered_map<std::string, struct Songset*> sets;
+	std::string name;
+	std::unordered_map<std::string /* directory path */, struct Songset*> sets;
 	std::vector<std::string> songs;
 };
 
@@ -40,6 +44,7 @@ static struct Songset* get_songset(std::string path){
 		if(S_ISDIR(route_stat.st_mode)){
 			PRINT("SET: " + new_path)
 			new_set->sets[new_path] = get_songset(new_path);
+			new_set->sets[new_path]->name = ent->d_name;
 		}else if(S_ISREG(route_stat.st_mode)){
 			PRINT("SONG: " + new_path)
 			new_set->songs.push_back(new_path);
@@ -54,6 +59,19 @@ static struct Songset* get_songset(std::string path){
 	}
 	
 	return new_set;
+}
+
+static struct Songset* find_set(struct Songset* songset, std::string set){
+	struct Songset* result = 0;
+	for(auto iter = songset->sets.begin(); iter != songset->sets.end(); ++iter){
+		if(iter->second->name == set){
+			return iter->second;
+		}
+		if((result = find_set(iter->second, set)) != 0){
+			return result;
+		}
+	}
+	return result;
 }
 
 int main(int argc, char **argv){
@@ -86,9 +104,21 @@ int main(int argc, char **argv){
 	
 	struct Songset* library = get_songset("../../Music");
 	
-	api.route("GET", "/", [&](JsonObject*, int)->ssize_t{
-		return 1;
-	}, {{"password", STRING}});
+	api.route("GET", "/set", [&](JsonObject* json)->std::string{
+		struct Songset* search = find_set(library, json->GetStr("set"));
+		if(search == 0){
+			return "{\"error\",\"No set.\"}";
+		}
+		std::stringstream ss;
+		for(std::string song : search->songs){
+			if(song == search->songs.back()){
+				ss << '\"' << song << '\"';
+			}else{
+				ss << '\"' << song << "\",";
+			}
+		}
+		return "{\"songs\":[" + ss.str() + "]}";
+	}, {{"token", STRING}, {"set", STRING}});
 
 	api.start();
 }
