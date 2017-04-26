@@ -50,8 +50,15 @@ int main(int argc, char **argv){
 		server = new TlsEpollServer(ssl_certificate, ssl_private_key, static_cast<uint16_t>(port), 10);
 	}
 
+	SymmetricEncryptor encryptor;
+	std::string admin = "bwackwat";
+	std::string password = "aq12ws";
+	std::string token = encryptor.encrypt(admin + password);
+	PRINT("ADMIN: " << admin)
+	PRINT("PASSWORD: " << password)
+	PRINT("TOKEN: " << token)
+
 	HttpApi api(public_directory, server);
-	
 	api.set_file_cache_size(cache_megabytes);
 
 	api.route("GET", "/", [&](JsonObject*)->std::string{
@@ -59,13 +66,13 @@ int main(int argc, char **argv){
 	});
 
 	api.route("POST", "/end", [&](JsonObject* json)->std::string{
-		JsonObject res;
-		res.parse(provider.communicate(Login("users", "bwackwat",
-			json->GetStr("token"))).c_str());
-		if(!res.HasObj("error", STRING)){
+		if(json->GetStr("token") != token){
+			return std::string();
+		}else{
 			server->running = false;
+			//server->send(server->broadcast_fd(), "Goodbye!");
+			return "{\"result\":\"Goodbye!\"}";
 		}
-		return res.stringify();
 	}, {{"token", STRING}});
 
 	/*

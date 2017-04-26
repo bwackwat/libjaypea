@@ -7,6 +7,7 @@
 #include <functional>
 #include <thread>
 #include <unordered_map>
+#include <atomic>
 
 #include "signal.h"
 #include "sys/timerfd.h"
@@ -50,7 +51,7 @@ public:
 	virtual ~EpollServer(){}
 
 	std::unordered_map<int /* client fd */, std::string> fd_to_details_map;
-	bool running;
+	std::atomic<bool> running;
 
 	void set_timeout(time_t seconds);
 	int broadcast_fd();

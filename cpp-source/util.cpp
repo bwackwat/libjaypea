@@ -481,10 +481,16 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 		case 3:
 		case 4:
 		case 6: //TODO: Other escape sequences. (e.g. '&' cannot exist in URL param value)
-			if(*it == '%' && *(it + 1) == '2' && *(it + 1) == '2'){
-				it++;
-				it++;
-				new_value += '"';
+			if(*it == '%'){
+				if(*(it + 1) == '2' && *(it + 2) == '6'){
+					it++;
+					it++;
+					new_value += '"';
+				}else if(*(it + 1) == '0' && *(it + 2) == 'A'){
+					it++;
+					it++;
+					new_value += '\n';
+				}
 			}else{
 				if(*it != '\r'){
 					new_value += *it;

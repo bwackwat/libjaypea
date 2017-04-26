@@ -28,6 +28,7 @@ EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string 
 :name(new_name),
 max_connections(new_max_connections),
 timeout(10),
+sockaddr_length(sizeof(this->accept_client)),
 running(true){
 	if((this->server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		perror("socket");
@@ -241,12 +242,17 @@ void EpollServer::run_thread(unsigned int thread_id){
 	};
 
 	while(this->running){
-		if((num_fds = epoll_wait(epoll_fd, client_events, static_cast<int>(this->max_connections + 2), -1)) < 0){
+		if((num_fds = epoll_wait(epoll_fd, client_events, static_cast<int>(this->max_connections + 2), 10000)) < 0){
 			if(errno == EINTR){
+				PRINT("EINTR!")
 				continue;
 			}
 			perror("epoll_wait");
 			this->running = false;
+			continue;
+		}
+		if(num_fds == 0){
+			DEBUG("EPOLL_WAIT TIMEOUT")
 			continue;
 		}
 		for(i = 0; i < num_fds; ++i){

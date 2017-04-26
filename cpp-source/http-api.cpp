@@ -71,7 +71,7 @@ void HttpApi::start(void){
 	};
 
 	this->server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
-		//PRINT("RECV:" << data)
+		DEBUG("RECV:" << data)
 		
 		JsonObject r_obj(OBJECT);
 		enum RequestResult r_type = Util::parse_http_api_request(data, &r_obj);
@@ -98,7 +98,7 @@ void HttpApi::start(void){
 			r_type = HTTP_API;
 		}
 		
-		//PRINT("JSON:" << r_obj.stringify(true))
+		DEBUG("JSON:" << r_obj.stringify(true))
 		
 		std::string route = r_obj.GetStr("route");
 		
@@ -144,7 +144,7 @@ void HttpApi::start(void){
 					if(this->server->send(fd, response.c_str(), response.length())){
 						return -1;
 					}
-					PRINT("DELI:" << response)
+					DEBUG("DELI:" << response)
 					if(r_obj.GetStr("method") != "HEAD"){
 						size_t buffer_size = BUFFER_LIMIT;
 						size_t offset = 0;
@@ -165,7 +165,7 @@ void HttpApi::start(void){
 					if(this->server->send(fd, response.c_str(), response.length())){
 						return -1;
 					}
-					PRINT("DELI:" << response)
+					DEBUG("DELI:" << response)
 
 					if(r_obj.GetStr("method") != "HEAD"){
 						if(this->file_cache_remaining_bytes > route_stat.st_size && this->file_cache_mutex.try_lock()){
@@ -329,13 +329,13 @@ void HttpApi::start(void){
 				if(this->server->send(fd, response_body.c_str(), response_body.length())){
 					return -1;
 				}
-				PRINT("DELI:" << response_body)
+				DEBUG("DELI:" << response_body)
 			}else{			
 				response = response_header + "Content-Length: " + std::to_string(response_body.length()) + "\r\n\r\n" + response_body;
 				if(this->server->send(fd, response.c_str(), response.length())){
 					return -1;
 				}
-				PRINT("DELI:" << response)
+				DEBUG("DELI:" << response)
 			}
 		}
 		
