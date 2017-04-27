@@ -78,20 +78,29 @@ void TlsEpollServer::close_client(int* fd, std::function<void(int*)> callback){
  * See EpollServer::send
  */ 
 bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
-	int len = 0, err = SSL_ERROR_WANT_WRITE, count = 0;
-	//TODO: A malicious SSL client could continously request the same bytes (keep ACKing received bytes).
+	int len = 0, err = SSL_ERROR_WANT_WRITE;
+	std::chrono::milliseconds send_start = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch());
+	std::chrono::milliseconds diff = std::chrono::milliseconds(0);
+	std::chrono::milliseconds timeout = std::chrono::milliseconds(10000);
+
 	while(err == SSL_ERROR_WANT_WRITE){
+		if(diff > timeout){
+			PRINT("SSL_write timeout...")
+			return true;
+		}
+
 		len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
 		err = SSL_get_error(this->client_ssl[fd], len);
-		count++;
+
+		diff = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::system_clock::now().time_since_epoch()) - send_start;
 	}
 	if(err != SSL_ERROR_NONE){
 		ERROR("SSL_write: " << err)
 		return true;
 	}
-	if(count != 1){
-		PRINT("SSL_write: " << count)
-	}
+	DEBUG("SSL_write took milliseconds: " << diff.count())
 	if(len != static_cast<int>(data_length)){
 		ERROR("Invalid number of bytes written...")
 	}
