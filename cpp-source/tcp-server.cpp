@@ -258,11 +258,11 @@ void EpollServer::run_thread(unsigned int thread_id){
 		for(i = 0; i < num_fds; ++i){
 			the_fd = client_events[i].data.fd;
 			if(client_events[i].events & EPOLLERR){
-				std::cout << "EPOLLERR ";
+				PRINT("EPOLLERR: " << the_fd)
 			}else if(client_events[i].events & EPOLLHUP){
-				std::cout << "EPOLLHUP ";
+				PRINT("EPOLLHUP: " << the_fd)
 			}else if(!(client_events[i].events & EPOLLIN)){
-				std::cout << "NOT EPOLLIN? ";
+				PRINT("EPOLLIN: " << the_fd)
 			}
 			if((client_events[i].events & EPOLLERR) || 
 			(client_events[i].events & EPOLLHUP) || 
@@ -339,10 +339,10 @@ void EpollServer::run_thread(unsigned int thread_id){
 						}else{
 							if(inet_ntop(AF_INET, &this->accept_client.sin_addr.s_addr, client_detail, sizeof(client_detail)) != 0){
 								PRINT("Connection from " << client_detail)
-								this->fd_to_details_map[the_fd] = std::string(client_detail);
+								this->fd_to_details_map[new_fd] = std::string(client_detail);
 							}else{
 								perror("inet_ntop!");
-								this->fd_to_details_map[the_fd] = "NULL";
+								this->fd_to_details_map[new_fd] = "NULL";
 							}
 							if(this->accept_continuation(&new_fd)){
 								DEBUG("accept continuation failed.")
@@ -368,7 +368,6 @@ void EpollServer::run_thread(unsigned int thread_id){
 									timer_spec.it_interval.tv_nsec = 0;
 									timer_spec.it_value.tv_sec = this->timeout;
 									timer_spec.it_value.tv_nsec = 0;
-									//PRINT("TIME " << timer_fd)
 									if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
 										perror("timerfd_settime");
 									}else{
@@ -376,19 +375,21 @@ void EpollServer::run_thread(unsigned int thread_id){
 										client_to_timer_map[new_fd] = timer_fd;
 										new_event.events = EVENTS;
 										new_event.data.fd = timer_fd;
-										//PRINT("new tfd " << timer_fd)
+										DEBUG("new tfd " << timer_fd)
 										if(epoll_ctl(timeout_epoll_fd, EPOLL_CTL_ADD, timer_fd, &new_event) < 0){
 											perror("epoll_ctl timer add");
 										}
 									}
 								}
 								/*
-								I found some docs that said this should work (and thus replace all these timerfds), but it doesn't?
+								I found some docs that said this should work (and thus replace all the timerfds), but it doesn't?
+
 								recv_timeout.tv_sec = 10;
 								recv_timeout.tv_usec = 0;
 								if(setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&recv_timeout), sizeof(struct timeval)) < 0){
 									perror("setsockopt new connection timeout");
-								}*/
+								}
+								*/
 								this->read_counter[new_fd] = 0;
 								this->write_counter[new_fd] = 0;
 								if(this->on_connect != nullptr){
