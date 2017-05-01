@@ -334,6 +334,8 @@ void EpollServer::run_thread(unsigned int thread_id){
 							if(errno != EWOULDBLOCK && errno != EAGAIN){
 								perror("accept");
 								running = false;
+							}else{
+								perror("accept nonblock");
 							}
 							break;
 						}else{
