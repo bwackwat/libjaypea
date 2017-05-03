@@ -126,7 +126,7 @@ std::function<ssize_t(int, char*, size_t)> callback){
 	case SSL_ERROR_NONE:
 		break;
 	case SSL_ERROR_WANT_READ:
-		PRINT("WANT READ" << fd)
+		PRINT("WANT READ " << fd)
 		// Nothing to read, nonblocking mode.
 		return 0;
 	case SSL_ERROR_ZERO_RETURN:
