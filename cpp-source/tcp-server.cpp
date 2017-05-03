@@ -423,7 +423,6 @@ void EpollServer::run_thread(unsigned int thread_id){
 				if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
 					PRINT("timerfd_setting error " << the_fd << " and timer " << timer_fd)
 					perror("timerfd_settime update");
-					this->close_client(&the_fd, close_client_callback);
 				}else if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
 					timer_to_client_map.erase(timer_fd);
 					client_to_timer_map.erase(the_fd);
