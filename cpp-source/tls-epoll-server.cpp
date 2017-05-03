@@ -159,7 +159,7 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 		ERR_print_errors_fp(stdout);
 		return true;
 	}
-	DEBUG("SSL_new, done.")
+	DEBUG("SSL_new, done." << *new_client_fd)
 
 	SSL_set_fd(this->client_ssl[*new_client_fd], *new_client_fd);
 	DEBUG("SSL_set_fd, done.")

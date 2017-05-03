@@ -270,7 +270,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				timer_fd = client_to_timer_map[the_fd];
 				client_to_timer_map.erase(the_fd);
 				timer_to_client_map.erase(timer_fd);
-				ERROR(the_fd << " and timer " << timer_fd << " donezo.")
+				ERROR(the_fd << " and timer " << timer_fd << " on error.")
 				if(close(timer_fd) < 0){
 					perror("close timer_fd on error");
 				}
@@ -348,7 +348,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 							}
 							Util::set_non_blocking(new_fd);
 							if(this->accept_continuation(&new_fd)){
-								DEBUG("accept continuation failed.")
+								DEBUG("accept continuation failed " << new_fd)
 								this->close_client(&new_fd, [&](int* fd){
 									close(*fd);
 								});
@@ -421,7 +421,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				timer_spec.it_value.tv_sec = this->timeout;
 				timer_spec.it_value.tv_nsec = 0;
 				if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
-					PRINT("timerfd_setting error" << the_fd << " and timer " << timer_fd)
+					PRINT("timerfd_setting error " << the_fd << " and timer " << timer_fd)
 					perror("timerfd_settime update");
 					this->close_client(&the_fd, close_client_callback);
 				}else if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
