@@ -252,7 +252,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 			continue;
 		}
 		if(num_fds == 0){
-			DEBUG("EPOLL_WAIT TIMEOUT")
+			//DEBUG("EPOLL_WAIT TIMEOUT")
 			continue;
 		}
 		for(i = 0; i < num_fds; ++i){
