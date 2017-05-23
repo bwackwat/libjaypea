@@ -26,7 +26,7 @@ case "${argv[@]}" in
 		;;
 	*"DEBUG"*)
 		echo "DEBUG MODE"
-		extra="-O0 -D_DO_DEBUG -g -pg -lprofiler -ltcmalloc -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free "
+		extra="-O0 -DDO_DEBUG -g -pg -lprofiler -ltcmalloc -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free "
 	
 		((argc-=1))
 		argv=( "${argv[@]/"DEBUG"}" )

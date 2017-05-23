@@ -119,9 +119,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 	libjaypea_path = libjaypea_path.substr(0, libjaypea_path.find_last_of('/')) + '/';
 	PRINT("libjaypea: " << libjaypea_path)
 
-	//#if defined(_DO_DEBUG)
 	std::signal(SIGSEGV, trace_segfault);
-	//#endif
 
 	std::string check;
 	std::cout << "Arguments: ";

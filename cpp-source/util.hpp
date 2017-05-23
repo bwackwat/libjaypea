@@ -35,9 +35,9 @@
 #define PRINT(msg) std::cout << msg << std::endl;
 #define ERROR(msg) std::cerr << "Uh oh, " << msg << " error." << std::endl;
 
-#define _DO_DEBUG
+#define DO_DEBUG
 
-#if defined(_DO_DEBUG)
+#if defined(DO_DEBUG)
 	#define DEBUG(msg) std::cout << msg << std::endl;
 	#define DEBUG_SLEEP(sec) sleep(sec);
 #else

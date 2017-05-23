@@ -49,7 +49,7 @@ private:
 			message << static_cast<char>(static_cast<unsigned char>(data[offset + i]) ^ mask[i % 4]);
 		}
 
-		#if defined(_DO_DEBUG)
+		#if defined(DO_DEBUG)
 			PRINT("DATA:")
 			Util::print_bits(data, data_length);
 			PRINT("MASK:")
@@ -118,7 +118,7 @@ public:
 		//std::memcpy(frame + offset, data, data_length);
 		//frame[data_length + offset] = 0;
 		
-		#if defined(_DO_DEBUG)
+		#if defined(DO_DEBUG)
 			PRINT("SDATA:")
 			Util::print_bits(frame.str().c_str(), frame.str().length());
 		#endif
