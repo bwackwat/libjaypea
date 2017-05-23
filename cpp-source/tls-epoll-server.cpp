@@ -159,8 +159,10 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 		ERR_print_errors_fp(stdout);
 		return true;
 	}
+	DEBUG("SSL_new, done.")
 
 	SSL_set_fd(this->client_ssl[*new_client_fd], *new_client_fd);
+	DEBUG("SSL_set_fd, done.")
 
 //	SSL_accept fails if socket is non_blocking.
 	if(SSL_accept(this->client_ssl[*new_client_fd]) <= 0){
@@ -168,6 +170,7 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 		ERR_print_errors_fp(stdout);
 		return true;
 	}
+	DEBUG("SSL_accept, done.")
 
 	return false;
 }
