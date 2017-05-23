@@ -346,6 +346,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 								perror("inet_ntop!");
 								this->fd_to_details_map[new_fd] = "NULL";
 							}
+							Util::set_non_blocking(new_fd);
 							if(this->accept_continuation(&new_fd)){
 								DEBUG("accept continuation failed.")
 								this->close_client(&new_fd, [&](int* fd){
@@ -353,7 +354,6 @@ void EpollServer::run_thread(unsigned int thread_id){
 								});
 								break;
 							}
-							Util::set_non_blocking(new_fd);
 							new_event.events = EVENTS;
 							new_event.data.fd = new_fd;
 							if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, new_fd, &new_event) < 0){

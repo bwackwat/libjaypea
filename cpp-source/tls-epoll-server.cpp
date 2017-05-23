@@ -164,13 +164,29 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 	SSL_set_fd(this->client_ssl[*new_client_fd], *new_client_fd);
 	DEBUG("SSL_set_fd, done.")
 
-//	SSL_accept fails if socket is non_blocking.
-	if(SSL_accept(this->client_ssl[*new_client_fd]) <= 0){
-		ERROR("SSL_accept " << *new_client_fd)
-		ERR_print_errors_fp(stdout);
+	int res, err = SSL_ERROR_WANT_READ;
+	std::chrono::milliseconds accept_start = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch());
+	std::chrono::milliseconds diff = std::chrono::milliseconds(0);
+	std::chrono::milliseconds timeout = std::chrono::milliseconds(10000);
+
+	while(err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE){
+		if(diff > timeout){
+			PRINT("SSL_accept timeout...")
+			return true;
+		}
+
+		res = SSL_accept(this->client_ssl[*new_client_fd]);
+		err = SSL_get_error(this->client_ssl[*new_client_fd], res);
+
+		diff = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::system_clock::now().time_since_epoch()) - accept_start;
+	}
+	if(err != SSL_ERROR_NONE){
+		ERROR("SSL_accept " << *new_client_fd << ';' << err)
 		return true;
 	}
-	DEBUG("SSL_accept, done.")
+	DEBUG("SSL_accept took milliseconds: " << diff.count())
 
 	return false;
 }
