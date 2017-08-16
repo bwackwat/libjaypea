@@ -8,7 +8,7 @@ CREATE TABLE users (
 	email VARCHAR(100) UNIQUE NOT NULL,
 	first_name VARCHAR(50) NOT NULL,
 	last_name VARCHAR(50) NOT NULL,
-	verified BOOLEAN, NOT NULL,
+	verified BOOLEAN NOT NULL,
 	created_on TIMESTAMP NOT NULL
 );
 ALTER TABLE users ALTER verified SET DEFAULT FALSE;
@@ -31,7 +31,7 @@ DROP TABLE threads;
 CREATE TABLE threads (
 	id SERIAL PRIMARY KEY,
 	name VARCHAR(50) UNIQUE NOT NULL,
-	created_on TIMESTAMP NOT NULL,
+	created_on TIMESTAMP NOT NULL
 );
 ALTER TABLE threads ALTER created_on SET DEFAULT now();
 
@@ -47,7 +47,7 @@ CREATE TABLE messages (
 	owner_id SERIAL NOT NULL,
 	title TEXT NOT NULL,
 	content TEXT NOT NULL,
-	created_on TIMESTAMP NOT NULL,
+	created_on TIMESTAMP NOT NULL
 );
 ALTER TABLE messages ALTER created_on SET DEFAULT now();
 

@@ -76,7 +76,14 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	}
 	
 	pqxx::work txn(this->conn);
-	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + " ORDER BY created_on DESC;");
+	pqxx::result res;
+
+	try{
+		res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + " ORDER BY created_on DESC;");
+	}catch(const pqxx::pqxx_exception &e){
+		PRINT(e.base().what())
+		return Error("You provided incomplete or bad data.");
+	}
 	
 	if(res.size() == 0){
 		return Error("Bad value.");

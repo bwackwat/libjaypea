@@ -20,11 +20,8 @@ chown postgres:postgres /tables.sql
 
 echo "abc123" | passwd postgres --stdin
 
-su postgres
-
-# psql -U postgres -c "CREATE DATABASE webservice OWNER postgres;"
-# psql -U postgres -d webservice -a -f /tables.sql
-# exit
+psql -U postgres -c "CREATE DATABASE webservice OWNER postgres;"
+psql -U postgres -d webservice -a -f /tables.sql
 
 rm /tables.sql
 
