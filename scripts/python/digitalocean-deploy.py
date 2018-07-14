@@ -29,9 +29,9 @@ dbpassword = generate_password()
 final_remark = ""
 
 def deploy_monad_new_smallvm():
-	newuser = raw_input("Enter a username for the application to run under: ")
-	newname = raw_input("Enter a name for the droplet [" + newuser + "]: ") or newuser
-	hostname = raw_input("Enter a hostname: ")
+	newuser = raw_input("Enter a username for the application to run under: ") or "bwackwat"
+	newname = raw_input("Enter a name for the droplet: ") or "jph2"
+	hostname = raw_input("Enter a hostname: ") or "jph2.net"
 	application = raw_input("Enter a libjaypea application name[jph2]: ") or "jph2"
 
 	key = ""
@@ -47,22 +47,23 @@ def deploy_monad_new_smallvm():
 	with open(path + ".pub") as f:
 		key = f.read()
 
+# - semanage port -a -t ssh_port_t -p tcp 10022
+# - sed -i 's/^#Port .*/Port 10022/' /etc/ssh/sshd_config
 	cloud_config = """
 #cloud-config
 
 runcmd:
  - useradd -d /opt/libjaypea -s /bin/false -r {0}
  - echo "{3}" >> ~/.ssh/authorized_keys
- - semanage port -a -t ssh_port_t -p tcp 10022
- - sed -i 's/^#Port .*/Port 10022/' /etc/ssh/sshd_config
  - sed -i 's/^PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
  - systemctl restart sshd
  - yum -y install git
  - git clone https://github.com/bwackwat/libjaypea /opt/libjaypea
+ - git clone https://github.com/bwackwat/affable-escapade /opt/affable-escapade
  - mkdir -p /opt/libjaypea/logs
  - chmod +x /opt/libjaypea/scripts/deploy.sh
  - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} {4} > /opt/libjaypea/logs/deploy.log 2>&1
- - reboot
+ - systemctl start libjaypea
 """
 
 	minimal_config = """
@@ -121,6 +122,7 @@ runcmd:
 		"user_data":cloud_config
 	}))
 
+	print("ssh -i " + path + " " + hostname + " -p 10022 \n AND \n Your new database password is " + dbpassword)
 	final_remark = "ssh -i " + path + " " + hostname + " -p 10022 \n AND \n Your new database password is " + dbpassword
 	
 	print '-----------------------------------------------------------------'

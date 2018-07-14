@@ -16,19 +16,34 @@ scripts/setup-centos7.sh > logs/setup-centos7.log 2>&1
 cat <<EOF >> artifacts/start.sh
 #!/bin/bash
 
-cd $1
-
 python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/git-commit-checker.log 2>&1 &
 
 python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-build.sh" > logs/master-commit-watcher.log 2>&1 &
 
-python -u scripts/python/watcher.py binaries/$3 "binaries/$3" -pcs "dbname=webservice user=$2 password=$5" -p 10443 -pd ../affable-escapade > logs/$3-watcher.log 2>&1 &
+python -u scripts/python/watcher.py binaries/$3 "binaries/$3 -pcs \"dbname=webservice user=$2 password=$5\" -p 10443 -pd ../affable-escapade" > logs/$3-watcher.log 2>&1 &
 
 python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname $4 --port 10080" > logs/http-redirecter-watcher.log 2>&1 &
 
 EOF
 
 chmod +x artifacts/start.sh
+
+cat <<EOF >> /etc/systemd/system/libjaypea.service
+[Unit]
+Description=libjaypea startup unit
+After=postgresql.service
+
+[Service]
+User=bwackwat
+Type=oneshot
+WorkingDirectory=/opt/libjaypea
+ExecStart=/opt/libjaypea/artifacts/start.sh
+
+[Install]
+WantedBy=default.target
+EOF
+
+systemctl enable libjaypea
 
 echo -e "\n@reboot $2 $1/artifacts/start.sh > $1/logs/start.log 2>&1\n" >> /etc/crontab
 

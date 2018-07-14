@@ -74,7 +74,7 @@ def enter_directory(next_dir):
 	for item in items:
 		print item
 		item_path = os.path.join(next_dir, item)
-		if os.path.isdir(item_path) and item == "index":
+		if os.path.isdir(item_path) and item != "index":
 			enter_directory(item_path)
 
 enter_directory(root_dir)
