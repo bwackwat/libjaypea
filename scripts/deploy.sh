@@ -16,9 +16,13 @@ scripts/setup-centos7.sh > logs/setup-centos7.log 2>&1
 cat <<EOF >> artifacts/start.sh
 #!/bin/bash
 
-python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/git-commit-checker.log 2>&1 &
+# Watch for changes to affable-escapade, and update.
+python -u scripts/python/git-commit-checker.py bwackwat affable-escapade > logs/libjaypea-git-commit-checker.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "scripts/extras/update-branch-from-git.sh $1 master" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
 
-python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-build.sh" > logs/master-commit-watcher.log 2>&1 &
+# Watch for changes to libjaypea, and update.
+python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/libjaypea-git-commit-checker.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-branch-from-git.sh $1 master" > logs/libjaypea-master-commit-watcher.log 2>&1 &
 
 python -u scripts/python/watcher.py binaries/$3 "binaries/$3 -pcs \"dbname=webservice user=$2 password=$5\" -p 10443 -pd ../affable-escapade" > logs/$3-watcher.log 2>&1 &
 
