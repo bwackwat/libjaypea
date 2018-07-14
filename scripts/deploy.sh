@@ -45,8 +45,6 @@ EOF
 
 systemctl enable libjaypea
 
-echo -e "\n@reboot $2 $1/artifacts/start.sh > $1/logs/start.log 2>&1\n" >> /etc/crontab
-
 firewall-cmd --zone=public --permanent --add-masquerade
 firewall-cmd --zone=public --permanent --add-forward-port=port=80:proto=tcp:toport=10080
 firewall-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:toport=10443
