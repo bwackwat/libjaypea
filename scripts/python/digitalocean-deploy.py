@@ -51,16 +51,17 @@ def deploy_monad_new_smallvm():
 #cloud-config
 
 runcmd:
- - useradd {0}
+ - useradd -d /opt/libjaypea -s /bin/false -r {0}
  - echo "{3}" >> ~/.ssh/authorized_keys
+ - semanage port -a -t ssh_port_t -p tcp 10022
  - sed -i 's/^#Port .*/Port 10022/' /etc/ssh/sshd_config
  - sed -i 's/^PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
- - service sshd restart
+ - systemctl restart sshd
  - yum -y install git
  - git clone https://github.com/bwackwat/libjaypea /opt/libjaypea
  - mkdir -p /opt/libjaypea/logs
  - chmod +x /opt/libjaypea/scripts/deploy.sh
- - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} > /opt/libjaypea/logs/deploy.log 2>&1
+ - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} {4} > /opt/libjaypea/logs/deploy.log 2>&1
  - reboot
 """
 
@@ -94,7 +95,7 @@ runcmd:
 	newestimageid = 0
 	images = json.loads(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers).content)
 	for image in images["images"]:
-		if image["distribution"] == "CentOS":
+		if image["distribution"] == "CentOS" and "7" in image["name"]:
 			print "\nCentOS Image"
 			print "id: " + str(image["id"])
 			print "name: " + image["name"]
@@ -135,7 +136,7 @@ def switch_floating_ip():
 		print "\nDroplet:"
 		print "Name: " + droplet["name"]
 		print "Memory: " + droplet["size_slug"]
-		print "Disk size: " + str(droplet["disk"]) + "GB
+		print "Disk size: " + str(droplet["disk"]) + "GB"
 		print "Id: " + str(droplet["id"])
 
 	print '-----------------------------------------------------------------'

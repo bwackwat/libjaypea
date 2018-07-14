@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 6 ]; then
+if [ $# -lt 5 ]; then
 	echo "Usage: deploy.sh <install directory> <username> <application name> <hostname> <db password>"
 	exit
 fi
