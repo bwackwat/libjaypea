@@ -56,14 +56,13 @@ runcmd:
  - useradd -d /opt/libjaypea -s /bin/false -r {0}
  - echo "{3}" >> ~/.ssh/authorized_keys
  - sed -i 's/^PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
- - systemctl restart sshd
  - yum -y install git
  - git clone https://github.com/bwackwat/libjaypea /opt/libjaypea
  - git clone https://github.com/bwackwat/affable-escapade /opt/affable-escapade
  - mkdir -p /opt/libjaypea/logs
  - chmod +x /opt/libjaypea/scripts/deploy.sh
  - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} {4} > /opt/libjaypea/logs/deploy.log 2>&1
- - systemctl start libjaypea
+ - reboot
 """
 
 	minimal_config = """

@@ -49,10 +49,9 @@ EOF
 
 systemctl enable libjaypea
 
-firewall-cmd --zone=public --permanent --add-masquerade
-firewall-cmd --zone=public --permanent --add-forward-port=port=80:proto=tcp:toport=10080
-firewall-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:toport=10443
-firewall-cmd --reload
+firewall-offline-cmd --zone=public --permanent --add-masquerade
+firewall-offline-cmd --zone=public --permanent --add-forward-port=port=80:proto=tcp:toport=10080
+firewall-offline-cmd --zone=public --permanent --add-forward-port=port=443:proto=tcp:toport=10443
 
 # certbot certonly --standalone --tls-sni-01-port 10443 --domain build.bwackwat.com
 # cp /etc/letsencrypt/live/build.bwackwat.com/fullchain.pem artifacts/ssl.crt
