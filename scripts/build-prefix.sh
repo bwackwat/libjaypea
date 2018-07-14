@@ -36,7 +36,7 @@ case "${argv[@]}" in
 		warn="$warn -Wno-unused-parameter -Wno-unused-exception-parameter -Wno-unused-variable "
 esac
 
-libs="-lpthread -lssl -lcryptopp"
+libs="-lpthread -lssl -lcryptopp -largon2"
 
 libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \

@@ -1,7 +1,8 @@
 {
 	"hostname": "localhost",
 	"public_directory": "public-html/",
-	"port": "4096",
+	"http_port": "10080",
+	"port": "10443",
 	"postgresql_connection": "dbname=webservice user=postgres password=abc123",
 	"ssl_certificate": "extras/self-signed-ssl/ssl.crt",
 	"ssl_private_key":"extras/self-signed-ssl/ssl.key",

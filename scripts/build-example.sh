@@ -15,7 +15,8 @@ function build {
 
 # Some libs need to be linked again because they are static?
 
-build pgsql-provider "-largon2"
+build jph2
+build pgsql-provider
 build bwackwat
 
 build libjaypea-api

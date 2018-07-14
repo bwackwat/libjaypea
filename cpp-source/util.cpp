@@ -17,6 +17,8 @@
 
 #include "util.hpp"
 
+#include "argon2.h"
+
 std::vector<struct Argument*> Util::arguments;
 
 bool Util::verbose = false;
@@ -24,10 +26,10 @@ std::string Util::config_path = "extras/configuration.json";
 std::string Util::libjaypea_path;
 JsonObject Util::config_object;
 
-std::string Util::distribution_keyfile = std::string();
-std::string Util::distribution_start_ip_address = std::string();
-int Util::distribution_start_port = 0;
-DistributedNode* Util::distribution_node = 0;
+//std::string Util::distribution_keyfile = std::string();
+//std::string Util::distribution_start_ip_address = std::string();
+//int Util::distribution_start_port = 0;
+//DistributedNode* Util::distribution_node = 0;
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
 	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_STRING, std::ref(value), 0, 0}));
@@ -108,9 +110,9 @@ std::string Util::exec_and_wait(const char* cmd){
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
 	define_argument("configuration_file", config_path, {"-cf"});
-	define_argument("distribution_keyfile", distribution_keyfile, {"-dk"});
-	define_argument("distribution_start_ip_address", distribution_start_ip_address, {"-dsip"});
-	define_argument("distribution_start_port", &distribution_start_port, {"-dsp"});
+	//define_argument("distribution_keyfile", distribution_keyfile, {"-dk"});
+	//define_argument("distribution_start_ip_address", distribution_start_ip_address, {"-dsip"});
+	//define_argument("distribution_start_port", &distribution_start_port, {"-dsp"});
 	
 	PRINT("------------------------------------------------------")
 
@@ -275,12 +277,12 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 	
 	PRINT("------------------------------------------------------")
 	
-	distribution_node = new DistributedNode(distribution_keyfile);
+	/*distribution_node = new DistributedNode(distribution_keyfile);
 
 	if(!distribution_start_ip_address.empty() &&
 	distribution_start_port != 0){
 		distribution_node->add_client(distribution_start_ip_address.c_str(), static_cast<uint16_t>(distribution_start_port));
-	}
+	}*/
 }
 
 /*
@@ -317,7 +319,7 @@ void Util::set_blocking(int fd){
 	fcntl(fd, F_SETFL, flags);
 }
 
-std::string Util::get_redirection_html(const std::string& hostname){
+std::string Util::get_redirection_html(const std::string& hostname, const std::string& port){
 	std::string response_body = "<!doctype html><html>\n"
 		"<head>\n"
 		"<title>301 Moved Permanently</title>\n"
@@ -325,14 +327,14 @@ std::string Util::get_redirection_html(const std::string& hostname){
 		"<body>\n"
 		"<h1>301 Moved Permanently</h1>\n"
 		"<p>This page has permanently moved to <a href=\"https://" +
-		hostname +
+		hostname + ":" + port +
 		"/\">https://" +
-		hostname +
+		hostname + ":" + port +
 		"/</a>.</p>\n"
 		"</body>\n"
 		"</html>";
 	std::string response = "HTTP/1.1 301 Moved Permanently\n" 
-		"Location: https://" + hostname + "/\n"
+		"Location: https://" + hostname + ":" + port + "/\n"
 		"Accept-Ranges: bytes\n"
 		"Content-Type: text/html\n"
 		"Content-Length: " + std::to_string(response_body.length()) + "\n"
@@ -533,6 +535,40 @@ std::string Util::sha256_hash(std::string data){
 		new CryptoPP::StringSink(hash))));
 
 	return hash;
+}
+
+std::string Util::hash_value_argon2d(std::string password){
+	const uint32_t t_cost = 5;
+	const uint32_t m_cost = 1 << 16; //about 65MB
+	const uint32_t parallelism = 1; //TODO: can use std::thread::hardware_concurrency();?
+
+	std::vector<uint8_t> pwdvec(password.begin(), password.end());
+	uint8_t* pwd = &pwdvec[0];
+	const size_t pwdlen = password.length();
+
+	//TODO: Should this be used??
+	//INFO: If this changes, user passwords in DB will become invalid.
+	std::string nonce = "itmyepicsalt!@12";
+	std::vector<uint8_t> saltvec(nonce.begin(), nonce.end());
+	uint8_t* salt = &saltvec[0];
+	const size_t saltlen = nonce.length();
+
+	uint8_t hash[128];
+	
+	char encoded[256];
+
+	argon2_type type = Argon2_d;
+
+	int res = argon2_hash(t_cost, m_cost, parallelism,
+		pwd, pwdlen, salt, saltlen,
+		hash, 128, encoded, 256, type, ARGON2_VERSION_NUMBER);
+	
+	if(res){
+		ERROR("Hashing error: " << res)
+		return std::string();
+	}else{
+		return std::string(encoded);
+	}
 }
 
 void Util::print_bits(const char* data, size_t data_length){

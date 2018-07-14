@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -lt 2 ]; then
-	echo "Usage: deploy.sh <install directory> <username>"
+if [ $# -lt 5 ]; then
+	echo "Usage: deploy.sh <install directory> <username> <application name> <hostname>"
 	exit
 fi
 
@@ -22,9 +22,9 @@ python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/git-com
 
 python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-build.sh" > logs/master-commit-watcher.log 2>&1 &
 
-python -u scripts/python/watcher.py binaries/libjaypea-api,artifacts/host-services.json "binaries/libjaypea-api --port 10443" > logs/libjaypea-api-watcher.log 2>&1 &
+python -u scripts/python/watcher.py binaries/$3 "binaries/$3" > logs/$3-watcher.log 2>&1 &
 
-python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname dev.bwackwat.com --port 10080" > logs/http-redirecter-watcher.log 2>&1 &
+python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname $4 --port 10080" > logs/http-redirecter-watcher.log 2>&1 &
 
 EOF
 
@@ -41,5 +41,7 @@ firewall-cmd --reload
 # cp /etc/letsencrypt/live/build.bwackwat.com/fullchain.pem artifacts/ssl.crt
 # cp /etc/letsencrypt/live/build.bwackwat.com/privkey.pem artifacts/ssl.key
 
-useradd -d /opt/libjaypea -s /bin/false -r $2
 chown -R $2:$2 $1
+
+scripts/pgsql-centos7.sh > logs/pgsql-centos7.log 2>&1
+

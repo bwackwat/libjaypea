@@ -28,24 +28,28 @@ def stop_process():
 atexit.register(stop_process)
 
 filetime = {}
-def any_changed():
-	def file_changed(file):
-		mtime = os.stat(file).st_mtime
-		if not file in filetime:
-			filetime[file] = mtime
-		else:
-			if filetime[file] != mtime:
-				filetime[file] = mtime
-				print "CHANGE" + " (" + str(datetime.datetime.now()) + "): " + file
-				return True
-		return False
-	def dir_changed(dir):
-		for file in os.listdir(dir):
-			if not os.path.isfile(dir + file):
-				continue
+
+def file_changed(file):
+	mtime = os.stat(file).st_mtime
+	if not file in filetime:
+		filetime[file] = mtime
+	elif filetime[file] != mtime:
+		filetime[file] = mtime
+		print "CHANGE" + " (" + str(datetime.datetime.now()) + "): " + file
+		return True
+	return False
+	
+def dir_changed(dir):
+	for file in os.listdir(dir):
+		if os.path.isfile(dir + file):
 			if not file.endswith(".swp") and file_changed(dir + file):
 				return True
-		return False
+		elif os.path.isdir(dir + file) and file != "index":
+			if dir_changed(dir + file):
+				return True
+	return False
+	
+def any_changed():
 	for item in watch:
 		if os.path.isfile(item):
 			if file_changed(item):
@@ -53,6 +57,8 @@ def any_changed():
 		elif os.path.isdir(item):
 			if dir_changed(item):
 				return True
+		else:
+			filetime[item] = 0
 	return False
 
 print "WATCHING FOR CHANGES (" + str(datetime.datetime.now()) + "): " + sys.argv[1]
@@ -78,3 +84,4 @@ while True:
 		if any_changed():
 			restart()
 			done = False
+

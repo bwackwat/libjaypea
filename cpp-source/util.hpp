@@ -27,6 +27,7 @@
 
 #include "json.hpp"
 #include "distributed-node.hpp"
+#include "argon2.h"
 
 #define PACKET_LIMIT 8096
 #define CONNECTIONS_LIMIT 2048
@@ -81,10 +82,10 @@ public:
 	static std::string libjaypea_path;
 	static JsonObject config_object;
 
-	static std::string distribution_keyfile;
-	static std::string distribution_start_ip_address;
-	static int distribution_start_port;
-	static DistributedNode* distribution_node;
+	//static std::string distribution_keyfile;
+	//static std::string distribution_start_ip_address;
+	//static int distribution_start_port;
+	//static DistributedNode* distribution_node;
 
 	static void define_argument(std::string name, std::string& value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, int* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
@@ -100,11 +101,12 @@ public:
 	static void set_non_blocking(int fd);
 	static void set_blocking(int fd);
 
-	static std::string get_redirection_html(const std::string& hostname);
+	static std::string get_redirection_html(const std::string& hostname, const std::string& port);
 
 	static enum RequestResult parse_http_api_request(const char* request, JsonObject* request_obj);
 
 	static std::string sha256_hash(std::string data);
+	static std::string hash_value_argon2d(std::string password);
 
 	static void print_bits(const char* data, size_t data_length);
 };

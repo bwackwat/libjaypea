@@ -1,45 +1,9 @@
 #include <vector>
 #include <string>
 
-#include "argon2.h"
-
 #include "util.hpp"
 #include "pgsql-model.hpp"
 #include "symmetric-epoll-server.hpp"
-
-static std::string hash_value_argon2d(std::string password){
-	const uint32_t t_cost = 5;
-	const uint32_t m_cost = 1 << 16; //about 65MB
-	const uint32_t parallelism = 1; //TODO: can use std::thread::hardware_concurrency();?
-
-	std::vector<uint8_t> pwdvec(password.begin(), password.end());
-	uint8_t* pwd = &pwdvec[0];
-	const size_t pwdlen = password.length();
-
-	//TODO: Should this be used??
-	//INFO: If this changes, user passwords in DB will become invalid.
-	std::string nonce = "itmyepicsalt!@12";
-	std::vector<uint8_t> saltvec(nonce.begin(), nonce.end());
-	uint8_t* salt = &saltvec[0];
-	const size_t saltlen = nonce.length();
-
-	uint8_t hash[128];
-	
-	char encoded[256];
-
-	argon2_type type = Argon2_d;
-
-	int res = argon2_hash(t_cost, m_cost, parallelism,
-		pwd, pwdlen, salt, saltlen,
-		hash, 128, encoded, 256, type, ARGON2_VERSION_NUMBER);
-	
-	if(res){
-		ERROR("Hashing error: " << res)
-		return std::string();
-	}else{
-		return std::string(encoded);
-	}
-}
 
 int main(int argc, char** argv){
 	std::string keyfile;
@@ -175,7 +139,7 @@ int main(int argc, char** argv){
 						// TODO: Password protected tables hash values for column 1!
 						if(table->HasColumn("password")){
 							request->objectValues["values"]->arrayValues[1]->stringValue =
-								hash_value_argon2d(request->objectValues["values"]->arrayValues[1]->stringValue);
+								Util::hash_value_argon2d(request->objectValues["values"]->arrayValues[1]->stringValue);
 						}
 						PRINT(request->stringify(true))
 						response = table->Insert(request->objectValues["values"]->arrayValues);
@@ -219,7 +183,7 @@ int main(int argc, char** argv){
 				if(table_name == "users"){
 					if(request->HasObj("username", STRING) &&
 					request->HasObj("password", STRING)){
-						JsonObject* token = table->Access("username", request->GetStr("username"), hash_value_argon2d(request->GetStr("password")));
+						JsonObject* token = table->Access("username", request->GetStr("username"), Util::hash_value_argon2d(request->GetStr("password")));
 						if(token->objectValues.count("error")){
 							response = token;
 						}else{						

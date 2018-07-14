@@ -61,7 +61,7 @@ int main(int argc, char **argv){
 		return result.stringify();
 	});
 	
-	api.route("GET", "/distribution", [&](JsonObject* json)->std::string{
+	/*api.route("GET", "/distribution", [&](JsonObject* json)->std::string{
 		if(json->GetStr("token") != password){
 			return std::string();
 		}
@@ -91,7 +91,7 @@ int main(int argc, char **argv){
 		response.objectValues["hash"] = new JsonObject(Util::distribution_node->status.objectValues["hash"]->stringValue);
 		
 		return response.stringify(false);
-	}, {{"token", STRING}, {"data", OBJECT}});
+	}, {{"token", STRING}, {"data", OBJECT}});*/
 
 	api.route("POST", "/message", [&](JsonObject* json)->std::string{
 		message_mutex.lock();

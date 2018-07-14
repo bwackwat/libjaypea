@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Used for development locally.
+
 yum makecache fast
 yum -y upgrade
 
@@ -18,18 +20,19 @@ cp ./scripts/extras/tables.sql /tables.sql
 chmod 666 /tables.sql
 chown postgres:postgres /tables.sql
 
-echo "abc123" | passwd postgres --stdin
+echo $1 | passwd postgres --stdin
+
+cp ./scripts/extras/pg_hba.conf /var/lib/pgsql/data/pg_hba.conf
+chown postgres:postgres /var/lib/pgsql/data/pg_hba.conf
+chmod 600 /var/lib/pgsql/data/pg_hba.conf
+systemctl restart postgresql
 
 psql -U postgres -c "CREATE DATABASE webservice OWNER postgres;"
 psql -U postgres -d webservice -a -f /tables.sql
 
 rm /tables.sql
 
-cp /var/lib/pgsql/data/pg_hba.conf /var/lib/pgsql/data/pg_hba.conf.orig
-
-vi /var/lib/pgsql/data/pg_hba.conf
-
 #Only change in /var/lib/pgsql/data/pg_hba.conf is 
 #host    all             all             127.0.0.1/32            ident
 #To
-#host    all             all             127.0.0.1/32            trust
+#host    all             all             127.0.0.1/32            trustconf /var/lib/pgsql/data/pg_hba.conf.orig

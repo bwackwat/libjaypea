@@ -1,3 +1,4 @@
+
 DROP TABLE users;
 CREATE TABLE users (
 	id SERIAL PRIMARY KEY,
@@ -9,10 +10,12 @@ CREATE TABLE users (
 	first_name VARCHAR(50) NOT NULL,
 	last_name VARCHAR(50) NOT NULL,
 	verified BOOLEAN NOT NULL,
-	created_on TIMESTAMP NOT NULL
+	modified TIMESTAMP NOT NULL,
+	created TIMESTAMP NOT NULL
 );
 ALTER TABLE users ALTER verified SET DEFAULT FALSE;
-ALTER TABLE users ALTER created_on SET DEFAULT now();
+ALTER TABLE messages ALTER modified SET DEFAULT now();
+ALTER TABLE messages ALTER created SET DEFAULT now();
 
 CREATE EXTENSION postgis;
 
@@ -23,23 +26,23 @@ CREATE TABLE poi (
 	label TEXT NOT NULL,
 	description TEXT NOT NULL,
 	location GEOGRAPHY(POINT, 4326) NOT NULL,
-	created_on TIMESTAMP NOT NULL
+	modified TIMESTAMP NOT NULL,
+	created TIMESTAMP NOT NULL
 );
-ALTER TABLE poi ALTER created_on SET DEFAULT now();
+ALTER TABLE messages ALTER modified SET DEFAULT now();
+ALTER TABLE messages ALTER created SET DEFAULT now();
 
 DROP TABLE threads;
 CREATE TABLE threads (
 	id SERIAL PRIMARY KEY,
-	name VARCHAR(50) UNIQUE NOT NULL,
-	created_on TIMESTAMP NOT NULL
+	owner_id SERIAL NOT NULL,
+	name VARCHAR(50) NOT NULL,
+	description TEXT NOT NULL,
+	modified TIMESTAMP NOT NULL,
+	created TIMESTAMP NOT NULL
 );
-ALTER TABLE threads ALTER created_on SET DEFAULT now();
-
-DROP TABLE tags;
-CREATE TABLE tags (
-	tag VARCHAR(25) PRIMARY KEY UNIQUE NOT NULL,
-	id SERIAL UNIQUE NOT NULL
-);
+ALTER TABLE messages ALTER modified SET DEFAULT now();
+ALTER TABLE messages ALTER created SET DEFAULT now();
 
 DROP TABLE messages;
 CREATE TABLE messages (
@@ -47,18 +50,41 @@ CREATE TABLE messages (
 	owner_id SERIAL NOT NULL,
 	title TEXT NOT NULL,
 	content TEXT NOT NULL,
-	created_on TIMESTAMP NOT NULL
+	modified TIMESTAMP NOT NULL,
+	created TIMESTAMP NOT NULL
 );
-ALTER TABLE messages ALTER created_on SET DEFAULT now();
+ALTER TABLE messages ALTER modified SET DEFAULT now();
+ALTER TABLE messages ALTER created SET DEFAULT now();
 
-ALTER ROLE postgres PASSWORD 'abc123';
+DROP TABLE access_types;
+CREATE TABLE access_types (
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(50) NOT NULL,
+	description TEXT NOT NULL,
+	modified TIMESTAMP NOT NULL,
+	created TIMESTAMP NOT NULL
+);
+ALTER TABLE messages ALTER modified SET DEFAULT now();
+ALTER TABLE messages ALTER created SET DEFAULT now();
+
+DROP TABLE access;
+CREATE TABLE access (
+	owner_id SERIAL NOT NULL,
+	access_type_id SERIAL NOT NULL,
+	UNIQUE(owner_id, access_type_id)
+);
+ALTER TABLE messages ALTER modified SET DEFAULT now();
+ALTER TABLE messages ALTER created SET DEFAULT now();
+
 CREATE ROLE bwackwat WITH LOGIN;
 ALTER ROLE bwackwat PASSWORD 'abc123';
 GRANT SELECT, INSERT, UPDATE ON users TO bwackwat;
 GRANT SELECT, INSERT, UPDATE ON poi TO bwackwat;
 GRANT SELECT, INSERT, UPDATE ON threads TO bwackwat;
-GRANT SELECT, INSERT, UPDATE ON tags TO bwackwat;
 GRANT SELECT, INSERT, UPDATE ON messages TO bwackwat;
+GRANT SELECT, INSERT, UPDATE ON access_types TO bwackwat;
+GRANT SELECT, INSERT, UPDATE ON access TO bwackwat;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO bwackwat;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO bwackwat;
+
