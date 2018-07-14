@@ -20,8 +20,6 @@ cp ./scripts/extras/tables.sql /tables.sql
 chmod 666 /tables.sql
 chown postgres:postgres /tables.sql
 
-echo $1 | passwd postgres --stdin
-
 cp ./scripts/extras/pg_hba.conf /var/lib/pgsql/data/pg_hba.conf
 chown postgres:postgres /var/lib/pgsql/data/pg_hba.conf
 chmod 600 /var/lib/pgsql/data/pg_hba.conf
@@ -29,6 +27,7 @@ systemctl restart postgresql
 
 psql -U postgres -c "CREATE DATABASE webservice OWNER postgres;"
 psql -U postgres -d webservice -a -f /tables.sql
+psql -U postgres -d webservice -c "ALTER ROLE bwackwat PASSWORD '$1';"
 
 rm /tables.sql
 

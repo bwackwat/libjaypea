@@ -61,7 +61,6 @@ runcmd:
  - mkdir -p /opt/libjaypea/logs
  - chmod +x /opt/libjaypea/scripts/deploy.sh
  - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} > /opt/libjaypea/logs/deploy.log 2>&1
- - /opt/libjaypea/scripts/extra/pgsql-centos7.sh {4} > /opt/libjaypea/logs/deploy.log 2>&1
  - reboot
 """
 
@@ -136,7 +135,7 @@ def switch_floating_ip():
 		print "\nDroplet:"
 		print "Name: " + droplet["name"]
 		print "Memory: " + droplet["size_slug"]
-		print "Disk size (GB?): " + str(droplet["disk"])
+		print "Disk size: " + str(droplet["disk"]) + "GB
 		print "Id: " + str(droplet["id"])
 
 	print '-----------------------------------------------------------------'

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -lt 5 ]; then
-	echo "Usage: deploy.sh <install directory> <username> <application name> <hostname>"
+if [ $# -lt 6 ]; then
+	echo "Usage: deploy.sh <install directory> <username> <application name> <hostname> <db password>"
 	exit
 fi
 
@@ -22,7 +22,7 @@ python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/git-com
 
 python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-build.sh" > logs/master-commit-watcher.log 2>&1 &
 
-python -u scripts/python/watcher.py binaries/$3 "binaries/$3" > logs/$3-watcher.log 2>&1 &
+python -u scripts/python/watcher.py binaries/$3 "binaries/$3" -pcs "dbname=webservice user=$2 password=$5" -p 10443 -pd ../affable-escapade > logs/$3-watcher.log 2>&1 &
 
 python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname $4 --port 10080" > logs/http-redirecter-watcher.log 2>&1 &
 
@@ -42,6 +42,7 @@ firewall-cmd --reload
 # cp /etc/letsencrypt/live/build.bwackwat.com/privkey.pem artifacts/ssl.key
 
 chown -R $2:$2 $1
+chown -R $2:$2 $1/../affable-escapade
 
-scripts/pgsql-centos7.sh > logs/pgsql-centos7.log 2>&1
+scripts/pgsql-centos7.sh $5 > logs/pgsql-centos7.log 2>&1
 

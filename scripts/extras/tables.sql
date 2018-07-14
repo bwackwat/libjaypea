@@ -77,7 +77,6 @@ ALTER TABLE messages ALTER modified SET DEFAULT now();
 ALTER TABLE messages ALTER created SET DEFAULT now();
 
 CREATE ROLE bwackwat WITH LOGIN;
-ALTER ROLE bwackwat PASSWORD 'abc123';
 GRANT SELECT, INSERT, UPDATE ON users TO bwackwat;
 GRANT SELECT, INSERT, UPDATE ON poi TO bwackwat;
 GRANT SELECT, INSERT, UPDATE ON threads TO bwackwat;
