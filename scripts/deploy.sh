@@ -23,7 +23,7 @@ killall /opt/libjaypea/binaries/http-redirecter
 # Watch for changes to affable-escapade, and update.
 python -u scripts/python/git-commit-checker.py bwackwat affable-escapade > logs/libjaypea-git-commit-checker.log 2>&1 &
 
-python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "scripts/extras/update-branch-from-git.sh /opt/affable-escapade master && cd /opt/affable-escapade && git lfs pull" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "scripts/extras/update-branch-from-git.sh /opt/affable-escapade master && cd /opt/affable-escapade && git lfs pull && cd /opt/libjaypea && scripts/python/site-indexer.py ../affable-escapade && scripts/python/site-templater.py ../affable-escapade" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
 
 # Watch for changes to libjaypea, and update.
 python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/libjaypea-git-commit-checker.log 2>&1 &
@@ -64,7 +64,7 @@ firewall-offline-cmd --zone=public --add-forward-port=port=80:proto=tcp:toport=1
 firewall-offline-cmd --zone=public --add-forward-port=port=443:proto=tcp:toport=10443
 
 # Run BEFORE http redirecter.
-certbot certonly --standalone --http-01-port 10080 --domain jph2.net -n --agree-tos
+certbot certonly --standalone --http-01-port 10080 --domain $4 -n --agree-tos
 cp /etc/letsencrypt/live/$4/fullchain.pem artifacts/ssl.crt
 cp /etc/letsencrypt/live/$4/privkey.pem artifacts/ssl.key
 

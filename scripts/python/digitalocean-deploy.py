@@ -208,10 +208,10 @@ def switch_floating_ip():
 if((raw_input("Would you like to delete a DigitalOcean droplet? [y]: ") or "y") == "y"):
 	delete_droplet()
 
-if((raw_input("Would you like to deploy libjaypea on a DigitalOcean CentOS 7 VM? [y]: ") or "y") == "y"):
+if((raw_input("Would you like to deploy libjaypea on a DigitalOcean CentOS 7 droplet? [y]: ") or "y") == "y"):
 	deploy_monad_new_smallvm()
 
-if((raw_input("Would you like to switch a DigitalOcean floating IP? [y]: ") or "y") == "y"):
+if((raw_input("Would you like to switch a DigitalOcean floating IP to a droplet? [y]: ") or "y") == "y"):
 	switch_floating_ip()
 
 for item in final_remarks:
