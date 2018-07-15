@@ -21,12 +21,42 @@ def rprint(response):
 	print response.status_code
 	for key, value in response.headers.iteritems():
 		print key + ": " + value
-	response_json = json.loads(response.content)
-	print json.dumps(response_json, indent=4)
-	return response_json
+	try:
+		response_json = json.loads(response.content)
+		print json.dumps(response_json, indent=4)
+		return response_json
+	except:
+		pass
+	return {}
 
 dbpassword = generate_password()
-final_remark = ""
+
+def delete_droplet():
+	print "Fetching droplets via API..."
+	droplets = rprint(requests.get("https://api.digitalocean.com/v2/droplets", headers=headers))
+
+	print '-----------------------------------------------------------------'
+
+	for droplet in droplets["droplets"]:
+		print "\nDroplet:"
+		print "Name: " + droplet["name"]
+		print "Memory: " + droplet["size_slug"]
+		print "Disk size: " + str(droplet["disk"]) + "GB"
+		print "Id: " + str(droplet["id"])
+
+	print '-----------------------------------------------------------------'
+	
+	dropletname = raw_input("Enter the name of the droplet which you want to delete: ");
+	
+	theid = 0
+	for droplet in droplets["droplets"]:
+		if droplet["name"] == dropletname:
+			theid = droplet["id"]
+	
+	print 'Deleting droplet...'
+	rprint(requests.delete("https://api.digitalocean.com/v2/droplets/" + str(theid), headers=headers))
+	print '-----------------------------------------------------------------'
+
 
 def deploy_monad_new_smallvm():
 	newuser = raw_input("Enter a username for the application to run under: ") or "bwackwat"
@@ -171,13 +201,12 @@ def switch_floating_ip():
 	print '-----------------------------------------------------------------'
 
 
+if((raw_input("Would you like to delete a DigitalOcean droplet? [y]: ") or "y") == "y"):
+	delete_droplet()
+
 if((raw_input("Would you like to deploy libjaypea on a DigitalOcean CentOS 7 VM? [y]: ") or "y") == "y"):
 	deploy_monad_new_smallvm()
 
 if((raw_input("Would you like to switch a DigitalOcean floating IP? [y]: ") or "y") == "y"):
 	switch_floating_ip()
-
-print '-----------------------------------------------------------------'
-print final_remark
-print '-----------------------------------------------------------------'
 

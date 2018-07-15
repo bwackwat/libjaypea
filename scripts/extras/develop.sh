@@ -22,5 +22,5 @@ xterm -geometry 100x5 \
 
 xterm -geometry 100x5 \
 -T "watcher preparing affable-escapade" \
--e scripts/python/watcher.py ../affable-escapade/,scripts/python/site-templater.py,scripts/python/site-indexer.py "scripts/python/site-indexer.py ../affable-escapade y && scripts/python/site-templater.py ../affable-escapade" &
+-e scripts/python/watcher.py cpp-source/examples/,scripts/python/site-templater.py,scripts/python/site-indexer.py "scripts/python/site-indexer.py ../affable-escapade y && scripts/python/site-templater.py ../affable-escapade" &
 

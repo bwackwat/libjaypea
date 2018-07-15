@@ -14,8 +14,8 @@ CREATE TABLE users (
 	created TIMESTAMP NOT NULL
 );
 ALTER TABLE users ALTER verified SET DEFAULT FALSE;
-ALTER TABLE messages ALTER modified SET DEFAULT now();
-ALTER TABLE messages ALTER created SET DEFAULT now();
+ALTER TABLE users ALTER modified SET DEFAULT now();
+ALTER TABLE users ALTER created SET DEFAULT now();
 
 CREATE EXTENSION postgis;
 
@@ -29,8 +29,8 @@ CREATE TABLE poi (
 	modified TIMESTAMP NOT NULL,
 	created TIMESTAMP NOT NULL
 );
-ALTER TABLE messages ALTER modified SET DEFAULT now();
-ALTER TABLE messages ALTER created SET DEFAULT now();
+ALTER TABLE poi ALTER modified SET DEFAULT now();
+ALTER TABLE poi ALTER created SET DEFAULT now();
 
 DROP TABLE threads;
 CREATE TABLE threads (
@@ -41,8 +41,8 @@ CREATE TABLE threads (
 	modified TIMESTAMP NOT NULL,
 	created TIMESTAMP NOT NULL
 );
-ALTER TABLE messages ALTER modified SET DEFAULT now();
-ALTER TABLE messages ALTER created SET DEFAULT now();
+ALTER TABLE threads ALTER modified SET DEFAULT now();
+ALTER TABLE threads ALTER created SET DEFAULT now();
 
 DROP TABLE messages;
 CREATE TABLE messages (
@@ -64,8 +64,8 @@ CREATE TABLE access_types (
 	modified TIMESTAMP NOT NULL,
 	created TIMESTAMP NOT NULL
 );
-ALTER TABLE messages ALTER modified SET DEFAULT now();
-ALTER TABLE messages ALTER created SET DEFAULT now();
+ALTER TABLE access_types ALTER modified SET DEFAULT now();
+ALTER TABLE access_types ALTER created SET DEFAULT now();
 
 DROP TABLE access;
 CREATE TABLE access (
@@ -73,8 +73,8 @@ CREATE TABLE access (
 	access_type_id SERIAL NOT NULL,
 	UNIQUE(owner_id, access_type_id)
 );
-ALTER TABLE messages ALTER modified SET DEFAULT now();
-ALTER TABLE messages ALTER created SET DEFAULT now();
+ALTER TABLE access ALTER modified SET DEFAULT now();
+ALTER TABLE access ALTER created SET DEFAULT now();
 
 CREATE ROLE bwackwat WITH LOGIN;
 GRANT SELECT, INSERT, UPDATE ON users TO bwackwat;

@@ -6,11 +6,12 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 yum -y install epel-release
 
-yum -y install git firewalld fail2ban certbot ntp gperftools
+yum -y install git firewalld fail2ban certbot ntp gperftools psmisc
 yum -y install clang gcc-c++ libpqxx-devel vim python-pip python-devel
 yum -y install libstdc++-static libstdc++ cryptopp cryptopp-devel openssl openssl-devel
 
-pip instal psutil
+pip install --upgrade pip
+pip install psutil
 
 systemctl enable fail2ban
 systemctl restart fail2ban
