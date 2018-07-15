@@ -11,6 +11,7 @@ headers = {
 
 hostname = ""
 path = ""
+final_remarks = []
 
 def generate_password():
 	chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -56,6 +57,7 @@ def delete_droplet():
 	print 'Deleting droplet...'
 	rprint(requests.delete("https://api.digitalocean.com/v2/droplets/" + str(theid), headers=headers))
 	print '-----------------------------------------------------------------'
+	final_remarks.push("You deleted a droplet named " + dropletname)
 
 
 def deploy_monad_new_smallvm():
@@ -92,6 +94,7 @@ runcmd:
  - mkdir -p /opt/libjaypea/logs
  - chmod +x /opt/libjaypea/scripts/deploy.sh
  - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} {4} > /opt/libjaypea/logs/deploy.log 2>&1
+ - reboot
 """
 
 	minimal_config = """
@@ -151,7 +154,8 @@ runcmd:
 	}))
 
 	print("ssh -i " + path + " " + hostname + " -p 10022 \n AND \n Your new database password is " + dbpassword)
-	final_remark = "ssh -i " + path + " " + hostname + " -p 10022 \n AND \n Your new database password is " + dbpassword
+	final_remarks.push("To connect use: ssh -i " + path + " " + hostname)
+	final_remarks.push("Your new database password is " + dbpassword)
 	
 	print '-----------------------------------------------------------------'
 
@@ -198,6 +202,7 @@ def switch_floating_ip():
 		rprint(requests.post("https://api.digitalocean.com/v2/floating_ips/" + newfip + " /actions", headers=headers, json={"type":"assign","droplet_id":newid}))
 
 	print '-----------------------------------------------------------------'
+	final_remarks.push("You moved a droplet named " + dropletname + " to floating IP " + newfip)
 
 
 if((raw_input("Would you like to delete a DigitalOcean droplet? [y]: ") or "y") == "y"):
@@ -208,4 +213,8 @@ if((raw_input("Would you like to deploy libjaypea on a DigitalOcean CentOS 7 VM?
 
 if((raw_input("Would you like to switch a DigitalOcean floating IP? [y]: ") or "y") == "y"):
 	switch_floating_ip()
+
+for item in final_remarks:
+	print item
+
 

@@ -31,7 +31,3 @@ psql -U postgres -d webservice -c "ALTER ROLE bwackwat PASSWORD '$1';"
 
 rm /tables.sql
 
-#Only change in /var/lib/pgsql/data/pg_hba.conf is 
-#host    all             all             127.0.0.1/32            ident
-#To
-#host    all             all             127.0.0.1/32            trustconf /var/lib/pgsql/data/pg_hba.conf.orig

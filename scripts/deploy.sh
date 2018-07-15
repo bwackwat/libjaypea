@@ -23,14 +23,14 @@ killall /opt/libjaypea/binaries/http-redirecter
 # Watch for changes to affable-escapade, and update.
 python -u scripts/python/git-commit-checker.py bwackwat affable-escapade > logs/libjaypea-git-commit-checker.log 2>&1 &
 
-python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "scripts/extras/update-branch-from-git.sh /opt/affable-escapade master" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "scripts/extras/update-branch-from-git.sh /opt/affable-escapade master && cd /opt/affable-escapade && git lfs pull" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
 
 # Watch for changes to libjaypea, and update.
 python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/libjaypea-git-commit-checker.log 2>&1 &
 
 python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-branch-from-git.sh $1 master && scripts/build-library.sh PROD && scripts/build-example.sh PROD" > logs/libjaypea-master-commit-watcher.log 2>&1 &
 
-python -u scripts/python/watcher.py binaries/$3 "binaries/$3 -pcs \"dbname=webservice user=$2 password=$5\" -p 10443 -pd ../affable-escapade" > logs/$3-watcher.log 2>&1 &
+python -u scripts/python/watcher.py binaries/$3 "binaries/$3 -key artifacts/ssl.key -crt artifacts/ssl.crt -pcs \"dbname=webservice user=$2 password=$5\" -p 10443 -pd ../affable-escapade" > logs/$3-watcher.log 2>&1 &
 
 python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname $4 --port 10080" > logs/http-redirecter-watcher.log 2>&1 &
 
@@ -51,6 +51,7 @@ Type=oneshot
 KillMode=process
 WorkingDirectory=/opt/libjaypea
 ExecStart=/bin/sh -c '/opt/libjaypea/artifacts/start.sh 2>&1 > $1/logs/start.log'
+ExecStop=/bin/sh -c 'killall python && killall binaries/http-redirecter && killall binaries/$3'
 
 [Install]
 WantedBy=default.target
@@ -63,14 +64,12 @@ firewall-offline-cmd --zone=public --add-forward-port=port=80:proto=tcp:toport=1
 firewall-offline-cmd --zone=public --add-forward-port=port=443:proto=tcp:toport=10443
 
 # Run BEFORE http redirecter.
-# certbot certonly --standalone --http-01-port 10080 --domain jph2.net -n
+certbot certonly --standalone --http-01-port 10080 --domain jph2.net -n --agree-tos
+cp /etc/letsencrypt/live/$4/fullchain.pem artifacts/ssl.crt
+cp /etc/letsencrypt/live/$4/privkey.pem artifacts/ssl.key
 
-# certbot certonly --standalone --tls-sni-01-port 10443 --domain build.bwackwat.com
-# cp /etc/letsencrypt/live/build.bwackwat.com/fullchain.pem artifacts/ssl.crt
-# cp /etc/letsencrypt/live/build.bwackwat.com/privkey.pem artifacts/ssl.key
+scripts/extras/pgsql-centos7.sh $5 > logs/pgsql-centos7.log 2>&1
 
 chown -R $2:$2 $1
 chown -R $2:$2 $1/../affable-escapade
-
-scripts/extras/pgsql-centos7.sh $5 > logs/pgsql-centos7.log 2>&1
 
