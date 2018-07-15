@@ -31,6 +31,7 @@ public:
 	std::vector<JsonObject*> arrayValues;
 
 	static std::string escape(std::string value);
+	static std::string deescape(std::string value);
 	const char* parse(const char* str);
 	std::string stringify(bool pretty = false, size_t depth = 0);
 

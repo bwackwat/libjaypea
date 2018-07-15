@@ -1,12 +1,12 @@
 #!/bin/python
 
-import requests, json, random, string, sys, os, subprocess, time
+import requests, json, random, string, sys, os, subprocess, time, getpass
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 headers = {
 	"Content-Type":"application/json",
-	"Authorization":"Bearer " + raw_input("Enter your DigitalOcean API access token: ")
+	"Authorization":"Bearer " + getpass.getpass("Enter your DigitalOcean API access token: ")
 }
 
 hostname = ""
@@ -57,7 +57,7 @@ def delete_droplet():
 	print 'Deleting droplet...'
 	rprint(requests.delete("https://api.digitalocean.com/v2/droplets/" + str(theid), headers=headers))
 	print '-----------------------------------------------------------------'
-	final_remarks.push("You deleted a droplet named " + dropletname)
+	final_remarks.append("You deleted a droplet named " + dropletname)
 
 
 def deploy_monad_new_smallvm():
@@ -65,6 +65,7 @@ def deploy_monad_new_smallvm():
 	newname = raw_input("Enter a name for the droplet: ") or "jph2"
 	hostname = raw_input("Enter a hostname: ") or "jph2.net"
 	application = raw_input("Enter a libjaypea application name[jph2]: ") or "jph2"
+	email = raw_input("Enter your email address: ")
 
 	key = ""
 	print "If the file path below doesn't exist or is invalid, a key will be generated and provided."
@@ -93,7 +94,7 @@ runcmd:
  - git clone https://github.com/bwackwat/affable-escapade /opt/affable-escapade
  - mkdir -p /opt/libjaypea/logs
  - chmod +x /opt/libjaypea/scripts/deploy.sh
- - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} {4} > /opt/libjaypea/logs/deploy.log 2>&1
+ - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} {4} {5} > /opt/libjaypea/logs/deploy.log 2>&1
  - reboot
 """
 
@@ -112,7 +113,7 @@ runcmd:
 	if((raw_input("Do you want to deploy a minimal server? (downloads from build server) [y]: ") or "y") == "y"):
 		cloud_config = minimal_config.format(newuser)
 	else:
-		cloud_config = cloud_config.format(newuser, application, hostname, key.strip(), dbpassword)
+		cloud_config = cloud_config.format(newuser, application, hostname, key.strip(), dbpassword, email)
 
 	print '-----------------------------------------------------------------'
 	print cloud_config
@@ -125,6 +126,7 @@ runcmd:
 	print "Fetching images via API..."
 
 	newestimageid = 0
+	#images = rprint(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers))
 	images = json.loads(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers).content)
 	for image in images["images"]:
 		if image["distribution"] == "CentOS" and "7" in image["name"]:
@@ -154,8 +156,8 @@ runcmd:
 	}))
 
 	print("ssh -i " + path + " " + hostname + " -p 10022 \n AND \n Your new database password is " + dbpassword)
-	final_remarks.push("To connect use: ssh -i " + path + " " + hostname)
-	final_remarks.push("Your new database password is " + dbpassword)
+	final_remarks.append("To connect use: ssh -i " + path + " " + hostname)
+	final_remarks.append("Your new database password is " + dbpassword)
 	
 	print '-----------------------------------------------------------------'
 
@@ -202,7 +204,7 @@ def switch_floating_ip():
 		rprint(requests.post("https://api.digitalocean.com/v2/floating_ips/" + newfip + " /actions", headers=headers, json={"type":"assign","droplet_id":newid}))
 
 	print '-----------------------------------------------------------------'
-	final_remarks.push("You moved a droplet named " + dropletname + " to floating IP " + newfip)
+	final_remarks.append("You moved a droplet named " + dropletname + " to floating IP " + newfip)
 
 
 if((raw_input("Would you like to delete a DigitalOcean droplet? [y]: ") or "y") == "y"):

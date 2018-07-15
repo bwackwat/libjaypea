@@ -10,6 +10,7 @@
 
 //#define DEBUG(msg) std::cout << msg << std::endl;
 #define DEBUG(msg)
+//#define PRINT(msg) std::cout << msg << std::endl;
 
 std::map<enum JsonType, std::string> JsonObject::typeString = {
 	{ NOTYPE, "No Json" },
@@ -29,15 +30,15 @@ const char* JsonObject::parse(const char* str){
 	for(it = str; *it; ++it){
 		DEBUG("LOOP:" << it)
 		switch(*it){
-		case '\\':
-			++it;
-			DEBUG("ESCAPE TO: " << *it)
-			if(*it == 'n' ||
-			*it == 'r' ||
-			*it == 't'){
-				continue;
-			}
-			break;
+		//case '\\':
+		//	++it;
+		//	DEBUG("ESCAPE TO: " << *it)
+		//	if(*it == 'n' ||
+		//	*it == 'r' ||
+		//	*it == 't'){
+		//		continue;
+		//	}
+		//	break;
 		case '"':
 			if(this->type == NOTYPE){
 				this->type = STRING;
@@ -169,8 +170,9 @@ std::string JsonObject::escape(std::string value){
 			escaped << "\\r";
 		}else if(value[i] == '\t'){
 			escaped << "\\t";
-		}else if(value[i] == '"' ||
-		value[i] == '\\'){			
+		}else if(value[i] == '"'){
+		// ||
+		//value[i] == '\\'){
 			escaped << '\\' << value[i];
 			DEBUG("ESCAPED: \\")
 		}else{
@@ -178,7 +180,36 @@ std::string JsonObject::escape(std::string value){
 		}
 	}
 	escaped << '"';
+	//PRINT(value)
+	//PRINT(escaped)
 	return escaped.str();
+}
+
+std::string JsonObject::deescape(std::string value){
+	std::stringstream deescaped;
+	for(size_t i = 0; i < value.length(); ++i){
+		if(value[i] == '\\' && value[i + 1] == 'n'){
+			deescaped << '\n';
+			i++;
+		}else if(value[i] == '\\' && value[i + 1] == 'r'){
+			deescaped << '\r';
+			i++;
+		}else if(value[i] == '\\' && value[i + 1] == 't'){
+			deescaped << '\t';
+			i++;
+		}else if(value[i] == '\\' && value[i + 1] == '"'){
+			deescaped << '"';
+			i++;
+		}else if(value[i] == '\\' && value[i + 1] == '\\'){
+			deescaped << '\\';
+			i++;
+		}else{
+			deescaped << value[i];
+		}
+	}
+	//PRINT(value)
+	//PRINT(escaped)
+	return deescaped.str();
 }
 
 std::string JsonObject::stringify(bool pretty, size_t depth){
@@ -216,9 +247,9 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 	case ARRAY:
 		ss << '[';
 		if(pretty){
-                               ss << '\n';
-                               depth++;
-                       }
+			ss << '\n';
+			depth++;
+		}
 		for(JsonObject* item : this->arrayValues){
 			if(pretty){
 				ss << std::string(depth, '\t');
@@ -233,9 +264,9 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 			}
 		}
 		if(pretty){
-                               depth--;
-                               ss << std::string(depth, '\t');
-                       }
+			depth--;
+			ss << std::string(depth, '\t');
+		}
 		ss << ']';
 		return ss.str();
 	}

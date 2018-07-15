@@ -43,7 +43,7 @@ public:
 	JsonObject* All();
 	JsonObject* Where(std::string key, std::string value);
 	JsonObject* Insert(std::vector<JsonObject*> values);
-	
+	JsonObject* Delete(std::string id);
 	bool IsOwner(std::string id, std::string owner_id);
 	JsonObject* Update(std::string id, std::unordered_map<std::string, JsonObject*> values);
 	

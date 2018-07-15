@@ -359,6 +359,9 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 	}else if(!strict_compare_inequal(request, "POST /", 6)){
 		request_obj->objectValues["method"]->stringValue = "POST";
 		it += 6;
+	}else if(!strict_compare_inequal(request, "DELETE /", 8)){
+		request_obj->objectValues["method"]->stringValue = "DELETE";
+		it += 8;
 	}else if(!strict_compare_inequal(request, "PUT /", 5)){
 		request_obj->objectValues["method"]->stringValue = "PUT";
 		it += 5;

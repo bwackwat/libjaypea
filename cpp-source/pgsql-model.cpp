@@ -43,7 +43,7 @@ JsonObject* PgSqlModel::ResultToJson(pqxx::result* res){
 	for(pqxx::result::size_type i = 0; i < res->size(); ++i){
 		JsonObject* next_item = new JsonObject(OBJECT);
 		for(size_t j = 0; j < this->cols.size(); ++j){
-			if(!(this->cols[j]->flags & COL_HIDDEN)){
+			if(!(this->cols[j]->flags & COL_HIDDEN) && !((*res)[i][this->cols[j]->name].is_null())){
 				next_item->objectValues[this->cols[j]->name] = new JsonObject(STRING);
 				next_item->objectValues[this->cols[j]->name]->stringValue = (*res)[i][this->cols[j]->name].as<std::string>();
 			}
@@ -56,7 +56,7 @@ JsonObject* PgSqlModel::ResultToJson(pqxx::result* res){
 JsonObject* PgSqlModel::ResultToJson(pqxx::result::tuple row){
 	JsonObject* result_json= new JsonObject(OBJECT);
 	for(size_t j = 0; j < this->cols.size(); ++j){
-		if(!(this->cols[j]->flags & COL_HIDDEN)){
+		if(!(this->cols[j]->flags & COL_HIDDEN) && !(row[this->cols[j]->name].is_null())){
 			result_json->objectValues[this->cols[j]->name] = new JsonObject(STRING);
 			result_json->objectValues[this->cols[j]->name]->stringValue = row[this->cols[j]->name].as<std::string>();
 		}
@@ -66,7 +66,11 @@ JsonObject* PgSqlModel::ResultToJson(pqxx::result::tuple row){
 
 JsonObject* PgSqlModel::All(){
 	pqxx::work txn(this->conn);
-	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + ';');
+	std::string check;
+	if(this->HasColumn("deleted")){
+		check = " WHERE deleted IS NULL";
+	}
+	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + check + ";");
 	return this->ResultToJson(&res);
 }
 
@@ -78,17 +82,37 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	pqxx::work txn(this->conn);
 	pqxx::result res;
 
+	std::string check;
+	if(this->HasColumn("deleted")){
+		check = " AND deleted IS NULL";
+	}
 	try{
-		res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + " ORDER BY created_on DESC;");
+		res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + " ORDER BY created DESC;");
 	}catch(const pqxx::pqxx_exception &e){
 		PRINT(e.base().what())
 		return Error("You provided incomplete or bad data.");
 	}
 	
-	if(res.size() == 0){
-		return Error("Bad value.");
-	}
+	//if(res.size() == 0){
+	//	return Error("Bad value.");
+	//}
 	return this->ResultToJson(&res);
+}
+
+JsonObject* PgSqlModel::Delete(std::string id){
+	pqxx::work txn(this->conn);
+	std::stringstream sql;
+	sql << "UPDATE " << this->table << " SET deleted = now() WHERE id = " + txn.quote(id) + " RETURNING id;";
+	try{
+		pqxx::result res = SqlWrap(&txn, sql.str());
+		
+		JsonObject* result = new JsonObject(OBJECT);
+		result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
+		return result;
+	}catch(const std::exception& e){
+		PRINT(e.what())
+		return Error("You provided incomplete or bad data.");
+	}
 }
 
 JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
@@ -182,17 +206,21 @@ JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, J
 JsonObject* PgSqlModel::Access(const std::string& key, const std::string& value, const std::string& password){
 	try{
 		pqxx::work txn(this->conn);
-		pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + ';');
+		std::string check;
+		if(this->HasColumn("deleted")){
+			check = " AND deleted IS NULL";
+		}
+		pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + ';');
 	
 		if(res.size() == 0){
 			return Error("Bad username.");
 		}else if(res[0]["password"].as<std::string>() == password){
-			PRINT("DB: " << res[0]["password"].as<std::string>())
-			PRINT("PS: " << password)
+			//PRINT("DB: " << res[0]["password"].as<std::string>())
+			//PRINT("PS: " << password)
 			return this->ResultToJson(res[0]);
 		}else{
-			PRINT("DB: " << res[0]["password"].as<std::string>())
-			PRINT("PS: " << password)
+			//PRINT("DB: " << res[0]["password"].as<std::string>())
+			//PRINT("PS: " << password)
 			return Error("Bad password.");
 		}
 	}catch(const std::exception &e){

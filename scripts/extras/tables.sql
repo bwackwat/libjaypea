@@ -10,6 +10,7 @@ CREATE TABLE users (
 	first_name VARCHAR(50) NOT NULL,
 	last_name VARCHAR(50) NOT NULL,
 	verified BOOLEAN NOT NULL,
+	deleted TIMESTAMP,
 	modified TIMESTAMP NOT NULL,
 	created TIMESTAMP NOT NULL
 );
@@ -26,6 +27,7 @@ CREATE TABLE poi (
 	label TEXT NOT NULL,
 	description TEXT NOT NULL,
 	location GEOGRAPHY(POINT, 4326) NOT NULL,
+	deleted TIMESTAMP,
 	modified TIMESTAMP NOT NULL,
 	created TIMESTAMP NOT NULL
 );
@@ -38,6 +40,7 @@ CREATE TABLE threads (
 	owner_id SERIAL NOT NULL,
 	name VARCHAR(50) NOT NULL,
 	description TEXT NOT NULL,
+	deleted TIMESTAMP,
 	modified TIMESTAMP NOT NULL,
 	created TIMESTAMP NOT NULL
 );
@@ -50,6 +53,7 @@ CREATE TABLE messages (
 	owner_id SERIAL NOT NULL,
 	title TEXT NOT NULL,
 	content TEXT NOT NULL,
+	deleted TIMESTAMP,
 	modified TIMESTAMP NOT NULL,
 	created TIMESTAMP NOT NULL
 );
@@ -61,11 +65,24 @@ CREATE TABLE access_types (
 	id SERIAL PRIMARY KEY,
 	name VARCHAR(50) NOT NULL,
 	description TEXT NOT NULL,
+	deleted TIMESTAMP,
 	modified TIMESTAMP NOT NULL,
 	created TIMESTAMP NOT NULL
 );
 ALTER TABLE access_types ALTER modified SET DEFAULT now();
 ALTER TABLE access_types ALTER created SET DEFAULT now();
+
+INSERT INTO access_types (id, name, description) VALUES (
+	1,
+	'Administrator',
+	'Has complete administrative priviliges.'
+);
+
+INSERT INTO access_types (id, name, description) VALUES (
+	2,
+	'Blogger',
+	'Has blogging privilige.'
+);
 
 DROP TABLE access;
 CREATE TABLE access (

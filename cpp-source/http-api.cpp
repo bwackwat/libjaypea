@@ -8,6 +8,7 @@ server(new_server)
 {
 	// 30 MB cache size by default.
 	this->set_file_cache_size(30);
+	this->server->set_timeout(10);
 }
 
 void HttpApi::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function,
@@ -52,8 +53,7 @@ static std::unordered_map<int, struct Question*> client_questions;
 
 void HttpApi::start(void){
 	std::string default_header = "HTTP/1.1 200 OK\n"
-		"Accept-Ranges: bytes\n"
-		"Content-Type: text\n";
+		"Accept-Ranges: bytes\n";
 
 	this->routes_object = new JsonObject(OBJECT);
 	for(auto iter = this->routemap.begin(); iter != this->routemap.end(); ++iter){
@@ -330,8 +330,13 @@ void HttpApi::start(void){
 					return -1;
 				}
 				DEBUG("DELI:" << response_body)
-			}else{			
-				response = response_header + "Content-Length: " + std::to_string(response_body.length()) + "\r\n\r\n" + response_body;
+			}else{
+				if(r_type == HTTP){
+					response = response_header + "Content-Type: text\n";
+				}else{
+					response = response_header + "Content-Type: application/json\n";
+				}
+				response = response + "Content-Length: " + std::to_string(response_body.length()) + "\r\n\r\n" + response_body;
 				if(this->server->send(fd, response.c_str(), response.length())){
 					return -1;
 				}
