@@ -92,7 +92,6 @@ runcmd:
  - mkdir -p /opt/libjaypea/logs
  - chmod +x /opt/libjaypea/scripts/deploy.sh
  - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} {4} > /opt/libjaypea/logs/deploy.log 2>&1
- - reboot
 """
 
 	minimal_config = """

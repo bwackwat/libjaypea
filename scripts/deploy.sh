@@ -17,11 +17,13 @@ cat <<EOF >> artifacts/start.sh
 #!/bin/bash
 
 killall python
+killall /opt/libjaypea/binaries/jph2
+killall /opt/libjaypea/binaries/http-redirecter
 
 # Watch for changes to affable-escapade, and update.
 python -u scripts/python/git-commit-checker.py bwackwat affable-escapade > logs/libjaypea-git-commit-checker.log 2>&1 &
 
-python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "scripts/extras/update-branch-from-git.sh $1 master" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "scripts/extras/update-branch-from-git.sh /opt/affable-escapade master" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
 
 # Watch for changes to libjaypea, and update.
 python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/libjaypea-git-commit-checker.log 2>&1 &
