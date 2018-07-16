@@ -38,7 +38,7 @@ public:
 	JsonObject(enum JsonType new_type);
 	JsonObject(std::string new_stringValue);
 	JsonObject();
-	~JsonObject();
+	//~JsonObject();
 	
 	bool HasObj(const std::string& key, enum JsonType t);
 	std::string GetStr(const char* key);

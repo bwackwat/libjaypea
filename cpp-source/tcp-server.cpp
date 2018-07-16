@@ -195,6 +195,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 	}
 
 	// Add server_fd
+	memset(&new_event, 0, sizeof(new_event));
 	new_event.events = EVENTS;
 	new_event.data.fd = this->server_fd;
 	if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, this->server_fd, &new_event) < 0){
@@ -208,6 +209,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 	}
 
 	// Add timeout_epoll_fd
+	memset(&new_event, 0, sizeof(new_event));
 	new_event.events = EVENTS;
 	new_event.data.fd = timeout_epoll_fd;
 	if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timeout_epoll_fd, &new_event) < 0){
@@ -216,6 +218,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 	}
 
 	// Add broadcast_pipe[0]
+	memset(&new_event, 0, sizeof(new_event));
 	new_event.events = EVENTS;
 	new_event.data.fd = this->broadcast_pipe[0];
 	if(epoll_ctl(epoll_fd, EPOLL_CTL_ADD, this->broadcast_pipe[0], &new_event) < 0){

@@ -25,13 +25,6 @@ PgSqlModel::PgSqlModel(std::string new_conn, std::string new_table, std::vector<
 	}
 }
 
-static pqxx::result SqlWrap(pqxx::work* txn, std::string sql){
-	std::cout << "PSQL: |" << sql << "|" << std::endl;
-	pqxx::result res = txn->exec(sql);
-	txn->commit();
-	return res;
-}
-
 JsonObject* PgSqlModel::Error(std::string message){
 	JsonObject* error = new JsonObject(OBJECT);
 	error->objectValues["error"] = new JsonObject(message);
@@ -65,12 +58,16 @@ JsonObject* PgSqlModel::ResultToJson(pqxx::result::tuple row){
 }
 
 JsonObject* PgSqlModel::All(){
-	pqxx::work txn(this->conn);
+	pqxx::nontransaction txn(this->conn);
+	
 	std::string check;
 	if(this->HasColumn("deleted")){
 		check = " WHERE deleted IS NULL";
 	}
-	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + check + ";");
+	
+	pqxx::result res = txn.exec("SELECT * FROM " + this->table + check + ";");
+	txn.commit();
+	
 	return this->ResultToJson(&res);
 }
 
@@ -79,32 +76,29 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 		return Error("Bad key.");
 	}
 	
-	pqxx::work txn(this->conn);
-	pqxx::result res;
-
+	pqxx::nontransaction txn(this->conn);
+	
 	std::string check;
 	if(this->HasColumn("deleted")){
 		check = " AND deleted IS NULL";
 	}
+
 	try{
-		res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + " ORDER BY created DESC;");
+		pqxx::result res = txn.exec("SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + " ORDER BY created DESC;");
+		txn.commit();
+		
+		return this->ResultToJson(&res);
 	}catch(const pqxx::pqxx_exception &e){
 		PRINT(e.base().what())
 		return Error("You provided incomplete or bad data.");
 	}
-	
-	//if(res.size() == 0){
-	//	return Error("Bad value.");
-	//}
-	return this->ResultToJson(&res);
 }
 
 JsonObject* PgSqlModel::Delete(std::string id){
-	pqxx::work txn(this->conn);
-	std::stringstream sql;
-	sql << "UPDATE " << this->table << " SET deleted = now() WHERE id = " + txn.quote(id) + " RETURNING id;";
+	pqxx::nontransaction txn(this->conn);
 	try{
-		pqxx::result res = SqlWrap(&txn, sql.str());
+		pqxx::result res = txn.exec("UPDATE " + this->table + " SET deleted = now() WHERE id = " + txn.quote(id) + " RETURNING id;");
+		txn.commit();
 		
 		JsonObject* result = new JsonObject(OBJECT);
 		result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
@@ -116,7 +110,8 @@ JsonObject* PgSqlModel::Delete(std::string id){
 }
 
 JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
-	pqxx::work txn(this->conn);
+	pqxx::nontransaction txn(this->conn);
+	
 	std::stringstream sql;
 	sql << "INSERT INTO " << this->table << " (" ;
 	for(size_t i = 0; i < this->cols.size(); ++i){
@@ -135,7 +130,8 @@ JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
 		}
 	}
 	try{
-		pqxx::result res = SqlWrap(&txn, sql.str());
+		pqxx::result res = txn.exec(sql.str());
+		txn.commit();
 		
 		JsonObject* result = new JsonObject(OBJECT);
 		result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
@@ -168,8 +164,9 @@ static void result_print(pqxx::result result){
 */
 
 bool PgSqlModel::IsOwner(std::string id, std::string owner_id){
-	pqxx::work txn(this->conn);
-	pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE id = " + txn.quote(id) + ';');
+	pqxx::nontransaction txn(this->conn);
+	pqxx::result res = txn.exec("SELECT * FROM " + this->table + " WHERE id = " + txn.quote(id) + ';');
+	txn.commit();
 	
 	if(res[0]["owner_id"].as<std::string>() == owner_id){
 		return true;
@@ -178,7 +175,8 @@ bool PgSqlModel::IsOwner(std::string id, std::string owner_id){
 }
 
 JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, JsonObject*> values){
-	pqxx::work txn(this->conn);
+	pqxx::nontransaction txn(this->conn);
+	
 	std::stringstream sql;
 	sql << "UPDATE " << this->table << " SET ";
 	for(auto iter = values.begin(); iter != values.end(); ++iter){
@@ -192,7 +190,8 @@ JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, J
 	}
 	sql << " WHERE id = " + txn.quote(id) + " RETURNING id;";
 	try{
-		pqxx::result res = SqlWrap(&txn, sql.str());
+		pqxx::result res = txn.exec(sql.str());
+		txn.commit();
 		
 		JsonObject* result = new JsonObject(OBJECT);
 		result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
@@ -205,12 +204,14 @@ JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, J
 
 JsonObject* PgSqlModel::Access(const std::string& key, const std::string& value, const std::string& password){
 	try{
-		pqxx::work txn(this->conn);
+		pqxx::nontransaction txn(this->conn);
+	
 		std::string check;
 		if(this->HasColumn("deleted")){
 			check = " AND deleted IS NULL";
 		}
-		pqxx::result res = SqlWrap(&txn, "SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + ';');
+		pqxx::result res = txn.exec("SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + ';');
+		txn.commit();
 	
 		if(res.size() == 0){
 			return Error("Bad username.");

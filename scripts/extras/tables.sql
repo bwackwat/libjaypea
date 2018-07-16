@@ -1,5 +1,13 @@
 
+CREATE EXTENSION postgis;
+
+DROP TABLE poi;
+DROP TABLE messages;
+DROP TABLE threads;
+DROP TABLE access;
+DROP TABLE access_types;
 DROP TABLE users;
+
 CREATE TABLE users (
 	id SERIAL PRIMARY KEY,
 	username VARCHAR(50) UNIQUE NOT NULL,
@@ -18,12 +26,9 @@ ALTER TABLE users ALTER verified SET DEFAULT FALSE;
 ALTER TABLE users ALTER modified SET DEFAULT now();
 ALTER TABLE users ALTER created SET DEFAULT now();
 
-CREATE EXTENSION postgis;
-
-DROP TABLE poi;
 CREATE TABLE poi (
 	id SERIAL PRIMARY KEY,
-	owner_id SERIAL NOT NULL,
+	owner_id SERIAL NOT NULL REFERENCES users (id),
 	label TEXT NOT NULL,
 	description TEXT NOT NULL,
 	location GEOGRAPHY(POINT, 4326) NOT NULL,
@@ -34,10 +39,9 @@ CREATE TABLE poi (
 ALTER TABLE poi ALTER modified SET DEFAULT now();
 ALTER TABLE poi ALTER created SET DEFAULT now();
 
-DROP TABLE threads;
 CREATE TABLE threads (
 	id SERIAL PRIMARY KEY,
-	owner_id SERIAL NOT NULL,
+	owner_id SERIAL NOT NULL REFERENCES users (id),
 	name VARCHAR(50) NOT NULL,
 	description TEXT NOT NULL,
 	deleted TIMESTAMP,
@@ -47,10 +51,10 @@ CREATE TABLE threads (
 ALTER TABLE threads ALTER modified SET DEFAULT now();
 ALTER TABLE threads ALTER created SET DEFAULT now();
 
-DROP TABLE messages;
 CREATE TABLE messages (
 	id SERIAL PRIMARY KEY,
-	owner_id SERIAL NOT NULL,
+	thread_id SERIAL NOT NULL REFERENCES threads (id),
+	owner_id SERIAL NOT NULL REFERENCES users (id),
 	title TEXT NOT NULL,
 	content TEXT NOT NULL,
 	deleted TIMESTAMP,
@@ -60,7 +64,6 @@ CREATE TABLE messages (
 ALTER TABLE messages ALTER modified SET DEFAULT now();
 ALTER TABLE messages ALTER created SET DEFAULT now();
 
-DROP TABLE access_types;
 CREATE TABLE access_types (
 	id SERIAL PRIMARY KEY,
 	name VARCHAR(50) NOT NULL,
@@ -84,14 +87,12 @@ INSERT INTO access_types (id, name, description) VALUES (
 	'Has blogging privilige.'
 );
 
-DROP TABLE access;
 CREATE TABLE access (
-	owner_id SERIAL NOT NULL,
-	access_type_id SERIAL NOT NULL,
+	owner_id SERIAL NOT NULL REFERENCES users (id),
+	access_type_id SERIAL NOT NULL REFERENCES access_types (id),
 	UNIQUE(owner_id, access_type_id)
 );
-ALTER TABLE access ALTER modified SET DEFAULT now();
-ALTER TABLE access ALTER created SET DEFAULT now();
+
 
 CREATE ROLE bwackwat WITH LOGIN;
 GRANT SELECT, INSERT, UPDATE ON users TO bwackwat;
@@ -103,4 +104,5 @@ GRANT SELECT, INSERT, UPDATE ON access TO bwackwat;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO bwackwat;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO bwackwat;
+
 

@@ -214,13 +214,16 @@ std::string JsonObject::deescape(std::string value){
 
 std::string JsonObject::stringify(bool pretty, size_t depth){
 	std::stringstream ss;
+	std::string result;
 	switch(this->type){
 	case NOTYPE:
-		return "";
+		result = "";
+		break;
 	case STRING:
-		return escape(this->stringValue);
+		result = escape(this->stringValue);
+		break;
 	case OBJECT:
-		ss << '{';
+		ss.put('{');
 		if(pretty){
 			ss << '\n';
 			depth++;
@@ -243,7 +246,8 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 			ss << std::string(depth, '\t');
 		}
 		ss << '}';
-		return ss.str();
+		result = ss.str();
+		break;
 	case ARRAY:
 		ss << '[';
 		if(pretty){
@@ -268,8 +272,10 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 			ss << std::string(depth, '\t');
 		}
 		ss << ']';
-		return ss.str();
+		result = ss.str();
+		break;
 	}
+	return result;
 }
 
 JsonObject::JsonObject(enum JsonType new_type)
@@ -282,14 +288,14 @@ JsonObject::JsonObject(std::string new_stringValue)
 JsonObject::JsonObject()
 :type(NOTYPE){}
 
-JsonObject::~JsonObject(){
-	for(auto it = this->objectValues.begin(); it != this->objectValues.end(); ++it){
-		delete it->second;
-	}
-	for(JsonObject* item : this->arrayValues){
-		delete item;
-	}
-}
+//JsonObject::~JsonObject(){
+//	for(auto it = this->objectValues.begin(); it != this->objectValues.end(); ++it){
+//		delete it->second;
+//	}
+//	for(JsonObject* item : this->arrayValues){
+//		delete item;
+//	}
+//}
 
 bool JsonObject::HasObj(const std::string& key, enum JsonType t){
 	return this->objectValues.count(key) && this->objectValues[key]->type == t;

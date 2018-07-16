@@ -349,6 +349,8 @@ void HttpApi::start(void){
 
 	// Should not return.
 	this->server->run();
+	
+	delete this->routes_object;
 
 	PRINT("Goodbye!")
 }

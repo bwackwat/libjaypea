@@ -82,6 +82,7 @@ int main(int argc, char **argv){
 	PgSqlModel* messages = new PgSqlModel(connection_string, "messages", {
 		&id,
 		&owner_id,
+		new Column("thread_id"),
 		new Column("title"),
 		new Column("content"),
 		&deleted,
@@ -114,7 +115,7 @@ int main(int argc, char **argv){
 	api.route("GET", "/users", [&](JsonObject* json)->std::string{
 		JsonObject token;
 		try{
-			token.parse(encryptor.decrypt(json->GetStr("token")).c_str());
+			token.parse(encryptor.decrypt(JsonObject::deescape(json->GetStr("token"))).c_str());
 		}catch(const std::exception& e){
 			PRINT(e.what())
 			return "{\"error\":\"You cannot gain access to this!\"}";
@@ -133,6 +134,17 @@ int main(int argc, char **argv){
 		delete token;
 		return response;
 	}, {{"username", STRING}, {"password", STRING}}, std::chrono::seconds(1));
+	
+	api.route("POST", "/token", [&](JsonObject* json)->std::string{
+		JsonObject token;
+		try{
+			token.parse(encryptor.decrypt(JsonObject::deescape(json->GetStr("token"))).c_str());
+		}catch(const std::exception& e){
+			PRINT(e.what())
+			return "{\"error\":\"You cannot gain access to this!\"}";
+		}
+		return "{\"result\":\"Token is good\"}";
+	}, {{"token", STRING}});
 	
 	api.route("POST", "/user", [&](JsonObject* json)->std::string{
 		std::string response;
@@ -234,90 +246,75 @@ int main(int argc, char **argv){
 		delete temp_threads;
 		return response;
 	}, {{"token", STRING}});
-
-	/*api.route("POST", "/end", [&](JsonObject* json)->std::string{
+	
+	api.route("POST", "/get/user/thread", [&](JsonObject* json)->std::string{
+		std::string response;
+		
 		JsonObject token;
 		try{
-			token.parse(encryptor.decrypt(request->objectValues["token"]->stringValue).c_str());
+			token.parse(encryptor.decrypt(JsonObject::deescape(json->GetStr("token"))).c_str());
 		}catch(const std::exception& e){
 			PRINT(e.what())
-			response = PgSqlModel::Error("You cannot gain access to this.");
+			return "{\"error\":\"You cannot gain access to this!\"}";
 		}
-		if(json->GetStr("token") != token){
-			return std::string();
-		}else{
-			server->running = false;
-			//server->send(server->broadcast_fd(), "Goodbye!");
-			return "{\"result\":\"Goodbye!\"}";
+		
+		JsonObject* temp_threads;
+		try{
+			temp_threads = threads->Where("id", json->GetStr("id"));
+		
+			if(temp_threads->arrayValues.size() == 0){
+				delete temp_threads;
+				return "{\"error\":\"That thread doesn't exist!\"}";
+			}
+			
+			if(temp_threads->arrayValues[0]->GetStr("owner_id") != token.GetStr("id")){
+				delete temp_threads;
+				return "{\"error\":\"You cannot gain access to this!\"}";
+			}
+		}catch(const std::exception& e){
+			PRINT(e.what())
+			return "{\"error\":\"You cannot gain access to this!\"}";
 		}
-	}, {{"token", STRING}});*/
-
-	/*
-		USER
-
-
-	api.route("GET", "/user", [&](JsonObject* json)->std::string{
-		return provider.communicate(Where("users",
-			"username",
-			json->GetStr("username"),
-			json->GetStr("token")));
-	}, {{"username", STRING}, {"token", STRING}});
+		
+		response = temp_threads->arrayValues[0]->stringify(false);
+		delete temp_threads;
+		return response;
+	}, {{"token", STRING}, {"id", STRING}});
 	
-	api.route("POST", "/user", [&](JsonObject* json)->std::string{	
-		return provider.communicate(Insert("users",
-			json->objectValues["values"]));
-	}, {{"values", ARRAY}}, std::chrono::hours(6)); // Can only register every 1 hours.
-	
-	api.route("PUT", "/user", [&](JsonObject* json)->std::string{	
-		return provider.communicate(Update("users",
-			json->GetStr("id"),
-			json->objectValues["values"],
-			json->GetStr("token")));
-	}, {{"id", STRING}, {"values", OBJECT}, {"token", STRING}});
-	
-
-		BLOG
-
-	api.route("GET", "/blog", [&](JsonObject* json)->std::string{
-		return provider.communicate(Where("posts", "username", json->GetStr("username")));
-	}, {{"username", STRING}});
-
-	api.route("POST", "/blog", [&](JsonObject* json)->std::string{
-		return provider.communicate(Insert("posts",
-			json->objectValues["values"],
-			json->GetStr("token")));
-	}, {{"values", ARRAY}, {"token", STRING}});
-
-	api.route("PUT", "/blog", [&](JsonObject* json)->std::string{
-		return provider.communicate(Update("posts",
-			json->GetStr("id"),
-			json->objectValues["values"],
-			json->GetStr("token")));
-	}, {{"id", STRING}, {"values", OBJECT}, {"token", STRING}});
-
-		POI
-	*/
-	/*
-
-	api.route("GET", "/poi", [&](JsonObject* json)->std::string{
-		return provider.communicate(Where("poi",
-			json->GetStr("key"),
-			json->GetStr("value")));
-	}, {{"key", STRING}, {"value", STRING}});
-
-	api.route("POST", "/poi", [&](JsonObject* json)->std::string{
-		return provider.communicate(Insert("poi",
-			json->objectValues["values"],
-			json->GetStr("token")));
-	}, {{"values", ARRAY}, {"token", STRING}});
-
-	api.route("PUT", "/poi", [&](JsonObject* json)->std::string{
-		return provider.communicate(Update("poi",
-			json->GetStr("id"),
-			json->objectValues["values"],
-			json->GetStr("token")));
-	}, {{"id", STRING}, {"values", OBJECT}, {"token", STRING}});
-	*/
+	api.route("POST", "/get/thread/messages", [&](JsonObject* json)->std::string{
+		std::string response;
+		
+		JsonObject token;
+		try{
+			token.parse(encryptor.decrypt(JsonObject::deescape(json->GetStr("token"))).c_str());
+		}catch(const std::exception& e){
+			PRINT(e.what())
+			return "{\"error\":\"You cannot gain access to this!\"}";
+		}
+		
+		try{
+			JsonObject* temp_threads = threads->Where("id", json->GetStr("id"));
+			
+			if(temp_threads->arrayValues.size() == 0){
+				delete temp_threads;
+				return "{\"error\":\"That thread doesn't exist!\"}";
+			}
+			
+			if(temp_threads->arrayValues[0]->GetStr("owner_id") != token.GetStr("id")){
+				delete temp_threads;
+				return "{\"error\":\"You cannot gain access to this!\"}";
+			}
+			delete temp_threads;
+		
+			JsonObject* temp_messages = messages->Where("thread_id", json->GetStr("id"));
+			response = temp_messages->stringify(false);
+			delete temp_messages;
+		}catch(const std::exception& e){
+			PRINT(e.what())
+			return "{\"error\":\"You cannot gain access to this!\"}";
+		}
+		return response;
+	}, {{"token", STRING}, {"id", STRING}});
 
 	api.start();
 }
