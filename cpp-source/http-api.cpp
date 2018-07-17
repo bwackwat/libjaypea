@@ -71,7 +71,7 @@ void HttpApi::start(void){
 	};
 
 	this->server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
-		DEBUG("RECV:" << data)
+		//DEBUG("RECV:" << data)
 		
 		JsonObject r_obj(OBJECT);
 		enum RequestResult r_type = Util::parse_http_api_request(data, &r_obj);
