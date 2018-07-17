@@ -84,7 +84,7 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	}
 
 	try{
-		PRINT("PSQL|" << "SELECT * FROM " << this->table << " WHERE " << key << " = " << txn.quote(value) << check << " ORDER BY created DESC;")
+		//PRINT("PSQL|" << "SELECT * FROM " << this->table << " WHERE " << key << " = " << txn.quote(value) << check << " ORDER BY created DESC;")
 		pqxx::result res = txn.exec("SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + " ORDER BY created DESC;");
 		txn.commit();
 		
@@ -131,7 +131,7 @@ JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
 		}
 	}
 	try{
-		PRINT("PSQL| " << sql.str())
+		//PRINT("PSQL| " << sql.str())
 		pqxx::result res = txn.exec(sql.str());
 		txn.commit();
 		
