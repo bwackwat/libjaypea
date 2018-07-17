@@ -20,7 +20,7 @@ int main(int argc, char **argv){
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
-	Util::define_argument("port", &port, {"-p"});
+	Util::define_argument("https_port", &port, {"-p"});
 	Util::define_argument("cache_megabytes", &cache_megabytes,{"-cm"});
 	Util::define_argument("postgresql_connection", connection_string, {"-pcs"});
 	Util::parse_arguments(argc, argv, "This is an HTTP(S) JSON API which hold routes for jph2.net.");

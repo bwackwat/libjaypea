@@ -1,8 +1,8 @@
 {
 	"hostname": "localhost",
-	"public_directory": "../affable-escapade/",
+	"public_directory": "../affable-escapade",
 	"http_port": "10080",
-	"port": "10443",
+	"https_port": "10443",
 	"postgresql_connection": "dbname=webservice user=postgres password=abc123",
 	"ssl_certificate": "extras/self-signed-ssl/ssl.crt",
 	"ssl_private_key":"extras/self-signed-ssl/ssl.key",
