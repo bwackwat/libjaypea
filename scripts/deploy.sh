@@ -68,6 +68,8 @@ firewall-offline-cmd --zone=public --add-forward-port=port=443:proto=tcp:toport=
 # certbot certonly --standalone --http-01-port 10080 --domain $4 -n --agree-tos --email $6
 # cp /etc/letsencrypt/live/$4/fullchain.pem artifacts/ssl.crt
 # cp /etc/letsencrypt/live/$4/privkey.pem artifacts/ssl.key
+cp extras/self-signed-ssl/ssl.crt artifacts/
+cp extras/self-signed-ssl/ssl.key artifacts/
 
 scripts/extras/pgsql-centos7.sh $5 > logs/pgsql-centos7.log 2>&1
 

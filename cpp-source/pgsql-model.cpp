@@ -84,6 +84,7 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	}
 
 	try{
+		PRINT("PSQL|" << "SELECT * FROM " << this->table << " WHERE " << key << " = " << txn.quote(value) << check << " ORDER BY created DESC;")
 		pqxx::result res = txn.exec("SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + " ORDER BY created DESC;");
 		txn.commit();
 		
@@ -130,6 +131,7 @@ JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
 		}
 	}
 	try{
+		PRINT("PSQL| " << sql.str())
 		pqxx::result res = txn.exec(sql.str());
 		txn.commit();
 		
@@ -178,9 +180,15 @@ JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, J
 	pqxx::nontransaction txn(this->conn);
 	
 	std::stringstream sql;
+	
 	sql << "UPDATE " << this->table << " SET ";
+	if(this->HasColumn("modified")){
+		sql << "modified = now(), ";
+	}
+	
 	for(auto iter = values.begin(); iter != values.end(); ++iter){
 		if(!this->HasColumn(iter->first)){
+			PRINT("BAD KEY: " + iter->first)
 			return Error("Bad key.");
 		}
 		sql << iter->first << " = " + txn.quote(iter->second->stringValue);
@@ -229,3 +237,4 @@ JsonObject* PgSqlModel::Access(const std::string& key, const std::string& value,
 		return Error("Bad data.");
 	}
 }
+

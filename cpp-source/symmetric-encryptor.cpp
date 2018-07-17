@@ -9,13 +9,14 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 		this->random_pool.GenerateBlock(this->iv, CryptoPP::AES::BLOCKSIZE);
 		this->hmac = CryptoPP::HMAC<CryptoPP::SHA256>(this->key, CryptoPP::AES::MAX_KEYLENGTH);
 		
+		/*
 		std::string keystr;
 		CryptoPP::HexEncoder hex(new CryptoPP::StringSink(keystr));
 		hex.Put(this->key, CryptoPP::AES::MAX_KEYLENGTH);
 		hex.Put(this->iv, CryptoPP::AES::BLOCKSIZE);
 		hex.MessageEnd();
-		PRINT("GENERATED KEY: " << keystr)
-		//PRINT("GENERATED KEY: " << this->key << this->iv)
+		*/
+		PRINT("GENERATED KEY.")
 		return;
 	}
 
@@ -126,6 +127,7 @@ std::string SymmetricEncryptor::encrypt(std::string data, int transaction){
 	DEBUG("STEXT:" << std::string(static_cast<char>(transaction % 255) + data))
 
 	return this->encrypt(static_cast<char>(transaction % 255) + data);
+	//return this->encrypt(data);
 }
 
 std::string SymmetricEncryptor::decrypt(std::string data, int transaction){
@@ -135,6 +137,8 @@ std::string SymmetricEncryptor::decrypt(std::string data, int transaction){
 	DEBUG("RTRANS:" << static_cast<char>(new_data[0]))
 	DEBUG("RTRANS:" << static_cast<int>(new_data[0]))
 	DEBUG("RTEXT:" << new_data)
+	
+	//TODO This transaction business was causing incorrect HMAC errors.
 	
 	if(static_cast<unsigned char>(new_data[0]) != static_cast<unsigned char>(transaction % 255)){
 		PRINT("got " << static_cast<int>(new_data[0]) << " expected " << transaction)

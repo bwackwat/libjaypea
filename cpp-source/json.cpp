@@ -30,15 +30,15 @@ const char* JsonObject::parse(const char* str){
 	for(it = str; *it; ++it){
 		DEBUG("LOOP:" << it)
 		switch(*it){
-		//case '\\':
-		//	++it;
-		//	DEBUG("ESCAPE TO: " << *it)
-		//	if(*it == 'n' ||
-		//	*it == 'r' ||
-		//	*it == 't'){
-		//		continue;
-		//	}
-		//	break;
+		case '\\':
+			++it;
+			DEBUG("ESCAPE TO: " << *it)
+			if(*it == 'n' ||
+			*it == 'r' ||
+			*it == 't'){
+				continue;
+			}
+			break;
 		case '"':
 			if(this->type == NOTYPE){
 				this->type = STRING;
@@ -171,10 +171,7 @@ std::string JsonObject::escape(std::string value){
 		}else if(value[i] == '\t'){
 			escaped << "\\t";
 		}else if(value[i] == '"'){
-		// ||
-		//value[i] == '\\'){
-			escaped << '\\' << value[i];
-			DEBUG("ESCAPED: \\")
+			escaped << "\\\"";
 		}else{
 			escaped << value[i];
 		}

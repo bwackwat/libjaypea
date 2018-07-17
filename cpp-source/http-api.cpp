@@ -144,7 +144,7 @@ void HttpApi::start(void){
 					if(this->server->send(fd, response.c_str(), response.length())){
 						return -1;
 					}
-					DEBUG("DELI:" << response)
+					//DEBUG("DELI:" << response)
 					if(r_obj.GetStr("method") != "HEAD"){
 						size_t buffer_size = BUFFER_LIMIT;
 						size_t offset = 0;
@@ -159,13 +159,13 @@ void HttpApi::start(void){
 							offset += buffer_size;
 						}
 					}
-					PRINT("FILE CACHED |" << clean_route)
+					PRINT("CACHED FILE SERVED |" << clean_route)
 				}else{
 					response = response_header + "Content-Length: " + std::to_string(route_stat.st_size) + "\r\n\r\n";
 					if(this->server->send(fd, response.c_str(), response.length())){
 						return -1;
 					}
-					DEBUG("DELI:" << response)
+					//DEBUG("DELI:" << response)
 
 					if(r_obj.GetStr("method") != "HEAD"){
 						if(this->file_cache_remaining_bytes > route_stat.st_size && this->file_cache_mutex.try_lock()){
@@ -209,7 +209,7 @@ void HttpApi::start(void){
 								this->file_cache_mutex.unlock();
 								return 0;
 							}
-							PRINT("FILE DONE AND CACHED |" << clean_route)
+							PRINT("FILE CACHED AND SERVED |" << clean_route)
 							this->file_cache_mutex.unlock();
 						}else{
 							// Send the file read-buffer style
@@ -237,7 +237,7 @@ void HttpApi::start(void){
 								perror("close file");
 								return 0;
 							}
-							PRINT("FILE DONE |" << clean_route)
+							PRINT("FILE SERVED |" << clean_route)
 						}
 					}
 				}
@@ -320,6 +320,7 @@ void HttpApi::start(void){
 			}else if(route == "GET /api/question/"){
 				response_body = "{\"result\":\"Human verification question: " + client_questions[fd]->q + "\"}";
 			}else{
+				PRINT("BAD ROUTE: " + route)
 				response_body = "{\"error\":\"Invalid API route.\"}";
 			}
 		}
@@ -340,7 +341,7 @@ void HttpApi::start(void){
 				if(this->server->send(fd, response.c_str(), response.length())){
 					return -1;
 				}
-				DEBUG("DELI:" << response)
+				//DEBUG("DELI:" << response)
 			}
 		}
 		

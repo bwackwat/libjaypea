@@ -253,14 +253,8 @@ int main(int argc, char **argv){
 		JsonObject token;
 		try{
 			token.parse(encryptor.decrypt(JsonObject::deescape(json->GetStr("token"))).c_str());
-		}catch(const std::exception& e){
-			PRINT(e.what())
-			return "{\"error\":\"You cannot gain access to this!\"}";
-		}
 		
-		JsonObject* temp_threads;
-		try{
-			temp_threads = threads->Where("id", json->GetStr("id"));
+			JsonObject* temp_threads = threads->Where("id", json->GetStr("id"));
 		
 			if(temp_threads->arrayValues.size() == 0){
 				delete temp_threads;
@@ -271,17 +265,18 @@ int main(int argc, char **argv){
 				delete temp_threads;
 				return "{\"error\":\"You cannot gain access to this!\"}";
 			}
+			
+			response = temp_threads->arrayValues[0]->stringify(false);
+			delete temp_threads;
+			return response;
 		}catch(const std::exception& e){
 			PRINT(e.what())
 			return "{\"error\":\"You cannot gain access to this!\"}";
 		}
 		
-		response = temp_threads->arrayValues[0]->stringify(false);
-		delete temp_threads;
-		return response;
 	}, {{"token", STRING}, {"id", STRING}});
 	
-	api.route("POST", "/get/thread/messages", [&](JsonObject* json)->std::string{
+	api.route("POST", "/message", [&](JsonObject* json)->std::string{
 		std::string response;
 		
 		JsonObject token;
@@ -292,20 +287,58 @@ int main(int argc, char **argv){
 			return "{\"error\":\"You cannot gain access to this!\"}";
 		}
 		
-		try{
-			JsonObject* temp_threads = threads->Where("id", json->GetStr("id"));
-			
-			if(temp_threads->arrayValues.size() == 0){
-				delete temp_threads;
-				return "{\"error\":\"That thread doesn't exist!\"}";
-			}
-			
-			if(temp_threads->arrayValues[0]->GetStr("owner_id") != token.GetStr("id")){
-				delete temp_threads;
-				return "{\"error\":\"You cannot gain access to this!\"}";
-			}
-			delete temp_threads;
+		PRINT(json->stringify())
 		
+		json->objectValues["values"]->arrayValues.insert(
+			json->objectValues["values"]->arrayValues.begin(), token.objectValues["id"]);
+		
+		JsonObject* new_message = messages->Insert(json->objectValues["values"]->arrayValues);
+		
+		response = new_message->stringify(false);
+		delete new_message;
+		return response;
+	}, {{"values", ARRAY}, {"token", STRING}});
+	
+	api.route("DELETE", "/message", [&](JsonObject* json)->std::string{
+		std::string response;
+		
+		JsonObject token;
+		try{
+			token.parse(encryptor.decrypt(JsonObject::deescape(json->GetStr("token"))).c_str());
+		}catch(const std::exception& e){
+			PRINT(e.what())
+			return "{\"error\":\"You cannot gain access to this!\"}";
+		}
+		
+		JsonObject* new_message = messages->Delete(json->GetStr("id"));
+		
+		response = new_message->stringify(false);
+		delete new_message;
+		return response;
+	}, {{"id", STRING}, {"token", STRING}});
+	
+	api.route("PUT", "/message", [&](JsonObject* json)->std::string{
+		std::string response;
+		
+		JsonObject token;
+		try{
+			token.parse(encryptor.decrypt(JsonObject::deescape(json->GetStr("token"))).c_str());
+		}catch(const std::exception& e){
+			PRINT(e.what())
+			return "{\"error\":\"You cannot gain access to this!\"}";
+		}
+		
+		JsonObject* new_message = messages->Update(json->GetStr("id"), json->objectValues["values"]->objectValues);
+		
+		response = new_message->stringify(false);
+		delete new_message;
+		return response;
+	}, {{"values", OBJECT}, {"id", STRING}, {"token", STRING}});
+	
+	api.route("POST", "/get/thread/messages", [&](JsonObject* json)->std::string{
+		std::string response;
+		
+		try{
 			JsonObject* temp_messages = messages->Where("thread_id", json->GetStr("id"));
 			response = temp_messages->stringify(false);
 			delete temp_messages;
@@ -314,7 +347,51 @@ int main(int argc, char **argv){
 			return "{\"error\":\"You cannot gain access to this!\"}";
 		}
 		return response;
-	}, {{"token", STRING}, {"id", STRING}});
+	}, {{"id", STRING}});
+	
+	api.route("POST", "/get/thread/messages/by/title", [&](JsonObject* json)->std::string{
+		std::string response;
+		
+		JsonObject* temp_threads = threads->Where("name", json->GetStr("name"));
+	
+		PRINT(temp_threads->stringify())
+		if(temp_threads->arrayValues.size() == 0){
+			delete temp_threads;
+			return "{\"error\":\"That thread doesn't exist!\"}";
+		}
+		PRINT("PSQL|")
+		
+		try{
+			JsonObject* temp_messages = messages->Where("thread_id", temp_threads->arrayValues[0]->GetStr("id"));
+			response = temp_messages->stringify(false);
+			delete temp_threads;
+			delete temp_messages;
+		}catch(const std::exception& e){
+			PRINT(e.what())
+			return "{\"error\":\"You cannot gain access to this!\"}";
+		}
+		return response;
+	}, {{"name", STRING}});
+	
+	api.route("POST", "/get/thread/message", [&](JsonObject* json)->std::string{
+		std::string response;
+		
+		try{
+			JsonObject* temp_messages = messages->Where("id", json->GetStr("id"));
+			
+			if(temp_messages->arrayValues.size() == 0){
+				delete temp_messages;
+				return "{\"error\":\"That message doesn't exist!\"}";
+			}
+			
+			response = temp_messages->arrayValues[0]->stringify(false);
+			delete temp_messages;
+		}catch(const std::exception& e){
+			PRINT(e.what())
+			return "{\"error\":\"You cannot gain access to this!\"}";
+		}
+		return response;
+	}, {{"id", STRING}});
 
 	api.start();
 }
