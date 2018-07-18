@@ -540,6 +540,16 @@ std::string Util::sha256_hash(std::string data){
 	return hash;
 }
 
+bool Util::endsWith(const std::string& str, const std::string& suffix)
+{
+	return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+}
+
+bool Util::startsWith(const std::string& str, const std::string& prefix)
+{
+	return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
+}
+
 std::string Util::hash_value_argon2d(std::string password){
 	const uint32_t t_cost = 5;
 	const uint32_t m_cost = 1 << 16; //about 65MB

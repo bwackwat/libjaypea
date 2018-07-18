@@ -102,6 +102,8 @@ public:
 	static void set_blocking(int fd);
 
 	static std::string get_redirection_html(const std::string& hostname, const std::string& port);
+	static bool endsWith(const std::string& str, const std::string& suffix);
+	static bool startsWith(const std::string& str, const std::string& prefix);
 
 	static enum RequestResult parse_http_api_request(const char* request, JsonObject* request_obj);
 

@@ -140,7 +140,14 @@ void HttpApi::start(void){
 					// Send the file from the cache.
 					CachedFile* cached_file = file_cache[clean_route];
 
-					response = response_header + "Content-Length: " + std::to_string(cached_file->data_length) + "\r\n\r\n";
+					if(Util::endsWith(clean_route, ".css")){
+						response = response_header + "Content-Type: text/css\n";
+					}else if(Util::endsWith(clean_route, ".html")){
+						response = response_header + "Content-Type: text/html\n";
+					}else{
+						response = response_header + "Content-Type: text/plain\n";
+					}
+					response = response + "Content-Length: " + std::to_string(cached_file->data_length) + "\r\n\r\n";
 					if(this->server->send(fd, response.c_str(), response.length())){
 						return -1;
 					}
@@ -161,7 +168,14 @@ void HttpApi::start(void){
 					}
 					PRINT("CACHED FILE SERVED |" << clean_route)
 				}else{
-					response = response_header + "Content-Length: " + std::to_string(route_stat.st_size) + "\r\n\r\n";
+					if(Util::endsWith(clean_route, ".css")){
+						response = response_header + "Content-Type: text/css\n";
+					}else if(Util::endsWith(clean_route, ".html")){
+						response = response_header + "Content-Type: text/html\n";
+					}else{
+						response = response_header + "Content-Type: text/plain\n";
+					}
+					response = response + "Content-Length: " + std::to_string(route_stat.st_size) + "\r\n\r\n";
 					if(this->server->send(fd, response.c_str(), response.length())){
 						return -1;
 					}
@@ -333,7 +347,13 @@ void HttpApi::start(void){
 				DEBUG("DELI:" << response_body)
 			}else{
 				if(r_type == HTTP){
-					response = response_header + "Content-Type: text\n";
+					if(Util::endsWith(route, ".css")){
+						response = response_header + "Content-Type: text/css\n";
+					}else if(Util::endsWith(route, ".html")){
+						response = response_header + "Content-Type: text/html\n";
+					}else{
+						response = response_header + "Content-Type: text/plain\n";
+					}
 				}else{
 					response = response_header + "Content-Type: application/json\n";
 				}
