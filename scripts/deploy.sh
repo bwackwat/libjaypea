@@ -30,11 +30,13 @@ python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/libjayp
 
 python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-branch-from-git.sh $1 master && scripts/build-library.sh PROD && scripts/build-example.sh PROD" > logs/libjaypea-master-commit-watcher.log 2>&1 &
 
+# Start three servers.
+
+python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname $4 --port 10080" forever > logs/http-redirecter-watcher.log 2>&1 &
+
 python -u scripts/python/watcher.py binaries/$3 "binaries/$3 -key artifacts/ssl.key -crt artifacts/ssl.crt -pcs \"dbname=webservice user=$2 password=$5\"" forever > logs/$3-watcher.log 2>&1 &
 
 python -u scripts/python/watcher.py binaries/chat "binaries/chat --port 11000" forever > logs/chat-watcher.log 2>&1 &
-
-python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname $4 --port 10080" forever > logs/http-redirecter-watcher.log 2>&1 &
 
 EOF
 
