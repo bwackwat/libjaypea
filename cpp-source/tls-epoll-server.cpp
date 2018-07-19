@@ -90,6 +90,8 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 			return true;
 		}
 
+		if(fd == EpollServer::broadcast_fd()){
+		}
 		len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
 		err = SSL_get_error(this->client_ssl[fd], len);
 
@@ -134,6 +136,7 @@ std::function<ssize_t(int, char*, size_t)> callback){
 		return -2;
 	case SSL_ERROR_SYSCALL:
 		perror("SSL_ERROR_SYSCALL");
+		PRINT(ERR_get_error())
 		ERR_print_errors_fp(stdout);
 		return -3;
 	default:

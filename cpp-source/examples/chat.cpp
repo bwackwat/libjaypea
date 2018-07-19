@@ -24,7 +24,7 @@ int main(int argc, char** argv){
 
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
-	Util::define_argument("port", &port, {"-p"});
+	Util::define_argument("https_port", &port, {"-p"});
 	Util::define_argument("http", &http);
 	Util::parse_arguments(argc, argv, "This is a chat server.");
 	
@@ -44,16 +44,22 @@ int main(int argc, char** argv){
 		msg.parse(data);
 
 		JsonObject response(OBJECT);
+		PRINT("CHAT ONREAD")
 
 		if(msg.HasObj("handle", STRING) &&
 		msg.HasObj("message", STRING)){
-			if(msg.GetStr("handle").length() > 16){
+			if(msg.GetStr("handle").length() < 5){
+				response.objectValues["status"] = new JsonObject("Handle too short.");
+			}else if(msg.GetStr("handle").length() > 16){
 				response.objectValues["status"] = new JsonObject("Handle too long.");
+			}else if(msg.GetStr("message").length() < 2){
+				response.objectValues["status"] = new JsonObject("Message too short.");
 			}else if(msg.GetStr("message").length() > 256){
 				response.objectValues["status"] = new JsonObject("Message too long.");
 			}else{
 				response.objectValues["status"] = new JsonObject("Sent.");
-				if(server->send(server->broadcast_fd(), data, static_cast<size_t>(data_length))){
+				PRINT("TRY BROADCAST")
+				if(server->EpollServer::send(server->broadcast_fd(), data, static_cast<size_t>(data_length))){
 					PRINT("broadcast fail")
 					return -1;
 				}

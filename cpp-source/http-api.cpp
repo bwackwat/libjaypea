@@ -64,7 +64,7 @@ void HttpApi::start(void){
 	}
 	this->routes_string = routes_object->stringify(true);
 
-	PRINT("HttpApi running with routes: " << this->routes_string)
+	//PRINT("HttpApi running with routes: " << this->routes_string)
 	
 	this->server->on_connect = [&](int fd){
 		client_questions[fd] = get_question();

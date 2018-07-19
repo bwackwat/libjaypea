@@ -32,7 +32,9 @@ python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "sc
 
 python -u scripts/python/watcher.py binaries/$3 "binaries/$3 -key artifacts/ssl.key -crt artifacts/ssl.crt -pcs \"dbname=webservice user=$2 password=$5\"" forever > logs/$3-watcher.log 2>&1 &
 
-python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname $4 --port 10080" > logs/http-redirecter-watcher.log 2>&1 &
+python -u scripts/python/watcher.py binaries/chat "binaries/chat --port 11000" forever > logs/chat-watcher.log 2>&1 &
+
+python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname $4 --port 10080" forever > logs/http-redirecter-watcher.log 2>&1 &
 
 EOF
 
@@ -63,6 +65,7 @@ systemctl enable libjaypea
 firewall-offline-cmd --zone=public -add-masquerade
 firewall-offline-cmd --zone=public --add-forward-port=port=80:proto=tcp:toport=10080
 firewall-offline-cmd --zone=public --add-forward-port=port=443:proto=tcp:toport=10443
+firewall-offline-cmd --zone=public --add-forward-port=port=8000:proto=tcp:toport=11000
 
 # Must stop http-redirecter.
 # certbot certonly --standalone --http-01-port 10080 --domain $4 -n --agree-tos --email $6

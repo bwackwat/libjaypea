@@ -248,21 +248,21 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 		for(auto& arg : arguments){
 			if(config_object.objectValues.count(arg->name)){
 				if(arg->set){
-					PRINT(arg->name << " ALREADY SET, SKIP")
+					PRINT(arg->name << " was set from the command line.")
 					continue;
 				}
 				switch(arg->type){
 				case ARG_STRING:
 					arg->string_value.get() = config_object[arg->name]->stringValue;
-					PRINT("CONFIGURATION SET STRING " << arg->name << " = " << arg->string_value.get())
+					PRINT(arg->name << " = " << arg->string_value.get())
 					break;
 				case ARG_INTEGER:
 					*arg->integer_value = std::stoi(config_object[arg->name]->stringValue);
-					PRINT("CONFIGURATION SET INTEGER " << arg->name << " = " << *arg->integer_value)
+					PRINT(arg->name << " = " << *arg->integer_value)
 					break;
 				case ARG_BOOLEAN:
 					*arg->boolean_value = true;
-					PRINT("CONFIGURATION SET BOOLEAN " << arg->name << " = " << *arg->boolean_value)
+					PRINT(arg->name << " = " << *arg->boolean_value)
 					break;
 				}
 				if(arg->callback != nullptr){

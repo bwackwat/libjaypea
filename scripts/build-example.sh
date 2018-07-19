@@ -16,6 +16,7 @@ function build {
 # Some libs need to be linked again because they are static?
 
 build jph2
+build chat
 build pgsql-provider
 build bwackwat
 
@@ -23,7 +24,6 @@ build libjaypea-api
 build http-redirecter
 
 build music
-build chat
 
 build json-test
 build queue-test

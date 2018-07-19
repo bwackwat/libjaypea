@@ -26,5 +26,5 @@ ssize_t TlsWebsocketServer::recv(int fd, char* data, size_t data_length){
 
 bool TlsWebsocketServer::accept_continuation(int* fd){
 	this->websocket.client_handshake_complete[*fd] = false;
-	return false;
+	return TlsEpollServer::accept_continuation(fd);
 }

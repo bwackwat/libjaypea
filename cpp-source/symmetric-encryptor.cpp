@@ -18,7 +18,7 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 		hex.Put(this->iv, CryptoPP::AES::BLOCKSIZE);
 		hex.MessageEnd();
 		*/
-		PRINT("GENERATED KEY.")
+		PRINT("SymmetricEncryptor generated a key.")
 		return;
 	}
 

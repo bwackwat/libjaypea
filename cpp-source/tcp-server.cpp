@@ -91,6 +91,7 @@ bool EpollServer::send(int fd, std::string data){
  */
 bool EpollServer::send(int fd, const char* data, size_t data_length){
 	ssize_t len;
+	PRINT("SEND ON TCP")
 	if((len = write(fd, data, data_length)) < 0){
 		perror("write");
 		ERROR("send")

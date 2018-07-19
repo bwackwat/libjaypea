@@ -7,7 +7,7 @@ int main(int argc, char **argv){
 	std::string public_directory;
 	std::string ssl_certificate;
 	std::string ssl_private_key;
-	int port = 443;
+	int port;
 	int cache_megabytes = 30;
 	std::string connection_string;
 	
@@ -212,8 +212,6 @@ int main(int argc, char **argv){
 	}, {{"values", OBJECT}, {"id", STRING}, {"token", STRING}});
 	
 	api.route("DELETE", "/thread", [&](JsonObject* json)->std::string{
-		std::string response;
-		
 		JsonObject token;
 		try{
 			token.parse(encryptor.decrypt(JsonObject::deescape(json->GetStr("token"))).c_str());
@@ -222,14 +220,22 @@ int main(int argc, char **argv){
 			return "{\"error\":\"You cannot gain access to this!\"}";
 		}
 		
-		JsonObject* newthread = threads->Delete(json->GetStr("id"));
+		JsonObject* new_thread = threads->Where("id", json->GetStr("id"));
 		
-		response = newthread->stringify(false);
-		delete newthread;
-		return response;
+		if(new_thread->arrayValues.size() == 0){
+			return "{\"error\":\"That thread doesn't exist!\"}";
+		}
+		
+		if(new_thread->arrayValues[0]->GetStr("owner_id") != token.GetStr("id")){
+			return "{\"error\":\"You cannot gain access to this!\"}";
+		}
+		
+		new_thread = threads->Delete(json->GetStr("id"));
+		
+		return new_thread->stringify(false);
 	}, {{"id", STRING}, {"token", STRING}});
 	
-	api.route("POST", "/get/user/threads", [&](JsonObject* json)->std::string{
+	api.route("POST", "/get/threads", [&](JsonObject* json)->std::string{
 		std::string response;
 		
 		JsonObject token;
@@ -247,7 +253,7 @@ int main(int argc, char **argv){
 		return response;
 	}, {{"token", STRING}});
 	
-	api.route("POST", "/get/user/thread", [&](JsonObject* json)->std::string{
+	api.route("POST", "/get/thread", [&](JsonObject* json)->std::string{
 		std::string response;
 		
 		JsonObject token;
@@ -255,16 +261,6 @@ int main(int argc, char **argv){
 			token.parse(encryptor.decrypt(JsonObject::deescape(json->GetStr("token"))).c_str());
 		
 			JsonObject* temp_threads = threads->Where("id", json->GetStr("id"));
-		
-			if(temp_threads->arrayValues.size() == 0){
-				delete temp_threads;
-				return "{\"error\":\"That thread doesn't exist!\"}";
-			}
-			
-			if(temp_threads->arrayValues[0]->GetStr("owner_id") != token.GetStr("id")){
-				delete temp_threads;
-				return "{\"error\":\"You cannot gain access to this!\"}";
-			}
 			
 			response = temp_threads->arrayValues[0]->stringify(false);
 			delete temp_threads;

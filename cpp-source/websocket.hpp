@@ -136,14 +136,15 @@ public:
 					DEBUG("Send handshake failed.")
 					return -1;
 				}
-				return static_cast<ssize_t>(data_length);
+				return static_cast<ssize_t>(message.length());
 			}
+			PRINT("WEBSOCKET ONREAD")
 			return this->server->on_read(fd, message.c_str(), static_cast<size_t>(message.length()));
 		}
 
 		JsonObject request_obj(OBJECT);
 		Util::parse_http_api_request(data, &request_obj);
-		DEBUG("JPON: " << request_obj.stringify(true))
+		//DEBUG("JPON: " << request_obj.stringify(true))
 		if(!request_obj.HasObj("Sec-WebSocket-Key", STRING)){
 			DEBUG("Bad websocket request.")
 			return -1;
