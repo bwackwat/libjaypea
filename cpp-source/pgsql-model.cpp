@@ -82,7 +82,7 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	if(this->HasColumn("deleted")){
 		check = " AND deleted IS NULL";
 	}
-
+	
 	try{
 		//PRINT("PSQL|" << "SELECT * FROM " << this->table << " WHERE " << key << " = " << txn.quote(value) << check << " ORDER BY created DESC;")
 		pqxx::result res = txn.exec("SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + " ORDER BY created DESC;");

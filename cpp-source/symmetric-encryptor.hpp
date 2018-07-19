@@ -19,6 +19,7 @@ private:
 	CryptoPP::AutoSeededRandomPool random_pool;
 	byte key[CryptoPP::AES::MAX_KEYLENGTH];
 	byte iv[CryptoPP::AES::BLOCKSIZE];
+	byte hmac_key[CryptoPP::AES::MAX_KEYLENGTH];
 	CryptoPP::HMAC<CryptoPP::SHA256> hmac;
 public:
 	SymmetricEncryptor(std::string keyfile = std::string());

@@ -287,8 +287,6 @@ int main(int argc, char **argv){
 			return "{\"error\":\"You cannot gain access to this!\"}";
 		}
 		
-		PRINT(json->stringify())
-		
 		json->objectValues["values"]->arrayValues.insert(
 			json->objectValues["values"]->arrayValues.begin(), token.objectValues["id"]);
 		

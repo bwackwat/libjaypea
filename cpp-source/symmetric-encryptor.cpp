@@ -7,7 +7,9 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 	if(keyfile.empty()){
 		this->random_pool.GenerateBlock(this->key, CryptoPP::AES::MAX_KEYLENGTH);
 		this->random_pool.GenerateBlock(this->iv, CryptoPP::AES::BLOCKSIZE);
-		this->hmac = CryptoPP::HMAC<CryptoPP::SHA256>(this->key, CryptoPP::AES::MAX_KEYLENGTH);
+		this->random_pool.GenerateBlock(this->hmac_key, CryptoPP::AES::MAX_KEYLENGTH);
+		
+		this->hmac = CryptoPP::HMAC<CryptoPP::SHA256>(hmac_key, CryptoPP::AES::MAX_KEYLENGTH);
 		
 		/*
 		std::string keystr;
