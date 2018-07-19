@@ -17,26 +17,21 @@ cat <<EOF >> artifacts/start.sh
 #!/bin/bash
 
 killall -q python
-killall -q binaries/jph2
-killall -q binaries/http-redirecter
+killall -q $1/binaries/$3
 
 # Watch for changes to affable-escapade, and update.
 python -u scripts/python/git-commit-checker.py bwackwat affable-escapade > logs/affable-escapade-git-commit-checker.log 2>&1 &
 
-python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "cd /opt/affable-escapade && git reset --hard HEAD && git clean -f && cd /opt/libjaypea && scripts/extras/update-branch-from-git.sh /opt/affable-escapade master && cd /opt/affable-escapade && git lfs pull && cd /opt/libjaypea && scripts/python/site-indexer.py ../affable-escapade y && scripts/python/site-templater.py ../affable-escapade" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "cd /opt/affable-escapade && git reset --hard HEAD && git clean -f && cd $1 && scripts/extras/update-branch-from-git.sh /opt/affable-escapade master && cd /opt/affable-escapade && git lfs pull && cd $1 && scripts/python/site-indexer.py ../affable-escapade y && scripts/python/site-templater.py ../affable-escapade" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
 
 # Watch for changes to libjaypea, and update.
 python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/libjaypea-git-commit-checker.log 2>&1 &
 
 python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-branch-from-git.sh $1 master && scripts/build-library.sh PROD && scripts/build-example.sh PROD" > logs/libjaypea-master-commit-watcher.log 2>&1 &
 
-# Start three servers.
+# Start the application server.
 
-python -u scripts/python/watcher.py binaries/http-redirecter "binaries/http-redirecter --hostname $4 --port 10080" forever > logs/http-redirecter-watcher.log 2>&1 &
-
-python -u scripts/python/watcher.py binaries/$3 "binaries/$3 -key artifacts/ssl.key -crt artifacts/ssl.crt -pcs \"dbname=webservice user=$2 password=$5\"" forever > logs/$3-watcher.log 2>&1 &
-
-python -u scripts/python/watcher.py binaries/chat "binaries/chat --port 11000" forever > logs/chat-watcher.log 2>&1 &
+python -u scripts/python/watcher.py binaries/$3 "binaries/$3 --chat_port 11000 -key artifacts/ssl.key -crt artifacts/ssl.crt -pcs \"dbname=webservice user=$2 password=$5\"" forever > logs/$3-watcher.log 2>&1 &
 
 EOF
 
@@ -50,13 +45,13 @@ Description=libjaypea startup unit
 After=postgresql.service
 
 [Service]
-User=bwackwat
+User=$2
 Type=oneshot
 KillMode=process
-WorkingDirectory=/opt/libjaypea
+WorkingDirectory=$1
 RemainAfterExit=true
-ExecStart=/bin/sh -c '/opt/libjaypea/artifacts/start.sh 2>&1 > $1/logs/start.log'
-ExecStop=/bin/sh -c 'killall -q python && killall -q binaries/http-redirecter && -q killall -q binaries/$3'
+ExecStart=/bin/sh -c '$1/artifacts/start.sh 2>&1 > $1/logs/start.log'
+ExecStop=/bin/sh -c 'killall -q python && killall -q $1/binaries/$3'
 
 [Install]
 WantedBy=default.target

@@ -1,5 +1,6 @@
 #include "http-api.hpp"
 #include "pgsql-model.hpp"
+#include "tls-websocket-server.hpp"
 
 int main(int argc, char **argv){
 	std::string hostname;
@@ -7,36 +8,40 @@ int main(int argc, char **argv){
 	std::string public_directory;
 	std::string ssl_certificate;
 	std::string ssl_private_key;
-	int port;
+	int http_port;
+	int https_port;
+	int chat_port;
 	int cache_megabytes = 30;
 	std::string connection_string;
 	
-	/*
-		Handle all the configurable arguments.
-	*/
+	///////////////////////////////////////////////////////
+	//	CONFIGURE ARGUMENTS
+	///////////////////////////////////////////////////////
 
 	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::define_argument("admin", hostname, {"-a"});
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
 	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
-	Util::define_argument("https_port", &port, {"-p"});
+	Util::define_argument("http_port", &http_port, {"-p"});
+	Util::define_argument("https_port", &https_port, {"-sp"});
+	Util::define_argument("chat_port", &chat_port, {"-cp"});
 	Util::define_argument("cache_megabytes", &cache_megabytes,{"-cm"});
 	Util::define_argument("postgresql_connection", connection_string, {"-pcs"});
 	Util::parse_arguments(argc, argv, "This is an HTTP(S) JSON API which hold routes for jph2.net.");
 	
-	/*
-		Initializes the HTTPS server, an encryptor, and an API.
-	*/
+	///////////////////////////////////////////////////////
+	//	INITIALIZE HTTPS SERVER AND API
+	///////////////////////////////////////////////////////
 	
-	TlsEpollServer server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(port), 10);
+	TlsEpollServer server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(https_port), 10);
 	SymmetricEncryptor encryptor;
 	HttpApi api(public_directory, &server);
 	api.set_file_cache_size(cache_megabytes);
 	
-	/*
-		Setup database models.
-	*/
+	///////////////////////////////////////////////////////
+	//	SETUP DATABASE MODELS
+	///////////////////////////////////////////////////////
 	
 	Column id("id", COL_AUTO);
 	Column owner_id("owner_id");
@@ -104,9 +109,23 @@ int main(int argc, char **argv){
 		new Column("access_type_id")
 	}, ACCESS_USER);
 	
-	/*
-		Start defining routes.
-	*/
+	///////////////////////////////////////////////////////
+	//	SETUP HTTP REDIRECTER
+	///////////////////////////////////////////////////////
+	
+	EpollServer http_server(static_cast<uint16_t>(http_port), 10);
+	std::string str = Util::get_redirection_html(hostname, std::to_string(https_port));
+	const char* http_response = str.c_str();
+	size_t http_response_length = str.length();
+	http_server.on_read = [&](int fd, const char*, ssize_t)->ssize_t{
+		http_server.send(fd, http_response, http_response_length);
+		return -1;
+	};
+	http_server.run(true, 1);
+	
+	///////////////////////////////////////////////////////
+	//	SETUP API ROUTES
+	///////////////////////////////////////////////////////
 	
 	api.route("GET", "/", [&](JsonObject*)->std::string{
 		return "{\"result\":\"Welcome to the API V1!\",\n\"routes\":" + api.routes_string + "}";
@@ -386,6 +405,50 @@ int main(int argc, char **argv){
 		}
 		return response;
 	}, {{"id", STRING}});
+	
+	///////////////////////////////////////////////////////
+	//	SETUP AND START CHAT SERVER
+	///////////////////////////////////////////////////////
+	
+	EpollServer* chat_server = new TlsWebsocketServer(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
+	chat_server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
+		JsonObject msg;
+		msg.parse(data);
+
+		JsonObject response(OBJECT);
+		PRINT("CHAT ONREAD")
+
+		if(msg.HasObj("handle", STRING) &&
+		msg.HasObj("message", STRING)){
+			if(msg.GetStr("handle").length() < 5){
+				response.objectValues["status"] = new JsonObject("Handle too short.");
+			}else if(msg.GetStr("handle").length() > 16){
+				response.objectValues["status"] = new JsonObject("Handle too long.");
+			}else if(msg.GetStr("message").length() < 2){
+				response.objectValues["status"] = new JsonObject("Message too short.");
+			}else if(msg.GetStr("message").length() > 256){
+				response.objectValues["status"] = new JsonObject("Message too long.");
+			}else{
+				response.objectValues["status"] = new JsonObject("Sent.");
+				PRINT("TRY BROADCAST")
+				if(chat_server->EpollServer::send(chat_server->broadcast_fd(), data, static_cast<size_t>(data_length))){
+					PRINT("broadcast fail")
+					return -1;
+				}
+			}
+		}else{
+			response.objectValues["status"] = new JsonObject("Must provide handle and message.");
+		}
+		std::string sresponse = response.stringify(false);
+		PRINT("SEND:" << sresponse)
+		if(chat_server->send(fd, sresponse.c_str(), static_cast<size_t>(sresponse.length()))){
+			PRINT("send prob")
+			return -1;
+		}
+		return data_length;
+	};
+	chat_server->run(true, 1);
 
 	api.start();
 }
+
