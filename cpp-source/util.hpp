@@ -36,9 +36,7 @@
 #define PRINT(msg) std::cout << msg << std::endl;
 #define ERROR(msg) std::cerr << "Uh oh, " << msg << " error." << std::endl;
 
-#define LJP_DEBUG
-
-#if defined(LJP_DEBUG)
+#if defined(DO_DEBUG)
 	#define DEBUG(msg) std::cout << msg << std::endl;
 	#define DEBUG_SLEEP(sec) sleep(sec);
 #else
@@ -101,7 +99,7 @@ public:
 	static void set_non_blocking(int fd);
 	static void set_blocking(int fd);
 
-	static std::string get_redirection_html(const std::string& hostname, const std::string& port);
+	static std::string get_redirection_html(const std::string& hostname);
 	static bool endsWith(const std::string& str, const std::string& suffix);
 	static bool startsWith(const std::string& str, const std::string& prefix);
 

@@ -50,10 +50,10 @@ private:
 		}
 
 		#if defined(DO_DEBUG)
-			PRINT("DATA:")
-			Util::print_bits(data, data_length);
-			PRINT("MASK:")
-			Util::print_bits(reinterpret_cast<char*>(mask), 4);
+			//PRINT("DATA:")
+			//Util::print_bits(data, data_length);
+			//PRINT("MASK:")
+			//Util::print_bits(reinterpret_cast<char*>(mask), 4);
 		#endif
 
 		return message.str();
@@ -119,8 +119,8 @@ public:
 		//frame[data_length + offset] = 0;
 		
 		#if defined(DO_DEBUG)
-			PRINT("SDATA:")
-			Util::print_bits(frame.str().c_str(), frame.str().length());
+			//PRINT("SDATA:")
+			//Util::print_bits(frame.str().c_str(), frame.str().length());
 		#endif
 
 		return frame.str();
@@ -129,7 +129,7 @@ public:
 	ssize_t recv(int fd, const char* data, size_t data_length){
 		if(this->client_handshake_complete[fd]){
 			std::string message = this->parse_frame(data, data_length);
-			PRINT("RECV:" << message)
+			//PRINT("RECV:" << message)
 			if(message == "ping"){
 				message = "pong";
 				if(this->server->send(fd, message.c_str(), message.length())){
@@ -138,7 +138,7 @@ public:
 				}
 				return static_cast<ssize_t>(message.length());
 			}
-			PRINT("WEBSOCKET ONREAD")
+			//PRINT("WEBSOCKET ONREAD")
 			return this->server->on_read(fd, message.c_str(), static_cast<size_t>(message.length()));
 		}
 
@@ -155,7 +155,7 @@ public:
 			DEBUG("Send handshake failed.")
 			return -1;
 		}
-		DEBUG("DELI: " << response)
+		//DEBUG("DELI: " << response)
 		this->client_handshake_complete[fd] = true;
 		return 1;
 	}

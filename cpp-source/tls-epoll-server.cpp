@@ -67,7 +67,7 @@ TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key,
  * See EpollServer::close_client
  */
 void TlsEpollServer::close_client(int* fd, std::function<void(int*)> callback){
-	PRINT("SSL_free'd " << *fd)
+	PRINT(this->name << ": SSL_free'd " << *fd)
 	SSL_free(this->client_ssl[*fd]);
 	callback(fd);
 }
@@ -135,8 +135,7 @@ std::function<ssize_t(int, char*, size_t)> callback){
 		ERROR("server read zero " << fd)
 		return -2;
 	case SSL_ERROR_SYSCALL:
-		perror("SSL_ERROR_SYSCALL");
-		PRINT(ERR_get_error())
+		PRINT(this->name << ": SSL_ERROR_SYSCALL")
 		ERR_print_errors_fp(stdout);
 		return -3;
 	default:
@@ -162,10 +161,10 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 		ERR_print_errors_fp(stdout);
 		return true;
 	}
-	DEBUG("SSL_new, done." << *new_client_fd)
 
 	SSL_set_fd(this->client_ssl[*new_client_fd], *new_client_fd);
-	DEBUG("SSL_set_fd, done.")
+	
+	DEBUG(this->name << ": SSL_new, done." << *new_client_fd)
 
 	int res, err = SSL_ERROR_WANT_READ;
 	std::chrono::milliseconds accept_start = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -189,7 +188,7 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 		ERROR("SSL_accept " << *new_client_fd << ';' << err)
 		return true;
 	}
-	DEBUG("SSL_accept took milliseconds: " << diff.count())
+	DEBUG(this->name << ": SSL_accept took milliseconds: " << diff.count())
 
 	return false;
 }

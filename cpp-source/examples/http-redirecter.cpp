@@ -4,16 +4,14 @@
 int main(int argc, char **argv){
 	std::string hostname = "localhost";
 	int port = 80;
-	int to_port = 443;
 
 	Util::define_argument("hostname", hostname, {"-hn"});
 	Util::define_argument("port", &port, {"-p"});
-	Util::define_argument("to_port", &to_port, {"-tp"});
 	Util::parse_arguments(argc, argv, "This serves HTTP 301 Moved Permanently to an HTTPS hostname and port. Most browsers will automatically load the 301 \"Location\" header value as a URL.");
 
 	EpollServer server(static_cast<uint16_t>(port), 10);
 
-	std::string str = Util::get_redirection_html(hostname, std::to_string(to_port));
+	std::string str = Util::get_redirection_html(hostname);
 	const char* http_response = str.c_str();
 	size_t http_response_length = str.length();
 

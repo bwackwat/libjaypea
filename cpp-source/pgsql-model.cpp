@@ -82,10 +82,13 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 	if(this->HasColumn("deleted")){
 		check = " AND deleted IS NULL";
 	}
+	if(this->HasColumn("created")){
+		check += " ORDER BY created DESC;";
+	}
 	
 	try{
-		//PRINT("PSQL|" << "SELECT * FROM " << this->table << " WHERE " << key << " = " << txn.quote(value) << check << " ORDER BY created DESC;")
-		pqxx::result res = txn.exec("SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check + " ORDER BY created DESC;");
+		DEBUG("PSQL|" << "SELECT * FROM " << this->table << " WHERE " << key << " = " << txn.quote(value) << check)
+		pqxx::result res = txn.exec("SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check);
 		txn.commit();
 		
 		return this->ResultToJson(&res);
@@ -97,8 +100,12 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 
 JsonObject* PgSqlModel::Delete(std::string id){
 	pqxx::nontransaction txn(this->conn);
+	std::string check;
+	if(this->HasColumn("id")){
+		check = " RETURNING id";
+	}
 	try{
-		pqxx::result res = txn.exec("UPDATE " + this->table + " SET deleted = now() WHERE id = " + txn.quote(id) + " RETURNING id;");
+		pqxx::result res = txn.exec("UPDATE " + this->table + " SET deleted = now() WHERE id = " + txn.quote(id) + check + ";");
 		txn.commit();
 		
 		JsonObject* result = new JsonObject(OBJECT);
@@ -114,30 +121,41 @@ JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
 	pqxx::nontransaction txn(this->conn);
 	
 	std::stringstream sql;
+	std::string check;
+	if(this->HasColumn("id")){
+		check = "DEFAULT, ";
+	}
+	
 	sql << "INSERT INTO " << this->table << " (" ;
 	for(size_t i = 0; i < this->cols.size(); ++i){
 		if(i < this->cols.size() - 1 && !(this->cols[i + 1]->flags & COL_AUTO)){
 			sql << this->cols[i]->name << ", ";
 		}else{
-			sql << this->cols[i]->name << ") VALUES (DEFAULT, ";
+			sql << this->cols[i]->name << ") VALUES (" << check;
 			break;
 		}
+	}
+	if(this->HasColumn("id")){
+		check = " RETURNING id";
 	}
 	for(size_t i = 0; i < values.size(); ++i){
 		if(i < values.size() - 1){
 			sql << txn.quote(values[i]->stringValue) << ", ";
 		}else{
-			sql << txn.quote(values[i]->stringValue) << ") RETURNING id;";
+			sql << txn.quote(values[i]->stringValue) << ")" << check << ";";
 		}
 	}
 	try{
-		//PRINT("PSQL| " << sql.str())
+		DEBUG("PSQL| " << sql.str())
 		pqxx::result res = txn.exec(sql.str());
 		txn.commit();
 		
-		JsonObject* result = new JsonObject(OBJECT);
-		result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
-		return result;
+		if(this->HasColumn("id")){
+			JsonObject* result = new JsonObject(OBJECT);
+			result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
+			return result;
+		}
+		return 0;
 	}catch(const pqxx::pqxx_exception &e){
 		PRINT(e.base().what())
 		return Error("You provided incomplete or bad data.");
@@ -198,6 +216,7 @@ JsonObject* PgSqlModel::Update(std::string id, std::unordered_map<std::string, J
 	}
 	sql << " WHERE id = " + txn.quote(id) + " RETURNING id;";
 	try{
+		DEBUG("PSQL| " << sql.str())
 		pqxx::result res = txn.exec(sql.str());
 		txn.commit();
 		

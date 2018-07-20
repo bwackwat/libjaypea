@@ -319,7 +319,7 @@ void Util::set_blocking(int fd){
 	fcntl(fd, F_SETFL, flags);
 }
 
-std::string Util::get_redirection_html(const std::string& hostname, const std::string& port){
+std::string Util::get_redirection_html(const std::string& hostname){
 	std::string response_body = "<!doctype html><html>\n"
 		"<head>\n"
 		"<title>301 Moved Permanently</title>\n"
@@ -327,14 +327,14 @@ std::string Util::get_redirection_html(const std::string& hostname, const std::s
 		"<body>\n"
 		"<h1>301 Moved Permanently</h1>\n"
 		"<p>This page has permanently moved to <a href=\"https://" +
-		hostname + ":" + port +
-		"/\">https://" +
-		hostname + ":" + port +
-		"/</a>.</p>\n"
+		hostname + 
+		"\">https://" +
+		hostname + 
+		"</a>.</p>\n"
 		"</body>\n"
 		"</html>";
 	std::string response = "HTTP/1.1 301 Moved Permanently\n" 
-		"Location: https://" + hostname + ":" + port + "/\n"
+		"Location: https://" + hostname + "\n"
 		"Accept-Ranges: bytes\n"
 		"Content-Type: text/html\n"
 		"Content-Length: " + std::to_string(response_body.length()) + "\n"
@@ -479,9 +479,14 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 			break;
 		}
 		switch(state){
+		case 3:
+			if(*it == '+'){
+				new_value += ' ';
+				break;
+			}
+			[[clang::fallthrough]];
 		case 0:
 		case 1:
-		case 3:
 		case 4:
 		case 6: //TODO: Other escape sequences. (e.g. '&' cannot exist in URL param value)
 			if(*it == '%'){

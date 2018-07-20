@@ -2,12 +2,19 @@
 
 #include "http-api.hpp"
 
+HttpApi::HttpApi(std::string new_public_directory, EpollServer* new_server, SymmetricEncryptor* new_encryptor)
+:public_directory(new_public_directory),
+server(new_server),
+encryptor(new_encryptor)
+{
+	this->server->set_timeout(10);
+}
+
 HttpApi::HttpApi(std::string new_public_directory, EpollServer* new_server)
 :public_directory(new_public_directory),
-server(new_server)
+server(new_server),
+encryptor(0)
 {
-	// 30 MB cache size by default.
-	this->set_file_cache_size(30);
 	this->server->set_timeout(10);
 }
 
@@ -15,6 +22,20 @@ void HttpApi::route(std::string method, std::string path, std::function<std::str
 std::unordered_map<std::string, JsonType> requires,
 std::chrono::milliseconds rate_limit,
 bool requires_human){
+	if(path[path.length() - 1] != '/'){
+		path += '/';
+	}
+	this->routemap[method + " /api" + path] = new Route(function, requires, rate_limit, requires_human);
+}
+
+void HttpApi::route(std::string method, std::string path, std::function<std::string(JsonObject*, JsonObject*)> function,
+std::unordered_map<std::string, JsonType> requires,
+std::chrono::milliseconds rate_limit,
+bool requires_human){
+	if(encryptor == 0){
+		PRINT("You tried to add a route that uses encryption. Please provide an encryptor in the HttpApi constructor")
+		exit(1);
+	}
 	if(path[path.length() - 1] != '/'){
 		path += '/';
 	}
@@ -166,7 +187,7 @@ void HttpApi::start(void){
 							offset += buffer_size;
 						}
 					}
-					PRINT("CACHED FILE SERVED |" << clean_route)
+					PRINT("Cached file served: " << clean_route)
 				}else{
 					if(Util::endsWith(clean_route, ".css")){
 						response = response_header + "Content-Type: text/css\n";
@@ -223,7 +244,7 @@ void HttpApi::start(void){
 								this->file_cache_mutex.unlock();
 								return 0;
 							}
-							PRINT("FILE CACHED AND SERVED |" << clean_route)
+							PRINT("File cached and served: " << clean_route)
 							this->file_cache_mutex.unlock();
 						}else{
 							// Send the file read-buffer style
@@ -251,7 +272,7 @@ void HttpApi::start(void){
 								perror("close file");
 								return 0;
 							}
-							PRINT("FILE SERVED |" << clean_route)
+							PRINT("File served: " << clean_route)
 						}
 					}
 				}
@@ -269,7 +290,7 @@ void HttpApi::start(void){
 				}
 			}
 
-			PRINT((r_type == API ? "APIR:" : "HTTPAPIR") << route)
+			PRINT((r_type == API ? "APIR: " : "HTTPAPIR: ") << route)
 
 			if(this->routemap.count(route)){
 				if(this->routemap[route]->minimum_ms_between_call.count() > 0){
@@ -296,6 +317,8 @@ void HttpApi::start(void){
 						if(!r_obj.HasObj(iter->first, iter->second)){
 							response_body = "{\"error\":\"'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".\"}";
 							break;
+						}else{
+							DEBUG("\t" << iter->first << ": " << r_obj.GetStr(iter->first.c_str()))
 						}
 					}
 				}
@@ -319,6 +342,19 @@ void HttpApi::start(void){
 					}else{
 						if(this->routemap[route]->function != nullptr){
 							response_body = this->routemap[route]->function(&r_obj);
+						}else if(this->routemap[route]->token_function != nullptr){
+							if(!r_obj.HasObj("token", STRING)){
+								response_body = "{\"error\":\"'token' requires a string.\"}";
+							}else{
+								JsonObject token;
+								try{
+									token.parse(this->encryptor->decrypt(JsonObject::deescape(r_obj.GetStr("token"))).c_str());
+									response_body = this->routemap[route]->token_function(&r_obj, &token);
+								}catch(const std::exception& e){
+									PRINT(e.what())
+									response_body = "{\"error\":\"Insufficient access.\"}";
+								}
+							}
 						}else{
 							if(this->routemap[route]->raw_function(&r_obj, fd) <= 0){
 								PRINT("RAW FUNCTION BAD")
@@ -349,10 +385,8 @@ void HttpApi::start(void){
 				if(r_type == HTTP){
 					if(Util::endsWith(route, ".css")){
 						response = response_header + "Content-Type: text/css\n";
-					}else if(Util::endsWith(route, ".html")){
-						response = response_header + "Content-Type: text/html\n";
 					}else{
-						response = response_header + "Content-Type: text/plain\n";
+						response = response_header + "Content-Type: text/html\n";
 					}
 				}else{
 					response = response_header + "Content-Type: application/json\n";
