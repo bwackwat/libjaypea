@@ -318,7 +318,7 @@ void HttpApi::start(void){
 							response_body = "{\"error\":\"'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".\"}";
 							break;
 						}else{
-							DEBUG("\t" << iter->first << ": " << r_obj.GetStr(iter->first.c_str()))
+							DEBUG("\t" << iter->first << ": " << r_obj.objectValues[iter->first]->stringify(true))
 						}
 					}
 				}

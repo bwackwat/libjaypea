@@ -30,7 +30,7 @@ const char* JsonObject::parse(const char* str){
 	for(it = str; *it; ++it){
 		DEBUG("LOOP:" << it)
 		switch(*it){
-		/*case '\\':
+		case '\\':
 			++it;
 			DEBUG("ESCAPE TO: " << *it)
 			if(*it == 'n' ||
@@ -38,7 +38,7 @@ const char* JsonObject::parse(const char* str){
 			*it == 't'){
 				continue;
 			}
-			break;*/
+			break;
 		case '"':
 			if(this->type == NOTYPE){
 				this->type = STRING;
