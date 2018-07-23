@@ -482,11 +482,11 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 		}
 		switch(state){
 		case 3:
-			/*if(*it == '+'){
+			if(*it == '+'){
 				new_value += ' ';
 				break;
 			}
-			[[clang::fallthrough]];*/
+			[[clang::fallthrough]];
 		case 0:
 		case 1:
 		case 4:
