@@ -14,8 +14,6 @@
 #include "sys/epoll.h"
 #include <arpa/inet.h>
 
-#include "queue.hpp"
-
 #define EVENTS EPOLLIN | EPOLLET | EPOLLONESHOT | EPOLLERR | EPOLLHUP
 
 struct ClientDetails{

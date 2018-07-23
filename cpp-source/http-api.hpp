@@ -25,6 +25,7 @@
 #define BUFFER_LIMIT 8192
 #define HTTP_404 "<h1>404 Not Found</h1>"
 #define INSUFFICIENT_ACCESS "{\"error\":\"Insufficient access.\"}"
+#define NO_SUCH_ITEM "{\"error\":\"That item doesn't exist.\"}"
 
 class Route{
 public:

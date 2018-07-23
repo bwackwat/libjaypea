@@ -346,6 +346,8 @@ std::string Util::get_redirection_html(const std::string& hostname){
 enum RequestResult Util::parse_http_api_request(const char* request, JsonObject* request_obj){
 	const char* it = request;
 	bool exit_http_parse = false;
+	
+	//DEBUG("REQUEST|" << request << "|END")
 
 	request_obj->objectValues["method"] = new JsonObject("GET");
 	request_obj->objectValues["route"] = new JsonObject(STRING);
@@ -480,11 +482,11 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 		}
 		switch(state){
 		case 3:
-			if(*it == '+'){
+			/*if(*it == '+'){
 				new_value += ' ';
 				break;
 			}
-			[[clang::fallthrough]];
+			[[clang::fallthrough]];*/
 		case 0:
 		case 1:
 		case 4:

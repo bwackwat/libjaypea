@@ -31,17 +31,21 @@ JsonObject* PgSqlModel::Error(std::string message){
 	return error;
 }
 
+/*
+static void result_print(pqxx::result result){
+	PRINT("RESULTS:")
+	for(auto row : result){
+		PRINT("ROW:")
+		for(auto col : row){
+			PRINT(col.as<const char*>())
+		}
+	}
+}*/
+
 JsonObject* PgSqlModel::ResultToJson(pqxx::result* res){
 	JsonObject* result_json = new JsonObject(ARRAY);
 	for(pqxx::result::size_type i = 0; i < res->size(); ++i){
-		JsonObject* next_item = new JsonObject(OBJECT);
-		for(size_t j = 0; j < this->cols.size(); ++j){
-			if(!(this->cols[j]->flags & COL_HIDDEN) && !((*res)[i][this->cols[j]->name].is_null())){
-				next_item->objectValues[this->cols[j]->name] = new JsonObject(STRING);
-				next_item->objectValues[this->cols[j]->name]->stringValue = (*res)[i][this->cols[j]->name].as<std::string>();
-			}
-		}
-		result_json->arrayValues.push_back(next_item);
+		result_json->arrayValues.push_back(this->ResultToJson((*res)[i]));
 	}
 	return result_json;
 }
@@ -50,8 +54,8 @@ JsonObject* PgSqlModel::ResultToJson(pqxx::result::tuple row){
 	JsonObject* result_json= new JsonObject(OBJECT);
 	for(size_t j = 0; j < this->cols.size(); ++j){
 		if(!(this->cols[j]->flags & COL_HIDDEN) && !(row[this->cols[j]->name].is_null())){
-			result_json->objectValues[this->cols[j]->name] = new JsonObject(STRING);
-			result_json->objectValues[this->cols[j]->name]->stringValue = row[this->cols[j]->name].as<std::string>();
+			JsonObject* next = new JsonObject((row[this->cols[j]->name].as<std::string>()));
+			result_json->objectValues[static_cast<std::string>(this->cols[j]->name)] = next;
 		}
 	}
 	return result_json;
@@ -118,7 +122,8 @@ JsonObject* PgSqlModel::Delete(std::string id){
 }
 
 JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
-	pqxx::nontransaction txn(this->conn);
+	//pqxx::nontransaction txn(this->conn);
+	pqxx::work txn(this->conn);
 	
 	std::stringstream sql;
 	std::string check;
@@ -147,7 +152,9 @@ JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
 	}
 	try{
 		DEBUG("PSQL| " << sql.str())
-		pqxx::result res = txn.exec(sql.str());
+		//pqxx::result res = txn.exec(sql.str());
+		//txn.commit();
+		pqxx::result res = txn.exec(sql);
 		txn.commit();
 		
 		if(this->HasColumn("id")){
@@ -170,18 +177,6 @@ bool PgSqlModel::HasColumn(std::string name){
 	}
 	return false;
 }
-
-/*
-static void result_print(pqxx::result result){
-	PRINT("RESULTS:")
-	for(auto row : result){
-		PRINT("ROW:")
-		for(auto col : row){
-			PRINT(col.as<const char*>())
-		}
-	}
-}
-*/
 
 bool PgSqlModel::IsOwner(std::string id, std::string owner_id){
 	pqxx::nontransaction txn(this->conn);

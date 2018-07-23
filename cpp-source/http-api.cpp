@@ -105,7 +105,7 @@ void HttpApi::start(void){
 			char json_data[PACKET_LIMIT + 32];
 			
 			auto get_body_callback = [&](int, const char*, size_t dl)->ssize_t{
-				PRINT("GOT JSON:" << json_data);
+				DEBUG("GOT JSON:" << json_data);
 				return static_cast<ssize_t>(dl);
 			};
 			
@@ -119,7 +119,7 @@ void HttpApi::start(void){
 			r_type = HTTP_API;
 		}
 		
-		//DEBUG("JSON:" << r_obj.stringify(true))
+		//DEBUG("JSON: " << r_obj.stringify(true))
 		
 		std::string route = r_obj.GetStr("route");
 		
@@ -346,10 +346,10 @@ void HttpApi::start(void){
 							if(!r_obj.HasObj("token", STRING)){
 								response_body = "{\"error\":\"'token' requires a string.\"}";
 							}else{
-								JsonObject token;
+								JsonObject* token = new JsonObject();
 								try{
-									token.parse(this->encryptor->decrypt(JsonObject::deescape(r_obj.GetStr("token"))).c_str());
-									response_body = this->routemap[route]->token_function(&r_obj, &token);
+									token->parse(this->encryptor->decrypt(JsonObject::deescape(r_obj.GetStr("token"))).c_str());
+									response_body = this->routemap[route]->token_function(&r_obj, token);
 								}catch(const std::exception& e){
 									PRINT(e.what())
 									response_body = "{\"error\":\"Insufficient access.\"}";
@@ -380,7 +380,6 @@ void HttpApi::start(void){
 				if(this->server->send(fd, response_body.c_str(), response_body.length())){
 					return -1;
 				}
-				DEBUG("DELI:" << response_body)
 			}else{
 				if(r_type == HTTP){
 					if(Util::endsWith(route, ".css")){
@@ -395,15 +394,19 @@ void HttpApi::start(void){
 				if(this->server->send(fd, response.c_str(), response.length())){
 					return -1;
 				}
-				//DEBUG("DELI:" << response)
 			}
 		}
 		
 		return data_length;
 	};
 
-	// Should not return.
+	// Now run forever.
+
+	// As many threads as possible.
 	this->server->run();
+	
+	// Single threaded.
+	//this->server->run(false, 1);
 	
 	delete this->routes_object;
 

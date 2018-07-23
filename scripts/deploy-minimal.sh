@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -lt 2 ]; then
-	echo "Usage: deploy-minimal.sh <install directory> <username>"
+if [ $# -lt 3 ]; then
+	echo "Usage: deploy-minimal.sh <install directory> <username> <build server domain>"
 	exit
 fi
 
@@ -49,16 +49,16 @@ chmod +x watcher.py
 
 # Update library, binaries, and configuration.
 
-wget https://build.bwackwat.com/build/libjaypeap.so -O artifacts/libjaypeap.so
+wget https://$3/build/libjaypeap.so -O artifacts/libjaypeap.so
 
-wget https://build.bwackwat.com/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=libjaypea-api -O libjaypea-api.configuration.json
+wget https://$3/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=libjaypea-api -O libjaypea-api.configuration.json
 rm libjaypea-api
 wget -N https://build.bwackwat.com/build/libjaypea-api
 chmod +x libjaypea-api
 
-wget https://build.bwackwat.com/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=http-redirecter -O http-redirecter.configuration.json
+wget https://$3/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=http-redirecter -O http-redirecter.configuration.json
 rm http-redirecter
-wget -N https://build.bwackwat.com/build/http-redirecter
+wget -N https://$3/build/http-redirecter
 chmod +x http-redirecter
 
 touch ready.lock

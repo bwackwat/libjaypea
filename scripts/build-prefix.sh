@@ -8,10 +8,11 @@ mkdir -p $dir/artifacts
 argc=$#
 argv=($@)
 
-warn="-Wformat -Wformat-security -Werror=format-security \
+warn="-Wformat -Wall -Wformat-security -Werror=format-security \
 -Weverything -Wpedantic -Wconversion \
 -Wno-c++98-compat -Wno-padded \
--Wno-exit-time-destructors -Wno-global-constructors "
+-Wno-exit-time-destructors -Wno-global-constructors \
+-Wno-unused-parameter -Wno-unused-exception-parameter -Wno-unused-variable "
 
 library="$dir/artifacts/libjaypea.so"
 
@@ -26,14 +27,15 @@ case "${argv[@]}" in
 		;;
 	*"DEBUG"*)
 		echo "DEBUG MODE"
-		extra="-O0 -DDO_DEBUG -g -pg -lprofiler -ltcmalloc -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free "
+		extra="-O0 -DDO_DEBUG -g -lefence"
+		# Flags for gperftools:
+		# -pg -lprofile -ltcmalloc -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
 	
 		((argc-=1))
 		argv=( "${argv[@]/"DEBUG"}" )
 		;;
 	*)
 		extra="-O0"
-		warn="$warn -Wno-unused-parameter -Wno-unused-exception-parameter -Wno-unused-variable "
 esac
 
 libs="-lpthread -lssl -lcryptopp -largon2"

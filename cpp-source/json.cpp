@@ -10,7 +10,7 @@
 
 //#define DEBUG(msg) std::cout << msg << std::endl;
 #define DEBUG(msg)
-//#define PRINT(msg) std::cout << msg << std::endl;
+#define PRINT(msg) std::cout << msg << std::endl;
 
 std::map<enum JsonType, std::string> JsonObject::typeString = {
 	{ NOTYPE, "No Json" },
@@ -30,7 +30,7 @@ const char* JsonObject::parse(const char* str){
 	for(it = str; *it; ++it){
 		DEBUG("LOOP:" << it)
 		switch(*it){
-		case '\\':
+		/*case '\\':
 			++it;
 			DEBUG("ESCAPE TO: " << *it)
 			if(*it == 'n' ||
@@ -38,7 +38,7 @@ const char* JsonObject::parse(const char* str){
 			*it == 't'){
 				continue;
 			}
-			break;
+			break;*/
 		case '"':
 			if(this->type == NOTYPE){
 				this->type = STRING;
@@ -164,6 +164,11 @@ std::string JsonObject::escape(std::string value){
 	std::stringstream escaped;
 	escaped << '"';
 	for(size_t i = 0; i < value.length(); ++i){
+		if(static_cast<int>(value[i]) < 32 || static_cast<int>(value[i]) > 126){
+			DEBUG("WEIRD: " << value << " " << i << " " << value[i])
+			DEBUG("WEIRD: " << value << " " << i << " " << std::hex << static_cast<int>(value[i]))
+			DEBUG("WEIRD: " << value << " " << i << " " << std::dec << static_cast<int>(value[i]))
+		}
 		if(value[i] == '\n'){
 			escaped << "\\n";
 		}else if(value[i] == '\r'){
@@ -214,7 +219,7 @@ std::string JsonObject::stringify(bool pretty, size_t depth){
 	std::string result;
 	switch(this->type){
 	case NOTYPE:
-		result = "";
+		result = "\"\"";
 		break;
 	case STRING:
 		result = escape(this->stringValue);
@@ -285,20 +290,24 @@ JsonObject::JsonObject(std::string new_stringValue)
 JsonObject::JsonObject()
 :type(NOTYPE){}
 
-//JsonObject::~JsonObject(){
-//	for(auto it = this->objectValues.begin(); it != this->objectValues.end(); ++it){
-//		delete it->second;
-//	}
-//	for(JsonObject* item : this->arrayValues){
-//		delete item;
-//	}
-//}
+JsonObject::~JsonObject(){
+	for(auto it = this->objectValues.begin(); it != this->objectValues.end(); ++it){
+		delete it->second;
+	}
+	for(JsonObject* item : this->arrayValues){
+		delete item;
+	}
+}
 
 bool JsonObject::HasObj(const std::string& key, enum JsonType t){
 	return this->objectValues.count(key) && this->objectValues[key]->type == t;
 }
 
 std::string JsonObject::GetStr(const char* key){
+	if(!this->objectValues.count(key)){
+		PRINT("Missing key: " << key)
+		throw new std::exception();
+	}
 	return this->objectValues[key]->stringValue;
 }
 

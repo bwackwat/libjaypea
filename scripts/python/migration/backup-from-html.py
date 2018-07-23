@@ -35,7 +35,7 @@ for post in soup.findAll("div", {"id": "post"}):
 
 	# USE PSYCOPG2 FOR STRING ESCAPING
 	
-	cur.execute("INSERT INTO messages (owner_id, thread_id, title, content, created, modified) VALUES (%s, %s, %s, %s, %s, now());", (1, 2, post.find(id="posttitle").decode_contents(formatter="html"), post.find(id="posttext").decode_contents(formatter="html"), post.find(id="postdate").decode_contents(formatter="html")))
+	cur.execute("INSERT INTO messages (owner_id, thread_id, title, content, created, modified) VALUES (%s, %s, %s, %s, %s, now());", (1, 1, post.find(id="posttitle").decode_contents(formatter="html"), post.find(id="posttext").decode_contents(formatter="html"), post.find(id="postdate").decode_contents(formatter="html")))
 
 conn.commit()
 cur.close()

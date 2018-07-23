@@ -22,12 +22,12 @@ killall -q $1/binaries/$3
 # Watch for changes to affable-escapade, and update.
 python -u scripts/python/git-commit-checker.py bwackwat affable-escapade > logs/affable-escapade-git-commit-checker.log 2>&1 &
 
-python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "cd /opt/affable-escapade && git reset --hard HEAD && git clean -f && cd $1 && scripts/extras/update-branch-from-git.sh /opt/affable-escapade master && cd /opt/affable-escapade && git lfs pull && cd $1 && scripts/python/site-indexer.py ../affable-escapade y && scripts/python/site-templater.py ../affable-escapade" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/affable-escapade.master.latest.commit "cd /opt/affable-escapade && git reset --hard HEAD && git clean -xdnf && cd $1 && scripts/extras/update-branch-from-git.sh /opt/affable-escapade master && cd /opt/affable-escapade && git lfs pull && cd $1 && scripts/python/site-indexer.py ../affable-escapade y && scripts/python/site-templater.py ../affable-escapade" > logs/affable-escapade-master-commit-watcher.log 2>&1 &
 
 # Watch for changes to libjaypea, and update.
 python -u scripts/python/git-commit-checker.py bwackwat libjaypea > logs/libjaypea-git-commit-checker.log 2>&1 &
 
-python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-branch-from-git.sh $1 master && scripts/build-library.sh PROD && scripts/build-example.sh PROD" > logs/libjaypea-master-commit-watcher.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "scripts/extras/update-build.sh" > logs/libjaypea-master-commit-watcher.log 2>&1 &
 
 # Start the application server.
 

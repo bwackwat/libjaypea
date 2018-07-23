@@ -52,7 +52,7 @@ int main(int argc, char **argv){
 	
 	Column id("id", COL_AUTO);
 	Column owner_id("owner_id");
-	Column deleted("deleted", COL_AUTO);
+	Column deleted("deleted", COL_AUTO | COL_HIDDEN);
 	Column created("created", COL_AUTO);
 	Column modified("modified", COL_AUTO);
 
@@ -70,6 +70,7 @@ int main(int argc, char **argv){
 		&created
 	}, ACCESS_ADMIN);
 	
+	/*
 	PgSqlModel* poi = new PgSqlModel(connection_string, "poi", {
 		&id,
 		&owner_id,
@@ -80,6 +81,7 @@ int main(int argc, char **argv){
 		&modified,
 		&created
 	}, ACCESS_USER);
+	*/
 	
 	PgSqlModel* threads = new PgSqlModel(connection_string, "threads", {
 		&id,
@@ -102,6 +104,7 @@ int main(int argc, char **argv){
 		&created
 	}, ACCESS_USER);
 	
+	/*
 	PgSqlModel* access_types = new PgSqlModel(connection_string, "access_types", {
 		&id,
 		new Column("name"),
@@ -110,6 +113,7 @@ int main(int argc, char **argv){
 		&modified,
 		&created
 	}, ACCESS_USER);
+	*/
 	
 	PgSqlModel* access = new PgSqlModel(connection_string, "access", {
 		&owner_id,
@@ -132,10 +136,9 @@ int main(int argc, char **argv){
 		std::string response;
 		if(token->objectValues.count("error")){
 			response = token->stringify();
-		}else{						
+		}else{
 			response = "{\"id\":\"" + token->GetStr("id") + "\",\"token\":" + JsonObject::escape(encryptor.encrypt(token->stringify())) + "}";
 		}
-		delete token;
 		return response;
 	}, {{"username", STRING}, {"password", STRING}}, std::chrono::seconds(1));
 	
@@ -178,8 +181,6 @@ int main(int argc, char **argv){
 		}
 		
 		response = newuser->stringify(false);
-		delete temp_users;
-		delete newuser;
 		return response;
 	}, {{"values", ARRAY}}, std::chrono::hours(1)); // Can only register every 1 hours.
 	
@@ -247,7 +248,7 @@ int main(int argc, char **argv){
 		JsonObject* new_thread = threads->Where("id", json->GetStr("id"));
 		
 		if(new_thread->arrayValues.size() == 0){
-			return "{\"error\":\"That thread doesn't exist!\"}";
+			return NO_SUCH_ITEM;
 		}
 		
 		if(new_thread->arrayValues[0]->GetStr("owner_id") != token->GetStr("id")){
@@ -262,7 +263,7 @@ int main(int argc, char **argv){
 		JsonObject* new_thread = threads->Where("id", json->GetStr("id"));
 		
 		if(new_thread->arrayValues.size() == 0){
-			return "{\"error\":\"That thread doesn't exist!\"}";
+			return NO_SUCH_ITEM;
 		}
 		
 		if(new_thread->arrayValues[0]->GetStr("owner_id") != token->GetStr("id")){
@@ -292,8 +293,7 @@ int main(int argc, char **argv){
 		JsonObject* temp_threads = threads->Where("name", json->GetStr("name"));
 		
 		if(temp_threads->arrayValues.size() == 0){
-			delete temp_threads;
-			return "{\"error\":\"That thread doesn't exist!\"}";
+			return NO_SUCH_ITEM;
 		}
 		
 		return messages->Where("thread_id", temp_threads->arrayValues[0]->GetStr("id"))->stringify();
@@ -316,7 +316,7 @@ int main(int argc, char **argv){
 		
 		json->objectValues["values"]->arrayValues.insert(
 			json->objectValues["values"]->arrayValues.begin(), token->objectValues["id"]);
-		
+			
 		return messages->Insert(json->objectValues["values"]->arrayValues)->stringify();
 	}, {{"values", ARRAY}});
 	
@@ -325,7 +325,7 @@ int main(int argc, char **argv){
 		JsonObject* new_message = messages->Where("id", json->GetStr("id"));
 		
 		if(new_message->arrayValues.size() == 0){
-			return "{\"error\":\"That message doesn't exist!\"}";
+			return NO_SUCH_ITEM;
 		}
 		
 		if(new_message->arrayValues[0]->GetStr("owner_id") != token->GetStr("id")){
@@ -340,7 +340,7 @@ int main(int argc, char **argv){
 		JsonObject* new_message = messages->Where("id", json->GetStr("id"));
 		
 		if(new_message->arrayValues.size() == 0){
-			return "{\"error\":\"That message doesn't exist!\"}";
+			return NO_SUCH_ITEM;
 		}
 		
 		if(new_message->arrayValues[0]->GetStr("owner_id") != token->GetStr("id")){

@@ -74,12 +74,13 @@ SymmetricEncryptor::SymmetricEncryptor(std::string keyfile){
 std::string SymmetricEncryptor::encrypt(std::string data){
 	CryptoPP::CBC_Mode<CryptoPP::AES>::Encryption encryptor(this->key, CryptoPP::AES::MAX_KEYLENGTH, this->iv);
 	
-	byte salt[CryptoPP::AES::BLOCKSIZE];
-	this->random_pool.GenerateBlock(salt, CryptoPP::AES::BLOCKSIZE);
-	std::string salts(reinterpret_cast<const char*>(salt), CryptoPP::AES::BLOCKSIZE);
+	//byte salt[CryptoPP::AES::BLOCKSIZE];
+	//this->random_pool.GenerateBlock(salt, CryptoPP::AES::BLOCKSIZE);
+	//std::string salts(reinterpret_cast<const char*>(salt), CryptoPP::AES::BLOCKSIZE);
 
 	std::string encrypted_data;
-	CryptoPP::StringSource pipeline1(salts + data, true,
+	//CryptoPP::StringSource pipeline1(salts + data, true,
+	CryptoPP::StringSource pipeline1(data, true,
 		new CryptoPP::StreamTransformationFilter(encryptor,
 		new CryptoPP::StringSink(encrypted_data)));
 
@@ -117,8 +118,8 @@ std::string SymmetricEncryptor::decrypt(std::string data){
 	CryptoPP::StringSource pipeline3(encrypted_data.substr(32), true,
 		new CryptoPP::StreamTransformationFilter(decryptor,
 		new CryptoPP::StringSink(decrypted_data)));
-		
-	decrypted_data.erase(0, CryptoPP::AES::BLOCKSIZE);
+
+	//decrypted_data.erase(0, CryptoPP::AES::BLOCKSIZE);
 	return decrypted_data;
 }
 

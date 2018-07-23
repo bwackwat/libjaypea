@@ -8,13 +8,13 @@ sleep 1
 
 xterm -geometry 100x20 \
 -T "watcher building libjaypea.so" \
--e scripts/python/watcher.py cpp-source/,scripts/build-library.sh,scripts/build-prefix.sh "scripts/build-library.sh $1" &
+-e scripts/python/watcher.py cpp-source/,scripts/build-library.sh,scripts/build-prefix.sh "scripts/build-library.sh DEBUG" &
 
 sleep 1
 
 xterm -geometry 100x25 \
 -T "watcher building examples" \
--e scripts/python/watcher.py cpp-source/examples/,artifacts/libjaypea.so,artifacts/libjaypeap.so,scripts/build-example.sh "scripts/build-example.sh $1" &
+-e scripts/python/watcher.py cpp-source/examples/,artifacts/libjaypea.so,artifacts/libjaypeap.so,scripts/build-example.sh "scripts/build-example.sh DEBUG" &
 
 sleep 1
 
@@ -24,18 +24,7 @@ xterm -geometry 100x5 \
 
 sleep 1
 
-xterm -geometry 100x10 \
--T "watcher running http-redirecter" \
--e scripts/python/watcher.py binaries/http-redirecter,extras/configuration.json "binaries/http-redirecter -hn localhost -p 10080 ../affable-escapade" &
-
-sleep 1
-
 xterm -geometry 100x30 \
 -T "watcher running jph2" \
 -e scripts/python/watcher.py binaries/jph2,extras/configuration.json "binaries/jph2" &
 
-sleep 1
-
-xterm -geometry 100x30 \
--T "watcher running chat" \
--e scripts/python/watcher.py binaries/jph2,extras/configuration.json "binaries/chat -p 8000" &
