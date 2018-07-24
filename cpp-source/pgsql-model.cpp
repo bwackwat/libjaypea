@@ -42,6 +42,18 @@ static void result_print(pqxx::result result){
 	}
 }*/
 
+JsonObject* PgSqlModel::AnyResultToJson(pqxx::result* res){
+	JsonObject* result_json = new JsonObject(ARRAY);
+	for(auto row : *res){
+		JsonObject* row_json= new JsonObject(OBJECT);
+		for(auto field : row){
+			row_json->objectValues[field.name()] = new JsonObject(field.c_str());
+		}
+		result_json->arrayValues.push_back(row_json);
+	}
+	return result_json;
+}
+
 JsonObject* PgSqlModel::ResultToJson(pqxx::result* res){
 	JsonObject* result_json = new JsonObject(ARRAY);
 	for(pqxx::result::size_type i = 0; i < res->size(); ++i){
@@ -59,6 +71,16 @@ JsonObject* PgSqlModel::ResultToJson(pqxx::result::tuple row){
 		}
 	}
 	return result_json;
+}
+
+JsonObject* PgSqlModel::Execute(std::string sql){
+	pqxx::nontransaction txn(this->conn);
+	
+	DEBUG("PSQL| " << sql)
+	pqxx::result res = txn.exec(sql);
+	txn.commit();
+	
+	return this->AnyResultToJson(&res);
 }
 
 JsonObject* PgSqlModel::All(){

@@ -190,23 +190,9 @@ int main(int argc, char **argv){
 	///////////////////////////////////////////////////////
 	
 	
-	/*api.route("GET", "/my/access", [&](JsonObject*, JsonObject* token)->std::string{
-		JsonObject* accesses = access->Where("owner_id", token->GetStr("id"));
-		
-		for(auto it = accesses->arrayValues.begin(); it != accesses->arrayValues.end(); ++it){
-			if((*it)->GetStr("access_type_id") == "1"){
-				has_access = true;
-			}
-		}
-		JsonObject* accesses = access_types->Where("access_type_id", (*it)->GetStr("access_type"));
-		
-		for(auto it = accesses->arrayValues.begin(); it != accesses->arrayValues.end(); ++it){
-			if((*it)->GetStr("access_type_id") == "1"){
-				has_access = true;
-			}
-		}
-		return threads->Where("owner_id", token->GetStr("id"))->stringify();
-	});*/
+	api.route("POST", "/my/access", [&](JsonObject*, JsonObject* token)->std::string{
+		return access->Execute("SELECT access_types.name, access_types.description FROM access_types, access WHERE access.access_type_id = access_types.id AND access.owner_id = " + token->GetStr("id") + ";")->stringify();
+	});
 	
 	
 	///////////////////////////////////////////////////////

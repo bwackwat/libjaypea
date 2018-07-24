@@ -16,7 +16,11 @@ function build {
 # Some libs need to be linked again because they are static?
 
 build jph2
+
+exit
+
 build chat
+build pqxxtest
 build pgsql-provider
 build bwackwat
 

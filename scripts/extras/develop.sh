@@ -6,13 +6,13 @@ set -e
 
 sleep 1
 
-xterm -geometry 100x20 \
+xterm -geometry 100x27 \
 -T "watcher building libjaypea.so" \
 -e scripts/python/watcher.py cpp-source/,scripts/build-library.sh,scripts/build-prefix.sh "scripts/build-library.sh DEBUG" &
 
 sleep 1
 
-xterm -geometry 100x25 \
+xterm -geometry 100x27 \
 -T "watcher building examples" \
 -e scripts/python/watcher.py cpp-source/examples/,artifacts/libjaypea.so,artifacts/libjaypeap.so,scripts/build-example.sh "scripts/build-example.sh DEBUG" &
 

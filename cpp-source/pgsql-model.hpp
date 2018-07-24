@@ -33,13 +33,16 @@ public:
 
 	PgSqlModel(std::string new_conn, std::string new_table, std::vector<Column*> new_cols, unsigned char new_access_flags = ACCESS_PUBLIC);
 
+	JsonObject* AnyResultToJson(pqxx::result* res);
 	// Rows (ARRAY of OBJECTS)
 	JsonObject* ResultToJson(pqxx::result* res);
 	// Single row (OBJECT)
 	JsonObject* ResultToJson(pqxx::result::tuple row);
+	
 	static JsonObject* Error(std::string message);
 	bool HasColumn(std::string name);
 	
+	JsonObject* Execute(std::string sql);
 	JsonObject* All();
 	JsonObject* Where(std::string key, std::string value);
 	JsonObject* Insert(std::vector<JsonObject*> values);
