@@ -165,6 +165,8 @@ void HttpApi::start(void){
 						response = response_header + "Content-Type: text/css\n";
 					}else if(Util::endsWith(clean_route, ".html")){
 						response = response_header + "Content-Type: text/html\n";
+					}else if(Util::endsWith(clean_route, ".svg")){
+						response = response_header + "Content-Type: image/svg+xml\n";
 					}else{
 						response = response_header + "Content-Type: text/plain\n";
 					}
@@ -193,6 +195,8 @@ void HttpApi::start(void){
 						response = response_header + "Content-Type: text/css\n";
 					}else if(Util::endsWith(clean_route, ".html")){
 						response = response_header + "Content-Type: text/html\n";
+					}else if(Util::endsWith(clean_route, ".svg")){
+						response = response_header + "Content-Type: image/svg+xml\n";
 					}else{
 						response = response_header + "Content-Type: text/plain\n";
 					}
@@ -384,6 +388,8 @@ void HttpApi::start(void){
 				if(r_type == HTTP){
 					if(Util::endsWith(route, ".css")){
 						response = response_header + "Content-Type: text/css\n";
+					}else if(Util::endsWith(route, ".svg")){
+						response = response_header + "Content-Type: image/svg+xml\n";
 					}else{
 						response = response_header + "Content-Type: text/html\n";
 					}

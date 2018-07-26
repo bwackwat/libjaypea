@@ -191,7 +191,7 @@ int main(int argc, char **argv){
 	
 	
 	api.route("POST", "/my/access", [&](JsonObject*, JsonObject* token)->std::string{
-		return access->Execute("SELECT access_types.name, access_types.description FROM access_types, access WHERE access.access_type_id = access_types.id AND access.owner_id = " + token->GetStr("id") + ";")->stringify();
+		return access->Execute("SELECT access_types.id, access_types.name, access_types.description FROM access_types, access WHERE access.access_type_id = access_types.id AND access.owner_id = " + token->GetStr("id") + ";")->stringify();
 	});
 	
 	
@@ -377,15 +377,45 @@ int main(int argc, char **argv){
 	
 	
 	EpollServer* chat_server = new TlsWebsocketServer(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
+	
+	std::deque<std::string> chat_messages;
+	std::mutex message_mutex;
+	
 	chat_server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		JsonObject msg;
 		msg.parse(data);
+		DEBUG("RECV:" << data);
 
 		JsonObject response(OBJECT);
+		bool do_broadcast = false;
 
-		if(msg.HasObj("handle", STRING) &&
+		if(msg.stringValue == "get_messages"){
+			response.objectValues["messages"] = new JsonObject(ARRAY);
+
+			for(auto it = chat_messages.begin(); it != chat_messages.end(); ++it){
+				response["messages"]->arrayValues.push_back(new JsonObject(*it));
+			}
+		}else if(msg.HasObj("token", STRING) &&
 		msg.HasObj("message", STRING)){
-			if(msg.GetStr("handle").length() < 5){
+			JsonObject* token = new JsonObject();
+			try{
+				token->parse(encryptor.decrypt(JsonObject::deescape(msg.GetStr("token"))).c_str());
+				
+				// If the decryption succeeds, then clean the token, set the response status, set the msg handle, and do the broadcast.
+				
+				msg.objectValues.erase("token");
+				response.objectValues["status"] = new JsonObject("Sent.");
+				msg.objectValues["prefix"] = new JsonObject("<img src='/chat/star.svg'>&nbsp");
+				msg.objectValues["handle"] = new JsonObject(token->GetStr("username"));
+				do_broadcast = true;
+			}catch(const std::exception& e){
+				response.objectValues["status"] = new JsonObject("Bad login token. Please re-login.");
+			}
+		}else if(msg.HasObj("handle", STRING) &&
+		msg.HasObj("message", STRING)){
+			if(users->Where("username", msg.GetStr("handle"))->arrayValues.size() > 0){
+				response.objectValues["status"] = new JsonObject("That's an existing username. Please login as that user.");
+			}else if(msg.GetStr("handle").length() < 5){
 				response.objectValues["status"] = new JsonObject("Handle too short.");
 			}else if(msg.GetStr("handle").length() > 16){
 				response.objectValues["status"] = new JsonObject("Handle too long.");
@@ -395,15 +425,29 @@ int main(int argc, char **argv){
 				response.objectValues["status"] = new JsonObject("Message too long.");
 			}else{
 				response.objectValues["status"] = new JsonObject("Sent.");
-				if(chat_server->EpollServer::send(chat_server->broadcast_fd(), data, static_cast<size_t>(data_length))){
-					PRINT("broadcast fail")
-					return -1;
-				}
+				do_broadcast = true;
 			}
 		}else{
 			response.objectValues["status"] = new JsonObject("Must provide handle and message.");
 		}
-		std::string sresponse = response.stringify(false);
+		
+		if(do_broadcast){
+			message_mutex.lock();
+			chat_messages.push_front(msg.GetStr("handle") + ": " + msg.GetStr("message"));
+			if(chat_messages.size() > 100){
+				chat_messages.pop_back();
+			}
+			message_mutex.unlock();
+		
+			std::string bcast_msg = msg.stringify();
+			if(chat_server->EpollServer::send(chat_server->broadcast_fd(), bcast_msg.c_str(), static_cast<size_t>(bcast_msg.length()))){
+				PRINT("broadcast fail")
+				return -1;
+			}
+		
+		}
+		
+		std::string sresponse = response.stringify();
 		PRINT("SEND:" << sresponse)
 		if(chat_server->send(fd, sresponse.c_str(), static_cast<size_t>(sresponse.length()))){
 			PRINT("send prob")
