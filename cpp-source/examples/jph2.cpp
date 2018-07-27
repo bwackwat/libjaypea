@@ -65,6 +65,7 @@ int main(int argc, char **argv){
 		new Column("email"),
 		new Column("first_name"),
 		new Column("last_name"),
+		new Column("color"),
 		&deleted,
 		&modified,
 		&created
@@ -137,7 +138,7 @@ int main(int argc, char **argv){
 		if(token->objectValues.count("error")){
 			response = token->stringify();
 		}else{
-			response = "{\"id\":\"" + token->GetStr("id") + "\",\"token\":" + JsonObject::escape(encryptor.encrypt(token->stringify())) + "}";
+			response = "{\"token\":" + JsonObject::escape(encryptor.encrypt(token->stringify())) + "}";
 		}
 		return response;
 	}, {{"username", STRING}, {"password", STRING}}, std::chrono::seconds(1));
@@ -160,29 +161,51 @@ int main(int argc, char **argv){
 	});
 	
 	
+	api.route("POST", "/get/my/user", [&](JsonObject*, JsonObject* token)->std::string{
+		return users->Where("id",  token->GetStr("id"))->stringify();
+	});
+	
+	
 	api.route("POST", "/user", [&](JsonObject* json)->std::string{
-		std::string response;
-		
 		JsonObject* temp_users = users->All();
 		
-		if(json->objectValues["values"]->arrayValues.size() > 1){
-			json->objectValues["values"]->arrayValues[1]->stringValue =
-				Util::hash_value_argon2d(json->objectValues["values"]->arrayValues[1]->stringValue);
+		if(json->objectValues["values"]->HasObj("password", STRING)){
+			json->objectValues["values"]->objectValues["password"]->stringValue = 
+				Util::hash_value_argon2d(json->objectValues["values"]->objectValues["password"]->stringValue);
 		}
 		
-		JsonObject* newuser = users->Insert(json->objectValues["values"]->arrayValues);
+		JsonObject* newuser = users->Insert(json->objectValues["values"]->objectValues);
 		
 		if(newuser->objectValues.count("error") == 0){
 			if(temp_users->arrayValues.size() == 0){
-				access->Insert(std::vector<JsonObject*> {
-					new JsonObject(newuser->GetStr("id")),
-					new JsonObject("1")});
+				access->Insert(std::unordered_map<std::string, JsonObject*> {
+					{"owner_id", new JsonObject(newuser->GetStr("id"))},
+					{"access_types_id", new JsonObject("1")}});
 			}
 		}
 		
-		response = newuser->stringify(false);
-		return response;
-	}, {{"values", ARRAY}}, std::chrono::hours(1)); // Can only register every 1 hours.
+		return newuser->stringify();
+	}, {{"values", OBJECT}}, std::chrono::hours(1)); // Can only register every 1 hours.
+	
+	
+	api.route("PUT", "/user", [&](JsonObject* json, JsonObject* token)->std::string{
+		if(json->objectValues["values"]->objectValues.count("id")){
+			json->objectValues.erase("id");
+		}
+		if(json->objectValues["values"]->objectValues.count("password")){
+			json->objectValues["values"]->objectValues["password"]->stringValue = 
+				Util::hash_value_argon2d(json->objectValues["values"]->objectValues["password"]->stringValue);
+		}
+		
+		users->Update(token->GetStr("id"), json->objectValues["values"]->objectValues);
+		
+		JsonObject* new_user = new JsonObject(OBJECT);
+		new_user->objectValues["token"] = 
+			new JsonObject(JsonObject::escape(encryptor.encrypt(
+				users->Where("id", token->GetStr("id"))->arrayValues[0]->stringify())));
+		
+		return new_user->stringify();
+	}, {{"values", OBJECT}});
 	
 	
 	///////////////////////////////////////////////////////
@@ -223,11 +246,10 @@ int main(int argc, char **argv){
 			return "{\"error\":\"This requires blogger access.\"}";
 		}
 		
-		json->objectValues["values"]->arrayValues.insert(
-			json->objectValues["values"]->arrayValues.begin(), token->objectValues["id"]);
+		json->objectValues["values"]->objectValues["owner_id"] = token->objectValues["id"];
 		
-		return threads->Insert(json->objectValues["values"]->arrayValues)->stringify();
-	}, {{"values", ARRAY}});
+		return threads->Insert(json->objectValues["values"]->objectValues)->stringify();
+	}, {{"values", OBJECT}});
 	
 	
 	api.route("PUT", "/thread", [&](JsonObject* json, JsonObject* token)->std::string{	
@@ -300,11 +322,10 @@ int main(int argc, char **argv){
 		}
 		
 		
-		json->objectValues["values"]->arrayValues.insert(
-			json->objectValues["values"]->arrayValues.begin(), token->objectValues["id"]);
+		json->objectValues["values"]->objectValues["owner_id"] = token->objectValues["id"];
 			
-		return messages->Insert(json->objectValues["values"]->arrayValues)->stringify();
-	}, {{"values", ARRAY}});
+		return messages->Insert(json->objectValues["values"]->objectValues)->stringify();
+	}, {{"values", OBJECT}});
 	
 	
 	api.route("PUT", "/message", [&](JsonObject* json, JsonObject* token)->std::string{
@@ -378,50 +399,59 @@ int main(int argc, char **argv){
 	
 	EpollServer* chat_server = new TlsWebsocketServer(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
 	
-	std::deque<std::string> chat_messages;
+	std::deque<JsonObject*> chat_messages;
 	std::mutex message_mutex;
 	
+	std::unordered_map<int, std::string> client_last_message;
+	std::unordered_map<int, std::chrono::milliseconds> client_last_message_time;
+	
 	chat_server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
-		JsonObject msg;
-		msg.parse(data);
+		JsonObject* msg = new JsonObject();
+		msg->parse(data);
 		DEBUG("RECV:" << data);
 
 		JsonObject response(OBJECT);
 		bool do_broadcast = false;
 
-		if(msg.stringValue == "get_messages"){
+		if(msg->stringValue == "get_messages"){
 			response.objectValues["messages"] = new JsonObject(ARRAY);
 
 			for(auto it = chat_messages.begin(); it != chat_messages.end(); ++it){
-				response["messages"]->arrayValues.push_back(new JsonObject(*it));
+				JsonObject* new_msg = new JsonObject(OBJECT);
+				if((*it)->objectValues.count("color")){
+					new_msg->objectValues["color"] = new JsonObject((*it)->GetStr("color"));
+				}
+				new_msg->objectValues["handle"] = new JsonObject((*it)->GetStr("handle"));
+				new_msg->objectValues["message"] = new JsonObject((*it)->GetStr("message"));
+				response["messages"]->arrayValues.push_back(new_msg);
 			}
-		}else if(msg.HasObj("token", STRING) &&
-		msg.HasObj("message", STRING)){
+		}else if(msg->HasObj("token", STRING) &&
+		msg->HasObj("message", STRING)){
 			JsonObject* token = new JsonObject();
 			try{
-				token->parse(encryptor.decrypt(JsonObject::deescape(msg.GetStr("token"))).c_str());
-				
+				token->parse(encryptor.decrypt(JsonObject::deescape(msg->GetStr("token"))).c_str()); 	
 				// If the decryption succeeds, then clean the token, set the response status, set the msg handle, and do the broadcast.
-				
-				msg.objectValues.erase("token");
-				response.objectValues["status"] = new JsonObject("Sent.");
-				msg.objectValues["prefix"] = new JsonObject("<img src='/chat/star.svg'>&nbsp");
-				msg.objectValues["handle"] = new JsonObject(token->GetStr("username"));
-				do_broadcast = true;
 			}catch(const std::exception& e){
 				response.objectValues["status"] = new JsonObject("Bad login token. Please re-login.");
 			}
-		}else if(msg.HasObj("handle", STRING) &&
-		msg.HasObj("message", STRING)){
-			if(users->Where("username", msg.GetStr("handle"))->arrayValues.size() > 0){
+			msg->objectValues.erase("token");
+			msg->objectValues["color"] = new JsonObject(token->GetStr("color"));
+			msg->objectValues["handle"] = new JsonObject(token->GetStr("username"));
+			do_broadcast = true;
+			
+			response.objectValues["status"] = new JsonObject("Sent.");
+			
+		}else if(msg->HasObj("handle", STRING) &&
+		msg->HasObj("message", STRING)){
+			if(users->Where("username", msg->GetStr("handle"))->arrayValues.size() > 0){
 				response.objectValues["status"] = new JsonObject("That's an existing username. Please login as that user.");
-			}else if(msg.GetStr("handle").length() < 5){
+			}else if(msg->GetStr("handle").length() < 5){
 				response.objectValues["status"] = new JsonObject("Handle too short.");
-			}else if(msg.GetStr("handle").length() > 16){
+			}else if(msg->GetStr("handle").length() > 16){
 				response.objectValues["status"] = new JsonObject("Handle too long.");
-			}else if(msg.GetStr("message").length() < 2){
+			}else if(msg->GetStr("message").length() < 2){
 				response.objectValues["status"] = new JsonObject("Message too short.");
-			}else if(msg.GetStr("message").length() > 256){
+			}else if(msg->GetStr("message").length() > 256){
 				response.objectValues["status"] = new JsonObject("Message too long.");
 			}else{
 				response.objectValues["status"] = new JsonObject("Sent.");
@@ -431,20 +461,45 @@ int main(int argc, char **argv){
 			response.objectValues["status"] = new JsonObject("Must provide handle and message.");
 		}
 		
+		std::chrono::milliseconds now;
+		
 		if(do_broadcast){
+			now = std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::system_clock::now().time_since_epoch());
+
+			if(now - client_last_message_time[fd] < std::chrono::milliseconds(2000)){
+				response.objectValues["status"] = new JsonObject("Please wait 2 seconds between messages.");
+				do_broadcast = false;
+			}else if(msg->GetStr("message") == client_last_message[fd]){
+				response.objectValues["status"] = new JsonObject("Do not send the same message.");
+				do_broadcast = false;
+			}
+		}
+		
+		if(do_broadcast){
+			client_last_message[fd] = msg->GetStr("message");
+			client_last_message_time[fd] = now;
+		
+			size_t index = 0;
+			while (true) {
+				index = msg->GetStr("message").find("iframe", index);
+				if(index == std::string::npos)break;
+				msg->objectValues["message"]->stringValue = msg->GetStr("message").replace(index, 6, "");
+			}
+		
 			message_mutex.lock();
-			chat_messages.push_front(msg.GetStr("handle") + ": " + msg.GetStr("message"));
+			chat_messages.push_front(msg);
+			
 			if(chat_messages.size() > 100){
 				chat_messages.pop_back();
 			}
 			message_mutex.unlock();
 		
-			std::string bcast_msg = msg.stringify();
+			std::string bcast_msg = msg->stringify();
 			if(chat_server->EpollServer::send(chat_server->broadcast_fd(), bcast_msg.c_str(), static_cast<size_t>(bcast_msg.length()))){
 				PRINT("broadcast fail")
 				return -1;
 			}
-		
 		}
 		
 		std::string sresponse = response.stringify();

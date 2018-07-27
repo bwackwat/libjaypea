@@ -177,6 +177,8 @@ std::string JsonObject::escape(std::string value){
 			escaped << "\\t";
 		}else if(value[i] == '"'){
 			escaped << "\\\"";
+		}else if(value[i] == '\\'){
+			escaped << "\\\\";
 		}else{
 			escaped << value[i];
 		}

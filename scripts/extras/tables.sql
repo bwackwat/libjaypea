@@ -17,6 +17,7 @@ CREATE TABLE users (
 	email VARCHAR(100) UNIQUE NOT NULL,
 	first_name VARCHAR(50) NOT NULL,
 	last_name VARCHAR(50) NOT NULL,
+	color VARCHAR(20) NOT NULL,
 	verified BOOLEAN NOT NULL,
 	deleted TIMESTAMP,
 	modified TIMESTAMP NOT NULL,
@@ -25,6 +26,7 @@ CREATE TABLE users (
 ALTER TABLE users ALTER verified SET DEFAULT FALSE;
 ALTER TABLE users ALTER modified SET DEFAULT now();
 ALTER TABLE users ALTER created SET DEFAULT now();
+ALTER TABLE users ALTER color SET DEFAULT 'gold';
 
 CREATE TABLE poi (
 	id SERIAL PRIMARY KEY,
@@ -84,7 +86,7 @@ INSERT INTO access_types (id, name, description) VALUES (
 INSERT INTO access_types (id, name, description) VALUES (
 	2,
 	'Blogger',
-	'Has blogging privilige.'
+	'Has blogging privilege.'
 );
 
 CREATE TABLE access (

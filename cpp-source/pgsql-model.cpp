@@ -143,7 +143,7 @@ JsonObject* PgSqlModel::Delete(std::string id){
 	}
 }
 
-JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
+JsonObject* PgSqlModel::Insert(std::unordered_map<std::string, JsonObject*> values){
 	//pqxx::nontransaction txn(this->conn);
 	pqxx::work txn(this->conn);
 	
@@ -154,28 +154,39 @@ JsonObject* PgSqlModel::Insert(std::vector<JsonObject*> values){
 	}
 	
 	sql << "INSERT INTO " << this->table << " (" ;
-	for(size_t i = 0; i < this->cols.size(); ++i){
-		if(i < this->cols.size() - 1 && !(this->cols[i + 1]->flags & COL_AUTO)){
-			sql << this->cols[i]->name << ", ";
-		}else{
-			sql << this->cols[i]->name << ") VALUES (" << check;
-			break;
+	
+	for(auto iter = values.begin(); iter != values.end(); ++iter){
+		if(!this->HasColumn(iter->first)){
+			PRINT("BAD KEY: " + iter->first)
+			return Error("Bad key.");
+		}
+		sql << iter->first;
+		if(std::next(iter) != values.end()){
+			sql << ", ";
 		}
 	}
+	
+	sql << ") VALUES (";
+	
+	for(auto iter = values.begin(); iter != values.end(); ++iter){
+		if(!this->HasColumn(iter->first)){
+			PRINT("BAD KEY: " + iter->first)
+			return Error("Bad key.");
+		}
+		sql << txn.quote(iter->second->stringValue);
+		if(std::next(iter) != values.end()){
+			sql << ", ";
+		}
+	}
+	
 	if(this->HasColumn("id")){
-		check = " RETURNING id";
+		sql << ") RETURNING id;";
+	}else{
+		sql << ");";
 	}
-	for(size_t i = 0; i < values.size(); ++i){
-		if(i < values.size() - 1){
-			sql << txn.quote(values[i]->stringValue) << ", ";
-		}else{
-			sql << txn.quote(values[i]->stringValue) << ")" << check << ";";
-		}
-	}
+	
 	try{
 		DEBUG("PSQL| " << sql.str())
-		//pqxx::result res = txn.exec(sql.str());
-		//txn.commit();
 		pqxx::result res = txn.exec(sql);
 		txn.commit();
 		

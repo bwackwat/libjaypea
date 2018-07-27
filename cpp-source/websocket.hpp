@@ -33,10 +33,10 @@ private:
 
 		if(PACKET_LIMIT < payload_length + offset){
 			ERROR("DIDNT READ ALL DATA")
-			PRINT("L:" << len)
-			PRINT("DATAL:" << data_length)
-			PRINT("PAYLL:" << payload_length)
-			PRINT("OFFSE:" << offset)
+			DEBUG("L:" << len)
+			DEBUG("DATAL:" << data_length)
+			DEBUG("PAYLL:" << payload_length)
+			DEBUG("OFFSE:" << offset)
 		}
 
 		unsigned char mask[4] = {0, 0, 0, 0};
