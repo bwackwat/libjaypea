@@ -181,7 +181,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 						// + 1 for timeout_epoll_fd
 						// + 1 for broadcast_pipe[0]
 						// + 1 for fun
-	struct epoll_event* timeout_events = new struct epoll_event[this->max_connections];
+	struct epoll_event* timeout_events = new struct epoll_event[this->max_connections + 1];
 	
 	std::unordered_map<int /* timer fd */, int /* client fd */> timer_to_client_map;
 	std::unordered_map<int /* client fd */, int /* timer fd */> client_to_timer_map;
@@ -451,6 +451,9 @@ void EpollServer::run_thread(unsigned int thread_id){
 			}
 		}
 	}
+	
+	delete[] client_events;
+	delete[] timeout_events;
 }
 
 /**
@@ -476,6 +479,9 @@ void EpollServer::run(bool returning, unsigned int new_num_threads){
 	for(unsigned int i = 0; i < total; ++i){
 			std::thread next(&EpollServer::run_thread, this, i);
 			next.detach();
+			//std::thread* next = new std::thread(&EpollServer::run_thread, this, i);
+			//this->threads.push_back(next);
+			//next->detach();
 	}
 
 	if(returning){
@@ -483,4 +489,17 @@ void EpollServer::run(bool returning, unsigned int new_num_threads){
 	}
 
 	this->run_thread(total);
+	
+	DEBUG("RUN END " << name)
 }
+
+EpollServer::~EpollServer(){
+	DEBUG("DELETE EPOLL: " << name)
+	for(auto iter = this->threads.begin(); iter != this->threads.end(); ++iter){
+		(*iter)->join();
+		delete (*iter);
+		DEBUG("THREAD JOINED AND DELETED")
+	}
+}
+
+

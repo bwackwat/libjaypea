@@ -12,10 +12,6 @@
 #define COL_AUTO 1
 #define COL_HIDDEN 2
 
-#define ACCESS_PUBLIC 0
-#define ACCESS_ADMIN 1
-#define ACCESS_USER 2
-
 class Column{
 public:
 	const char* name;
@@ -29,9 +25,9 @@ class PgSqlModel {
 public:
 	size_t num_insert_values;
 	const std::string table;
-	unsigned char access_flags;
 
-	PgSqlModel(std::string new_conn, std::string new_table, std::vector<Column*> new_cols, unsigned char new_access_flags = ACCESS_PUBLIC);
+	PgSqlModel(std::string new_conn, std::string new_table, std::vector<Column*> new_cols);
+	~PgSqlModel();
 
 	JsonObject* AnyResultToJson(pqxx::result* res);
 	// Rows (ARRAY of OBJECTS)

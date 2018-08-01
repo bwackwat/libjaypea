@@ -211,6 +211,7 @@ void HttpApi::start(void){
 							// Stick the file into the cache AND send it
 							CachedFile* cached_file = new CachedFile();
 							cached_file->data_length = static_cast<size_t>(route_stat.st_size);
+							DEBUG("CACHING " << clean_route << " IN " << route_stat.st_size)
 							cached_file->data = new char[route_stat.st_size];
 							cached_file->modified = route_stat.st_mtime;
 							int offset = 0;
@@ -413,13 +414,23 @@ void HttpApi::start(void){
 	
 	// Single threaded.
 	//this->server->run(false, 1);
-	
-	delete this->routes_object;
 
 	PRINT("Goodbye!")
 }
 
 void HttpApi::set_file_cache_size(int megabytes){
 	this->file_cache_remaining_bytes = megabytes * 1024 * 1024;
+}
+
+HttpApi::~HttpApi(){
+	delete this->routes_object;
+	for(auto iter = this->routemap.begin(); iter != this->routemap.end(); ++iter){
+		delete iter->second;
+	}
+	for(auto iter = this->file_cache.begin(); iter != this->file_cache.end(); ++iter){
+		delete[] iter->second->data;
+		delete iter->second;
+	}
+	DEBUG("API DELETED")
 }
 

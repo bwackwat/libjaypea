@@ -14,8 +14,8 @@
 #include "json.hpp"
 #include "pgsql-model.hpp"
 
-PgSqlModel::PgSqlModel(std::string new_conn, std::string new_table, std::vector<Column*> new_cols, unsigned char new_access_flags)
-:table(new_table), access_flags(new_access_flags), conn(new_conn), cols(new_cols){
+PgSqlModel::PgSqlModel(std::string new_conn, std::string new_table, std::vector<Column*> new_cols)
+:table(new_table), conn(new_conn), cols(new_cols){
 	this->num_insert_values = 0;
 	for(size_t i = 0; i < this->cols.size(); ++i){
 		if(!(this->cols[i]->flags & COL_AUTO) &&
@@ -282,6 +282,12 @@ JsonObject* PgSqlModel::Access(const std::string& key, const std::string& value,
 	}catch(const std::exception &e){
 		PRINT(e.what())
 		return Error("Bad data.");
+	}
+}
+
+PgSqlModel::~PgSqlModel(){
+	for(auto iter = this->cols.begin(); iter != this->cols.end(); ++iter){
+		delete (*iter);
 	}
 }
 

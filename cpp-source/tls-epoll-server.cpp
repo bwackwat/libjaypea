@@ -69,6 +69,8 @@ TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key,
 void TlsEpollServer::close_client(int* fd, std::function<void(int*)> callback){
 	PRINT(this->name << ": SSL_free'd " << *fd)
 	SSL_free(this->client_ssl[*fd]);
+	//delete this->client_ssl[*fd];
+	this->client_ssl.erase(*fd);
 	callback(fd);
 }
 
@@ -162,7 +164,11 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 		return true;
 	}
 
-	SSL_set_fd(this->client_ssl[*new_client_fd], *new_client_fd);
+	if(SSL_set_fd(this->client_ssl[*new_client_fd], *new_client_fd) == 0){
+		ERROR("SSL_set_fd" << *new_client_fd);
+		ERR_print_errors_fp(stdout);
+		return true;
+	}
 	
 	DEBUG(this->name << ": SSL_new, done." << *new_client_fd)
 
@@ -195,6 +201,18 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 
 /// Simply cleans up the OpenSSL context.
 TlsEpollServer::~TlsEpollServer(){
+	DEBUG("DELETE TLS EPOLL SERVER")
+	for(auto iter = this->client_ssl.begin(); iter != this->client_ssl.end(); ++iter){
+		SSL_free(iter->second);
+		//delete iter->second;
+		//this->client_ssl.erase(iter->first);
+	}
 	SSL_CTX_free(this->ctx);
+	ERR_remove_state(0);
+	ERR_free_strings();
 	EVP_cleanup();
+	//SSL_COMP_get_compression_methods();
+	CRYPTO_cleanup_all_ex_data();
 }
+
+

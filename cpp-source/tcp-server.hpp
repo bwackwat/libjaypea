@@ -29,6 +29,8 @@ protected:
 	time_t timeout;
 	socklen_t sockaddr_length;
 
+	std::vector<std::thread*> threads;
+
 	std::unordered_map<int /* fd */, int> read_counter;
 	std::unordered_map<int /* fd */, int> write_counter;
 	//uint64_t represents millseconds since last recv
@@ -46,7 +48,7 @@ protected:
 	virtual void close_client(int* fd, std::function<void(int*)> callback);
 public:
 	EpollServer(uint16_t port, size_t new_max_connections, std::string new_name = "EpollServer");
-	virtual ~EpollServer(){}
+	virtual ~EpollServer();
 
 	std::unordered_map<int /* client fd */, std::string> fd_to_details_map;
 	std::atomic<bool> running;

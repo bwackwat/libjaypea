@@ -84,6 +84,7 @@ public:
 
 	HttpApi(std::string new_public_directory, EpollServer* new_server, SymmetricEncryptor* new_encryptor);
 	HttpApi(std::string new_public_directory, EpollServer* new_server);
+	~HttpApi();
 
 	void route(std::string method,
 		std::string path,

@@ -27,7 +27,8 @@ case "${argv[@]}" in
 		;;
 	*"DEBUG"*)
 		echo "DEBUG MODE"
-		extra="-O0 -DDO_DEBUG -g -lefence"
+		extra="-O0 -DDO_DEBUG -g"
+		# -lefence Electric Fence (memory protection tool)
 		# Flags for gperftools:
 		# -pg -lprofile -ltcmalloc -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
 	

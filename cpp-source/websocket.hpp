@@ -122,7 +122,7 @@ public:
 			//PRINT("SDATA:")
 			//Util::print_bits(frame.str().c_str(), frame.str().length());
 		#endif
-
+		
 		return frame.str();
 	}
 

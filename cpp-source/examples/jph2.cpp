@@ -48,16 +48,9 @@ int main(int argc, char **argv){
 	///////////////////////////////////////////////////////
 	//	SETUP DATABASE MODELS
 	///////////////////////////////////////////////////////
-	
-	
-	Column id("id", COL_AUTO);
-	Column owner_id("owner_id");
-	Column deleted("deleted", COL_AUTO | COL_HIDDEN);
-	Column created("created", COL_AUTO);
-	Column modified("modified", COL_AUTO);
 
 	PgSqlModel* users = new PgSqlModel(connection_string, "users", {
-		&id,
+		new Column("id", COL_AUTO),
 		new Column("username"),
 		new Column("password", COL_HIDDEN),
 		new Column("primary_token"),
@@ -66,60 +59,60 @@ int main(int argc, char **argv){
 		new Column("first_name"),
 		new Column("last_name"),
 		new Column("color"),
-		&deleted,
-		&modified,
-		&created
-	}, ACCESS_ADMIN);
+		new Column("deleted", COL_AUTO | COL_HIDDEN),
+		new Column("modified", COL_AUTO),
+		new Column("created", COL_AUTO)
+	});
 	
 	/*
 	PgSqlModel* poi = new PgSqlModel(connection_string, "poi", {
-		&id,
-		&owner_id,
+		new Column("id", COL_AUTO),
+		new Column("owner_id"),
 		new Column("label"),
 		new Column("description"),
 		new Column("location"),
-		&deleted,
-		&modified,
-		&created
+		new Column("deleted", COL_AUTO | COL_HIDDEN),
+		new Column("modified", COL_AUTO),
+		new Column("created", COL_AUTO)
 	}, ACCESS_USER);
 	*/
 	
 	PgSqlModel* threads = new PgSqlModel(connection_string, "threads", {
-		&id,
-		&owner_id,
+		new Column("id", COL_AUTO),
+		new Column("owner_id"),
 		new Column("name"),
 		new Column("description"),
-		&deleted,
-		&modified,
-		&created
-	}, ACCESS_USER);
+		new Column("deleted", COL_AUTO | COL_HIDDEN),
+		new Column("modified", COL_AUTO),
+		new Column("created", COL_AUTO)
+	});
 	
 	PgSqlModel* messages = new PgSqlModel(connection_string, "messages", {
-		&id,
-		&owner_id,
+		new Column("id", COL_AUTO),
+		new Column("owner_id"),
 		new Column("thread_id"),
 		new Column("title"),
 		new Column("content"),
-		&deleted,
-		&modified,
-		&created
-	}, ACCESS_USER);
+		new Column("deleted", COL_AUTO | COL_HIDDEN),
+		new Column("modified", COL_AUTO),
+		new Column("created", COL_AUTO)
+	});
 	
 	/*
 	PgSqlModel* access_types = new PgSqlModel(connection_string, "access_types", {
-		&id,
+		new Column("id", COL_AUTO),
 		new Column("name"),
 		new Column("description"),
-		&deleted,
-		&modified,
-		&created
-	}, ACCESS_USER);
+		new Column("deleted", COL_AUTO | COL_HIDDEN),
+		new Column("modified", COL_AUTO),
+		new Column("created", COL_AUTO)
+	});
 	*/
 	
 	PgSqlModel* access = new PgSqlModel(connection_string, "access", {
-		&owner_id,
+		new Column("owner_id"),
 		new Column("access_type_id")
-	}, ACCESS_USER);
+	});
 	
 	
 	///////////////////////////////////////////////////////
@@ -397,26 +390,43 @@ int main(int argc, char **argv){
 	///////////////////////////////////////////////////////
 	
 	
-	EpollServer* chat_server = new TlsWebsocketServer(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
+	TlsWebsocketServer chat_server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
 	
 	std::deque<JsonObject*> chat_messages;
 	std::mutex message_mutex;
 	
 	std::unordered_map<int, std::string> client_last_message;
 	std::unordered_map<int, std::chrono::milliseconds> client_last_message_time;
+	std::unordered_map<int, JsonObject*> client_details;
 	
-	chat_server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
+	chat_server.on_disconnect = [&](int fd){
+		client_details.erase(fd);
+	};
+	
+	chat_server.on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
 		JsonObject* msg = new JsonObject();
 		msg->parse(data);
 		DEBUG("RECV:" << data);
 
 		JsonObject response(OBJECT);
 		bool do_broadcast = false;
-
-		if(msg->stringValue == "get_messages"){
+		
+		if(msg->stringValue == "get_users"){
+			response.objectValues["users"] = new JsonObject(ARRAY);
+			for(auto iter = client_details.begin(); iter != client_details.end(); ++iter){
+				JsonObject* new_user = new JsonObject(OBJECT);
+				if(iter->second->objectValues.count("handle")){
+					new_user->objectValues["handle"] = new JsonObject(iter->second->GetStr("handle"));
+				}
+				new_user->objectValues["x"] = new JsonObject(iter->second->GetStr("x"));
+				new_user->objectValues["y"] = new JsonObject(iter->second->GetStr("y"));
+				response["users"]->arrayValues.push_back(new_user);
+			}
+		}else if(msg->stringValue == "get_messages"){
 			response.objectValues["messages"] = new JsonObject(ARRAY);
 
 			for(auto it = chat_messages.begin(); it != chat_messages.end(); ++it){
+				DEBUG("MESSAGE: " << (*it)->stringify())
 				JsonObject* new_msg = new JsonObject(OBJECT);
 				if((*it)->objectValues.count("color")){
 					new_msg->objectValues["color"] = new JsonObject((*it)->GetStr("color"));
@@ -424,6 +434,27 @@ int main(int argc, char **argv){
 				new_msg->objectValues["handle"] = new JsonObject((*it)->GetStr("handle"));
 				new_msg->objectValues["message"] = new JsonObject((*it)->GetStr("message"));
 				response["messages"]->arrayValues.push_back(new_msg);
+			}
+		}else if(msg->HasObj("handle", STRING) &&
+		msg->HasObj("x", STRING) &&
+		msg->HasObj("y", STRING)){
+			if(!client_details.count(fd)){
+				client_details[fd] = new JsonObject(OBJECT);
+			}
+			if(client_details[fd]->objectValues.count("handle")){
+				client_details[fd]->objectValues["handle"]->stringValue = msg->GetStr("handle");
+			}else{
+				client_details[fd]->objectValues["handle"] = new JsonObject(msg->GetStr("handle"));
+			}
+			if(client_details[fd]->objectValues.count("x")){
+				client_details[fd]->objectValues["x"]->stringValue = msg->GetStr("x");
+			}else{
+				client_details[fd]->objectValues["x"] = new JsonObject(msg->GetStr("x"));
+			}
+			if(client_details[fd]->objectValues.count("y")){
+				client_details[fd]->objectValues["y"]->stringValue = msg->GetStr("y");
+			}else{
+				client_details[fd]->objectValues["y"] = new JsonObject(msg->GetStr("y"));
 			}
 		}else if(msg->HasObj("token", STRING) &&
 		msg->HasObj("message", STRING)){
@@ -496,7 +527,7 @@ int main(int argc, char **argv){
 			message_mutex.unlock();
 		
 			std::string bcast_msg = msg->stringify();
-			if(chat_server->EpollServer::send(chat_server->broadcast_fd(), bcast_msg.c_str(), static_cast<size_t>(bcast_msg.length()))){
+			if(chat_server.EpollServer::send(chat_server.broadcast_fd(), bcast_msg.c_str(), static_cast<size_t>(bcast_msg.length()))){
 				PRINT("broadcast fail")
 				return -1;
 			}
@@ -504,15 +535,36 @@ int main(int argc, char **argv){
 		
 		std::string sresponse = response.stringify();
 		PRINT("SEND:" << sresponse)
-		if(chat_server->send(fd, sresponse.c_str(), static_cast<size_t>(sresponse.length()))){
+		if(chat_server.send(fd, sresponse.c_str(), static_cast<size_t>(sresponse.length()))){
 			PRINT("send prob")
 			return -1;
 		}
 		return data_length;
 	};
-	chat_server->run(true, 1);
 	
-
+	chat_server.run(true, 1);
+	
+	
+	#if defined(DO_DEBUG)
+		api.route("GET", "/end", [&](JsonObject*)->std::string{
+			chat_server.running = false;
+			server.running = false;
+			http_server.running = false;
+			return "APPLICATION ENDING";
+		});
+	#endif
+	
 	api.start();
+	
+	delete users;
+	//delete poi;
+	delete threads;
+	delete messages;
+	//delete access_types;
+	delete access;
+	
+	Util::clean();
+	
+	PRINT("DONE!")
 }
 

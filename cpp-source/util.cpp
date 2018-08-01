@@ -602,3 +602,11 @@ void Util::print_bits(const char* data, size_t data_length){
 	}
 	std::cout << std::endl;
 }
+
+void Util::clean(){
+	for(auto iter = arguments.begin(); iter != arguments.end(); ++iter){
+		delete (*iter);
+	}
+}
+
+

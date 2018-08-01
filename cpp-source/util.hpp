@@ -109,5 +109,6 @@ public:
 	static std::string hash_value_argon2d(std::string password);
 
 	static void print_bits(const char* data, size_t data_length);
+	static void clean();
 };
 
