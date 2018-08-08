@@ -211,7 +211,7 @@ void HttpApi::start(void){
 							// Stick the file into the cache AND send it
 							CachedFile* cached_file = new CachedFile();
 							cached_file->data_length = static_cast<size_t>(route_stat.st_size);
-							DEBUG("CACHING " << clean_route << " IN " << route_stat.st_size)
+							DEBUG("Caching " << clean_route << " for " << route_stat.st_size << " bytes.")
 							cached_file->data = new char[route_stat.st_size];
 							cached_file->modified = route_stat.st_mtime;
 							int offset = 0;

@@ -92,7 +92,7 @@ public:
 			//frame[1] = static_cast<char>(data_length);
 			offset = 2;
 		}else if(data_length <= 65535){
-			DEBUG("DL:" << data_length)
+			//DEBUG("DL:" << data_length)
 			frame << static_cast<char>(126);
 			//frame[1] = 126;
 			frame << static_cast<char>((static_cast<uint16_t>(data_length) >> 8) & 0xFF);
@@ -127,11 +127,29 @@ public:
 	}
 
 	ssize_t recv(int fd, const char* data, size_t data_length){
+		#if defined(DO_DEBUG)
+			// Simulates latency.
+			std::this_thread::sleep_for(std::chrono::milliseconds(35));
+			if(static_cast<int>(data[0]) == 3 &&
+			static_cast<int>(data[1]) == -23){
+				DEBUG("WS DISCONNECToooo! " << fd)
+				return -1;
+			}
+		#endif
+		
 		if(this->client_handshake_complete[fd]){
 			std::string message = this->parse_frame(data, data_length);
 			//PRINT("RECV:" << message)
+			//DEBUG("CHAT RECV:" << data << " on " << fd);
+		
+			if(static_cast<int>(message[0]) == 3 &&
+			static_cast<int>(message[1]) == -23){
+				DEBUG("WS DISCONNECT! " << fd)
+				return -1;
+			}
 			if(message == "ping"){
 				message = "pong";
+				//TODO: SOME SERVERS DONT NEED PINGPONG? ALSO THIS IS NOT THREADED OOF
 				if(this->server->send(fd, message.c_str(), message.length())){
 					DEBUG("Send handshake failed.")
 					return -1;

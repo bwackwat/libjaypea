@@ -41,8 +41,6 @@ TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key,
 		throw std::runtime_error(this->name + "SSL_CTX_use_PrivateKey_file");
 	}
 
-	std::signal(SIGPIPE, SIG_IGN);
-
 	// Hell yeah, use ECDH.
 	if(!SSL_CTX_set_ecdh_auto(this->ctx, 1)){
 		ERR_print_errors_fp(stdout);
@@ -50,7 +48,7 @@ TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key,
 	}
 
 	// SSLv3 is insecure via poodles.
-	SSL_CTX_set_options(this->ctx, SSL_OP_NO_SSLv3);
+	SSL_CTX_set_options(this->ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_SSLv3 | SSL_OP_NO_SSLv2);
 
 	// "Good" cipher list from the interweb.
 	if(!SSL_CTX_set_cipher_list(this->ctx, "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS")){
@@ -67,7 +65,7 @@ TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key,
  * See EpollServer::close_client
  */
 void TlsEpollServer::close_client(int* fd, std::function<void(int*)> callback){
-	PRINT(this->name << ": SSL_free'd " << *fd)
+	PRINT(this->name << ": SSL_free on " << *fd)
 	SSL_free(this->client_ssl[*fd]);
 	//delete this->client_ssl[*fd];
 	this->client_ssl.erase(*fd);
@@ -92,8 +90,6 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 			return true;
 		}
 
-		if(fd == EpollServer::broadcast_fd()){
-		}
 		len = SSL_write(this->client_ssl[fd], data, static_cast<int>(data_length));
 		err = SSL_get_error(this->client_ssl[fd], len);
 
@@ -101,6 +97,13 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 			std::chrono::system_clock::now().time_since_epoch()) - send_start;
 	}
 	if(err != SSL_ERROR_NONE){
+		// TODO: This code tries to check if the connection has already been closed.
+		// It is not a solution for anything currently, but an interesting note.
+		
+		//if(close(fd) && errno == EBADF){
+		//	DEBUG(fd << " IS CLOSED, IGNORING?")
+		//	return true;
+		//}
 		ERROR("SSL_write: " << err)
 		return true;
 	}

@@ -24,6 +24,7 @@ struct ClientDetails{
 class EpollServer{
 protected:
 	std::string name;
+	uint16_t port;
 	unsigned long max_connections;
 	unsigned int num_threads;
 	time_t timeout;

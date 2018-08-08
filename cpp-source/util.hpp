@@ -6,6 +6,7 @@
 #include <thread>
 #include <sstream>
 #include <vector>
+#include <queue>
 #include <tuple>
 #include <functional>
 #include <map>
@@ -37,7 +38,8 @@
 #define ERROR(msg) std::cerr << "Uh oh, " << msg << " error." << std::endl;
 
 #if defined(DO_DEBUG)
-	#define DEBUG(msg) std::cout << msg << std::endl;
+	static std::mutex debug_msg_mutex;
+	#define DEBUG(msg) debug_msg_mutex.lock(); std::cout << msg << std::endl; debug_msg_mutex.unlock();
 	#define DEBUG_SLEEP(sec) sleep(sec);
 #else
 	#define DEBUG(msg)

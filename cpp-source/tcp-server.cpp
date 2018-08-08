@@ -4,14 +4,14 @@
 
 /**
  * @brief A TCP, epoll-based, IPv4 server constructor.
- * @param port The port number the server's socket will bind to.
+ * @param new_port The port number the server's socket will bind to.
  * @param new_max_connections The maximum number of connections *each thread* can handle.
  * Also the listen backlog.
  * @param new_name An arbitrary name for debugging purposes.
  *
  * This is the essential networking server code. Architecturally, each thread calls epoll_wait() and
  * waits for either a mutexed server fd to accept a new connection, a connected fd to indicate there is data to read,
- * or for a connected fd to timeoutvia timerfd. Each thread manages its own set of connected fds, timeout fds, and
+ * or for a connected fd to timeout via timerfd. Each thread manages its own set of connected fds, timeout fds, and
  * is able to accept new connections because epoll_wait is thread safe for reused fds and there is a mutex.
  * @see EpollServer::accept_mutex
  *
@@ -24,8 +24,8 @@
  * @bug There is a condition within the kernel where not all data sent to write() is written.
  * This is completely unaccounted for, but I havent hit it yet.
  */
-EpollServer::EpollServer(uint16_t port, size_t new_max_connections, std::string new_name)
-:name(new_name),
+EpollServer::EpollServer(uint16_t new_port, size_t new_max_connections, std::string new_name)
+:name(new_name), port(new_port),
 max_connections(new_max_connections),
 timeout(10),
 sockaddr_length(sizeof(this->accept_client)),
@@ -47,8 +47,8 @@ running(true){
 */
 	int opt = 1;
 	if(setsockopt(this->server_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&opt), sizeof(opt)) < 0){
-		perror("setsockopt");
-		throw std::runtime_error(this->name + " setsockopt");
+		perror("setsockopt SO_REUSEADDR");
+		throw std::runtime_error(this->name + " setsockopt SO_REUSEADDR");
 	}
 
 	struct sockaddr_in server_addr;
@@ -63,7 +63,6 @@ running(true){
 		perror("listen");
 		throw std::runtime_error(this->name + " listen");
 	}
-	PRINT(this->name << " listening on " << port)
 }
 
 /**
@@ -91,7 +90,7 @@ bool EpollServer::send(int fd, std::string data){
  */
 bool EpollServer::send(int fd, const char* data, size_t data_length){
 	ssize_t len;
-	PRINT("SEND ON TCP")
+	//PRINT("SEND ON TCP")
 	if((len = write(fd, data, data_length)) < 0){
 		perror("write");
 		ERROR("send")
@@ -248,7 +247,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 	while(this->running){
 		if((num_fds = epoll_wait(epoll_fd, client_events, static_cast<int>(this->max_connections + 2), 10000)) < 0){
 			if(errno == EINTR){
-				PRINT("EINTR!")
+				DEBUG("EINTR!t:" << thread_id)
 				continue;
 			}
 			perror("epoll_wait");
@@ -383,7 +382,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 										client_to_timer_map[new_fd] = timer_fd;
 										new_event.events = EVENTS;
 										new_event.data.fd = timer_fd;
-										DEBUG(this->name << ": new tfd " << timer_fd)
+										DEBUG(this->name << ": new timer fd " << timer_fd << " on " << the_fd)
 										if(epoll_ctl(timeout_epoll_fd, EPOLL_CTL_ADD, timer_fd, &new_event) < 0){
 											perror("epoll_ctl timer add");
 										}
@@ -428,11 +427,11 @@ void EpollServer::run_thread(unsigned int thread_id){
 				timer_spec.it_value.tv_nsec = 0;
 				if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
 					PRINT("timerfd_setting error " << the_fd << " and timer " << timer_fd)
-					perror("timerfd_settime update");
+					perror("timerfd_settime reset");
 				}else if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){
 					timer_to_client_map.erase(timer_fd);
 					client_to_timer_map.erase(the_fd);
-					PRINT(this->name << ": " << the_fd << " and timer " << timer_fd << " donezo.")
+					PRINT(this->name << ": " << the_fd << " and timer " << timer_fd << " done.")
 					if(close(timer_fd) < 0){
 						perror("close timer_fd");
 					}
@@ -470,6 +469,8 @@ void EpollServer::run(bool returning, unsigned int new_num_threads){
 	if(this->num_threads <= 0){
 		this->num_threads = 1;
 	}
+	
+	PRINT(this->name << " listening on " << this->port << " with " << this->num_threads << " thread(s).")
 
 	unsigned int total = this->num_threads;
 	if(!returning){
@@ -479,6 +480,10 @@ void EpollServer::run(bool returning, unsigned int new_num_threads){
 	for(unsigned int i = 0; i < total; ++i){
 			std::thread next(&EpollServer::run_thread, this, i);
 			next.detach();
+			
+			//TODO: The code below working with the deconstructor code causes a SEGFAULT.
+			// Doesn't really matter, but I would like to resolve this eventually.
+			 
 			//std::thread* next = new std::thread(&EpollServer::run_thread, this, i);
 			//this->threads.push_back(next);
 			//next->detach();

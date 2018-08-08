@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include "http-api.hpp"
 #include "pgsql-model.hpp"
 #include "tls-websocket-server.hpp"
@@ -114,7 +116,6 @@ int main(int argc, char **argv){
 		new Column("access_type_id")
 	});
 	
-	
 	///////////////////////////////////////////////////////
 	//	START API ROUTES
 	///////////////////////////////////////////////////////
@@ -198,7 +199,7 @@ int main(int argc, char **argv){
 				users->Where("id", token->GetStr("id"))->arrayValues[0]->stringify())));
 		
 		return new_user->stringify();
-	}, {{"values", OBJECT}});
+	}, {{"values", OBJECT}}, std::chrono::seconds(2));
 	
 	
 	///////////////////////////////////////////////////////
@@ -242,7 +243,7 @@ int main(int argc, char **argv){
 		json->objectValues["values"]->objectValues["owner_id"] = token->objectValues["id"];
 		
 		return threads->Insert(json->objectValues["values"]->objectValues)->stringify();
-	}, {{"values", OBJECT}});
+	}, {{"values", OBJECT}}, std::chrono::seconds(2));
 	
 	
 	api.route("PUT", "/thread", [&](JsonObject* json, JsonObject* token)->std::string{	
@@ -257,7 +258,7 @@ int main(int argc, char **argv){
 		}
 		
 		return threads->Update(json->GetStr("id"), json->objectValues["values"]->objectValues)->stringify();
-	}, {{"id", STRING}, {"values", OBJECT}});
+	}, {{"id", STRING}, {"values", OBJECT}}, std::chrono::seconds(2));
 	
 	
 	api.route("DELETE", "/thread", [&](JsonObject* json, JsonObject* token)->std::string{
@@ -310,15 +311,15 @@ int main(int argc, char **argv){
 				has_access = true;
 			}
 		}
+		
 		if(!has_access){
 			return "{\"error\":\"This requires blogger access.\"}";
 		}
 		
-		
 		json->objectValues["values"]->objectValues["owner_id"] = token->objectValues["id"];
 			
 		return messages->Insert(json->objectValues["values"]->objectValues)->stringify();
-	}, {{"values", OBJECT}});
+	}, {{"values", OBJECT}}, std::chrono::seconds(2));
 	
 	
 	api.route("PUT", "/message", [&](JsonObject* json, JsonObject* token)->std::string{
@@ -333,7 +334,7 @@ int main(int argc, char **argv){
 		}
 		
 		return messages->Update(json->GetStr("id"), json->objectValues["values"]->objectValues)->stringify();
-	}, {{"id", STRING}, {"values", OBJECT}});
+	}, {{"id", STRING}, {"values", OBJECT}}, std::chrono::seconds(2));
 	
 	
 	api.route("DELETE", "/message", [&](JsonObject* json, JsonObject* token)->std::string{
@@ -349,6 +350,97 @@ int main(int argc, char **argv){
 		
 		return messages->Delete(json->GetStr("id"))->stringify();
 	}, {{"id", STRING}});
+	
+	
+	///////////////////////////////////////////////////////
+	//	START CHAT ROUTES
+	///////////////////////////////////////////////////////
+	
+	
+	std::deque<JsonObject*> chat_messages;
+	std::unordered_map<std::string, std::string> client_last_message;
+	std::mutex message_mutex;
+	
+	auto chat_msg = [&](JsonObject* msg){
+		size_t index = 0;
+		while (true) {
+			index = msg->GetStr("message").find("iframe", index);
+			if(index == std::string::npos)break;
+			msg->objectValues["message"]->stringValue = msg->GetStr("message").replace(index, 6, "");
+		}
+		
+		if(msg->GetStr("message").length() < 2){
+			return "{\"error\":\"Message too short.\"}";
+		}
+
+		if(msg->GetStr("message").length() > 256){
+			return "{\"error\":\"Message too long.\"}";
+		}
+
+		if(client_last_message.count(msg->GetStr("handle")) &&
+		msg->GetStr("message") == client_last_message[msg->GetStr("handle")]){
+			return "{\"error\":\"Do not send the same message.\"}";
+		}
+
+		client_last_message[msg->GetStr("handle")] = msg->GetStr("message");
+	
+		message_mutex.lock();
+		chat_messages.push_front(msg);
+		
+		if(chat_messages.size() > 100){
+			chat_messages.pop_back();
+		}
+		message_mutex.unlock();
+		
+		return "{\"status\":\"Sent.\"}";
+	};
+	
+	
+	api.route("GET", "/chat", [&](JsonObject*)->std::string{
+		JsonObject response(OBJECT);
+		response.objectValues["messages"] = new JsonObject(ARRAY);
+		message_mutex.lock();
+		for(auto it = chat_messages.begin(); it != chat_messages.end(); ++it){
+			DEBUG("MESSAGE: " << (*it)->stringify())
+			JsonObject* new_msg = new JsonObject(OBJECT);
+			if((*it)->HasObj("color", STRING)){
+				new_msg->objectValues["color"] = new JsonObject((*it)->GetStr("color"));
+			}
+			new_msg->objectValues["handle"] = new JsonObject((*it)->GetStr("handle"));
+			new_msg->objectValues["message"] = new JsonObject((*it)->GetStr("message"));
+			response["messages"]->arrayValues.push_back(new_msg);
+		}
+		message_mutex.unlock();
+		return response.stringify();
+	});
+	
+	
+	api.route("POST", "/user/chat", [&](JsonObject* json, JsonObject* token)->std::string{
+	
+		JsonObject* msg = new JsonObject(OBJECT);
+		msg->objectValues["color"] = new JsonObject(token->GetStr("color"));
+		msg->objectValues["handle"] = new JsonObject(token->GetStr("username"));
+		msg->objectValues["message"] = new JsonObject(json->GetStr("message"));
+		
+		return chat_msg(msg);
+	}, {{"message", STRING}}, std::chrono::seconds(2));
+	
+	
+	api.route("POST", "/chat", [&](JsonObject* json)->std::string{
+		if(users->Where("username", json->GetStr("handle"))->arrayValues.size() > 0){
+			return "{\"error\":\"That's an existing username. Please login as that user.\"}";
+		}else if(json->GetStr("handle").length() < 5){
+			return "{\"error\":\"Handle too short.\"}";
+		}else if(json->GetStr("handle").length() > 32){
+			return "{\"error\":\"Handle too long.\"}";
+		}
+		
+		JsonObject* msg = new JsonObject(OBJECT);
+		msg->objectValues["handle"] = new JsonObject(json->GetStr("handle"));
+		msg->objectValues["message"] = new JsonObject(json->GetStr("message"));
+		
+		return chat_msg(msg);
+	}, {{"handle", STRING}, {"message", STRING}}, std::chrono::seconds(2));
 	
 	
 	///////////////////////////////////////////////////////
@@ -386,168 +478,205 @@ int main(int argc, char **argv){
 	
 	
 	///////////////////////////////////////////////////////
-	//	SETUP AND START CHAT SERVER
+	//	SETUP AND START GAME TICK SERVER
 	///////////////////////////////////////////////////////
 	
 	
-	TlsWebsocketServer chat_server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
-	
-	std::deque<JsonObject*> chat_messages;
-	std::mutex message_mutex;
-	
-	std::unordered_map<int, std::string> client_last_message;
-	std::unordered_map<int, std::chrono::milliseconds> client_last_message_time;
+	TlsWebsocketServer game_server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);	
 	std::unordered_map<int, JsonObject*> client_details;
+	JsonObject game_state(OBJECT);
+	game_state.objectValues["players"] = new JsonObject(OBJECT);
 	
-	chat_server.on_disconnect = [&](int fd){
-		client_details.erase(fd);
+	// Pixels per tick.
+	static const double maxSpeed = 15.0;
+	static const double acceleration = 0.04;
+	static const double maxTurnSpeed = 0.1;
+	static const double turnAcceleration = 0.001;
+	
+	// A type of "event" queue for disconnects.
+	std::queue<int> disconnect_queue;
+	
+	std::thread tick_thread([&]{
+		// 1000ms per second, 60 tick rate, about 16ms.
+		std::chrono::milliseconds ms_per_tick = std::chrono::milliseconds(16);
+		//ms_per_tick += std::chrono::milliseconds(0);
+		
+		std::chrono::milliseconds tick_ms = std::chrono::milliseconds(0);
+		
+		// Calculate a game tick every ms_per_tick.
+		// Can also use std::chrono::high_resolution_clock::now()
+		// instead of std::chrono::system_clock::now()
+		while(true){
+			// Sleep the remainder ms.
+			std::this_thread::sleep_for(tick_ms);
+			
+			// Start time of tick.
+			tick_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::system_clock::now().time_since_epoch());
+			
+			//Run the simulation.
+			for(auto iter = game_state["players"]->objectValues.begin(); iter != game_state["players"]->objectValues.end(); ++iter){
+				//DEBUG("INP PLAYER " << iter->second->GetStr("input"))
+				char direction = iter->second->GetStr("i")[0];
+				char turn = iter->second->GetStr("i")[1];
+				
+				double x = std::stod(iter->second->GetStr("x"));
+				double y = std::stod(iter->second->GetStr("y"));
+				double speed = std::stod(iter->second->GetStr("s"));
+				
+				if(direction == 'f'){
+					if(speed < maxSpeed){
+						speed += acceleration;
+					}
+				}else if(direction == 'b'){
+					if(speed > -maxSpeed){
+						speed -= acceleration;
+					}
+				}else{
+					if(std::abs(speed) <= acceleration){
+						speed = 0;
+					}else if(speed > 0){
+						speed -= acceleration;
+					}else if(speed < 0){
+						speed += acceleration;
+					}
+				}
+				
+				// Handle turning.
+				
+				double rotation = std::stod(iter->second->GetStr("r"));
+				double turnSpeed = std::stod(iter->second->GetStr("ts"));
+				
+				//DEBUG(turn)
+				if(turn == 'l'){
+					if(turnSpeed < maxTurnSpeed){
+						turnSpeed += turnAcceleration;
+					}
+					rotation += turnSpeed;
+				}else if(turn == 'r'){
+					if(turnSpeed < maxTurnSpeed){
+						turnSpeed += turnAcceleration;
+					}
+					rotation -= turnSpeed;
+				}else{
+					if(turnSpeed <= turnAcceleration){
+						turnSpeed = 0;
+					}else if(turnSpeed > 0){
+						turnSpeed -= turnAcceleration;
+					}
+				}
+				
+				x += speed * std::cos(rotation);
+				y += speed * -1 * std::sin(rotation);
+				
+				iter->second->objectValues["x"]->stringValue = std::to_string(x);
+				iter->second->objectValues["y"]->stringValue = std::to_string(y);
+				iter->second->objectValues["s"]->stringValue = std::to_string(speed);
+				iter->second->objectValues["r"]->stringValue = std::to_string(rotation);
+				iter->second->objectValues["ts"]->stringValue = std::to_string(turnSpeed);
+			}
+			
+			// Broadcast the game state.
+			std::string bcast_msg = game_state.stringify();
+			//DEBUG("bcast_msg" << bcast_msg)
+			
+			while(!disconnect_queue.empty()){
+				int fd = disconnect_queue.front();
+				disconnect_queue.pop();
+				delete game_state["players"]->objectValues[client_details[fd]->GetStr("handle")];
+				game_state["players"]->objectValues.erase(client_details[fd]->GetStr("handle"));
+				client_details.erase(fd);
+			}
+
+			for(auto iter = client_details.begin(); iter != client_details.end(); ++iter){
+				//DEBUG("BC: " << iter->first)
+				game_server.send(iter->first, bcast_msg.c_str(), static_cast<size_t>(bcast_msg.length()));
+			}
+			
+			// Time per tick minus the duration of the tick calculations, gives time to wait before next tick.
+			tick_ms = ms_per_tick - (std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::system_clock::now().time_since_epoch()) - tick_ms);
+			
+			if(tick_ms < std::chrono::milliseconds(0)){
+				DEBUG("CALCULATIONS TOOK LONGER THAN A TICK!!!")
+				tick_ms = std::chrono::milliseconds(0);
+			}
+		}
+	});
+	tick_thread.detach();
+	
+	// END GAME STATE MANAGEMENT
+	
+	game_server.on_disconnect = [&](int fd){
+		DEBUG("DISC: " << fd)
+		if(client_details.count(fd)){
+			disconnect_queue.push(fd);
+			DEBUG("DO DISC: " << client_details[fd]->GetStr("handle"))
+		}
 	};
 	
-	chat_server.on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
+	// TODO: Only receive inputs from client. Writing data here at the same time as above causes corruption.
+	
+	game_server.on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
+		#if defined(DO_DEBUG)
+			// Simulates latency.
+			//std::this_thread::sleep_for(std::chrono::milliseconds(35));
+			//PRINT("RECV:" << data << "|ENDRECV")
+			std::stringstream dbg;
+			int total = 0;
+			for(size_t i = 0; i < static_cast<size_t>(data_length); i++){
+				if(static_cast<int>(data[i]) < 32 || static_cast<int>(data[i]) > 126){
+					dbg << static_cast<int>(data[i]) << "@" << i << ", ";
+					total++;
+				}
+			}
+			if(total > 0){
+				Util::print_bits(data, static_cast<size_t>(data_length));
+				PRINT("dbg.str()" << dbg.str())
+				PRINT("total" << total)
+			}
+		#endif
+		
 		JsonObject* msg = new JsonObject();
 		msg->parse(data);
-		DEBUG("RECV:" << data);
-
-		JsonObject response(OBJECT);
-		bool do_broadcast = false;
 		
-		if(msg->stringValue == "get_users"){
-			response.objectValues["users"] = new JsonObject(ARRAY);
-			for(auto iter = client_details.begin(); iter != client_details.end(); ++iter){
-				JsonObject* new_user = new JsonObject(OBJECT);
-				if(iter->second->objectValues.count("handle")){
-					new_user->objectValues["handle"] = new JsonObject(iter->second->GetStr("handle"));
-				}
-				new_user->objectValues["x"] = new JsonObject(iter->second->GetStr("x"));
-				new_user->objectValues["y"] = new JsonObject(iter->second->GetStr("y"));
-				response["users"]->arrayValues.push_back(new_user);
+		if(msg->HasObj("handle", STRING) &&
+		msg->HasObj("i", STRING)){
+			if(game_state["players"]->objectValues.count(msg->GetStr("handle"))){
+				game_state["players"]->objectValues[msg->GetStr("handle")]
+					->objectValues["i"]->stringValue = msg->GetStr("i");
 			}
-		}else if(msg->stringValue == "get_messages"){
-			response.objectValues["messages"] = new JsonObject(ARRAY);
-
-			for(auto it = chat_messages.begin(); it != chat_messages.end(); ++it){
-				DEBUG("MESSAGE: " << (*it)->stringify())
-				JsonObject* new_msg = new JsonObject(OBJECT);
-				if((*it)->objectValues.count("color")){
-					new_msg->objectValues["color"] = new JsonObject((*it)->GetStr("color"));
-				}
-				new_msg->objectValues["handle"] = new JsonObject((*it)->GetStr("handle"));
-				new_msg->objectValues["message"] = new JsonObject((*it)->GetStr("message"));
-				response["messages"]->arrayValues.push_back(new_msg);
-			}
+			//DEBUG("INPU: " << msg->GetStr("input"));
 		}else if(msg->HasObj("handle", STRING) &&
 		msg->HasObj("x", STRING) &&
 		msg->HasObj("y", STRING)){
 			if(!client_details.count(fd)){
+				JsonObject* player = new JsonObject(OBJECT);
+				player->objectValues["x"] = new JsonObject(msg->GetStr("x"));
+				player->objectValues["y"] = new JsonObject(msg->GetStr("y"));
+				player->objectValues["s"] = new JsonObject("0");
+				player->objectValues["r"] = new JsonObject("0");
+				player->objectValues["ts"] = new JsonObject("0");
+				player->objectValues["i"] = new JsonObject("nn");
+				//player->objectValues["c"] = new JsonObject(msg->GetStr("color"));
+				DEBUG(player->stringify())
+				game_state["players"]->objectValues[msg->GetStr("handle")] = player;
+				
 				client_details[fd] = new JsonObject(OBJECT);
-			}
-			if(client_details[fd]->objectValues.count("handle")){
-				client_details[fd]->objectValues["handle"]->stringValue = msg->GetStr("handle");
-			}else{
 				client_details[fd]->objectValues["handle"] = new JsonObject(msg->GetStr("handle"));
 			}
-			if(client_details[fd]->objectValues.count("x")){
-				client_details[fd]->objectValues["x"]->stringValue = msg->GetStr("x");
-			}else{
-				client_details[fd]->objectValues["x"] = new JsonObject(msg->GetStr("x"));
-			}
-			if(client_details[fd]->objectValues.count("y")){
-				client_details[fd]->objectValues["y"]->stringValue = msg->GetStr("y");
-			}else{
-				client_details[fd]->objectValues["y"] = new JsonObject(msg->GetStr("y"));
-			}
-		}else if(msg->HasObj("token", STRING) &&
-		msg->HasObj("message", STRING)){
-			JsonObject* token = new JsonObject();
-			try{
-				token->parse(encryptor.decrypt(JsonObject::deescape(msg->GetStr("token"))).c_str()); 	
-				// If the decryption succeeds, then clean the token, set the response status, set the msg handle, and do the broadcast.
-			}catch(const std::exception& e){
-				response.objectValues["status"] = new JsonObject("Bad login token. Please re-login.");
-			}
-			msg->objectValues.erase("token");
-			msg->objectValues["color"] = new JsonObject(token->GetStr("color"));
-			msg->objectValues["handle"] = new JsonObject(token->GetStr("username"));
-			do_broadcast = true;
 			
-			response.objectValues["status"] = new JsonObject("Sent.");
-			
-		}else if(msg->HasObj("handle", STRING) &&
-		msg->HasObj("message", STRING)){
-			if(users->Where("username", msg->GetStr("handle"))->arrayValues.size() > 0){
-				response.objectValues["status"] = new JsonObject("That's an existing username. Please login as that user.");
-			}else if(msg->GetStr("handle").length() < 5){
-				response.objectValues["status"] = new JsonObject("Handle too short.");
-			}else if(msg->GetStr("handle").length() > 16){
-				response.objectValues["status"] = new JsonObject("Handle too long.");
-			}else if(msg->GetStr("message").length() < 2){
-				response.objectValues["status"] = new JsonObject("Message too short.");
-			}else if(msg->GetStr("message").length() > 256){
-				response.objectValues["status"] = new JsonObject("Message too long.");
-			}else{
-				response.objectValues["status"] = new JsonObject("Sent.");
-				do_broadcast = true;
-			}
 		}else{
-			response.objectValues["status"] = new JsonObject("Must provide handle and message.");
-		}
-		
-		std::chrono::milliseconds now;
-		
-		if(do_broadcast){
-			now = std::chrono::duration_cast<std::chrono::milliseconds>(
-				std::chrono::system_clock::now().time_since_epoch());
-
-			if(now - client_last_message_time[fd] < std::chrono::milliseconds(2000)){
-				response.objectValues["status"] = new JsonObject("Please wait 2 seconds between messages.");
-				do_broadcast = false;
-			}else if(msg->GetStr("message") == client_last_message[fd]){
-				response.objectValues["status"] = new JsonObject("Do not send the same message.");
-				do_broadcast = false;
-			}
-		}
-		
-		if(do_broadcast){
-			client_last_message[fd] = msg->GetStr("message");
-			client_last_message_time[fd] = now;
-		
-			size_t index = 0;
-			while (true) {
-				index = msg->GetStr("message").find("iframe", index);
-				if(index == std::string::npos)break;
-				msg->objectValues["message"]->stringValue = msg->GetStr("message").replace(index, 6, "");
-			}
-		
-			message_mutex.lock();
-			chat_messages.push_front(msg);
-			
-			if(chat_messages.size() > 100){
-				chat_messages.pop_back();
-			}
-			message_mutex.unlock();
-		
-			std::string bcast_msg = msg->stringify();
-			if(chat_server.EpollServer::send(chat_server.broadcast_fd(), bcast_msg.c_str(), static_cast<size_t>(bcast_msg.length()))){
-				PRINT("broadcast fail")
-				return -1;
-			}
-		}
-		
-		std::string sresponse = response.stringify();
-		PRINT("SEND:" << sresponse)
-		if(chat_server.send(fd, sresponse.c_str(), static_cast<size_t>(sresponse.length()))){
-			PRINT("send prob")
-			return -1;
+			DEBUG("JUNK: " << msg->stringify())
 		}
 		return data_length;
 	};
 	
-	chat_server.run(true, 1);
-	
+	game_server.run(true, 1);
 	
 	#if defined(DO_DEBUG)
 		api.route("GET", "/end", [&](JsonObject*)->std::string{
-			chat_server.running = false;
+			game_server.running = false;
 			server.running = false;
 			http_server.running = false;
 			return "APPLICATION ENDING";
