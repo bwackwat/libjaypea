@@ -2,6 +2,19 @@
 
 This is where my TODO list piles up forever. It is basically a detailed log of the sticky notes which I write improvements on, collect on my desk, and begin to ignore.
 
+## 8/8/2018
+
+1. Eliminate all memory leaks. Most are not harmful. Use valgrind and Electric Fence as noted in build-prefix.sh.
+2. Develop a database backup and/or migration mechanism. Local, Dropbox, AWS S3, or other cloud backups?
+3. Develop and research lag compensation techniques for Tanks.
+4. Separate the API routes, HTTP redirecter, and game server into separate files for the jph2 application.
+5. Develop file uploading support. Consider using Git LFS, keeping the files locally, or backing them up.
+6. Rebuild the POI application.
+7. Link to documentation. Improve documentation.
+8. Refactor portions of the TCP server. Epoll resets using timers and similar actions can be refactored. Loops to functions.
+9. Research an alternative to JSON in Tanks.
+10. Create anonymous threads for public chat and private chat.
+
 ## 3/29/2017
 
 1. Check out "Metasploit" to do some generic penetration testing.
@@ -53,3 +66,4 @@ This is where my TODO list piles up forever. It is basically a detailed log of t
 8. Created a "DistributedServer" class which manages a list of hosts, does heartbeats, and negotiates master nodes. Hosts connected this way should be in the same data center--more research is required here.
 9. PrivateEventClient (openssl client) implementing TcpEventClient.
 10. Refactor run_thread into classes or something crazy??? Ugh.
+

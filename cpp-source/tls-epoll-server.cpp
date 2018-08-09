@@ -65,7 +65,7 @@ TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key,
  * See EpollServer::close_client
  */
 void TlsEpollServer::close_client(int* fd, std::function<void(int*)> callback){
-	PRINT(this->name << ": SSL_free on " << *fd)
+	DEBUG(this->name << ": SSL_free on " << *fd)
 	SSL_free(this->client_ssl[*fd]);
 	//delete this->client_ssl[*fd];
 	this->client_ssl.erase(*fd);
@@ -173,7 +173,7 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 		return true;
 	}
 	
-	DEBUG(this->name << ": SSL_new, done." << *new_client_fd)
+	DEBUG(this->name << ": SSL_new, done on " << *new_client_fd)
 
 	int res, err = SSL_ERROR_WANT_READ;
 	std::chrono::milliseconds accept_start = std::chrono::duration_cast<std::chrono::milliseconds>(

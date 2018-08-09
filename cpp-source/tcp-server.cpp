@@ -345,7 +345,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 							break;
 						}else{
 							if(inet_ntop(AF_INET, &this->accept_client.sin_addr.s_addr, client_detail, sizeof(client_detail)) != 0){
-								PRINT(this->name << ": Connection from " << client_detail)
+								PRINT(this->name << ": Connection from " << client_detail << " on " << new_fd)
 								this->fd_to_details_map[new_fd] = std::string(client_detail);
 							}else{
 								perror("inet_ntop!");

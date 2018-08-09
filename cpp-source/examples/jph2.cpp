@@ -2,6 +2,7 @@
 
 #include "http-api.hpp"
 #include "pgsql-model.hpp"
+#include "websocket-server.hpp"
 #include "tls-websocket-server.hpp"
 
 
@@ -482,23 +483,39 @@ int main(int argc, char **argv){
 	///////////////////////////////////////////////////////
 	
 	
-	TlsWebsocketServer game_server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);	
+	// I don't see a reason why this needs TLS.
+	// You can currently spoof other players, but you cant control the movement of players.
+	WebsocketServer game_server(static_cast<uint16_t>(chat_port), 10);
+	//TlsWebsocketServer game_server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
+	
+	// Unlike the structure in TcpServer, this structure indicates "joined players".
+	// Need to build out a larger UI and corresponding events for players.
+	// E.g. players can only connect once they have joined the game?
 	std::unordered_map<int, JsonObject*> client_details;
+	
+	// The public game state broadcasted to all players.
 	JsonObject game_state(OBJECT);
 	game_state.objectValues["players"] = new JsonObject(OBJECT);
 	
 	// Pixels per tick.
-	static const double maxSpeed = 15.0;
-	static const double acceleration = 0.04;
-	static const double maxTurnSpeed = 0.1;
-	static const double turnAcceleration = 0.001;
+	static const double maxSpeed = 10.0;
+	static const double acceleration = 0.05;
+	static const double backAcceleration = 0.03;
+	static const double maxTurnSpeed = 0.05;
+	static const double turnAcceleration = 0.0005;
 	
 	// A type of "event" queue for disconnects.
+	// I tried to use std::queue<std::function<void()>>, but that didn't work well.
+	// Eventually need to be broadcasting events.
+	// Will be a new interesting challenge to resolve desync.
 	std::queue<int> disconnect_queue;
 	
+	// Server game simulation loop.
 	std::thread tick_thread([&]{
 		// 1000ms per second, 60 tick rate, about 16ms.
 		std::chrono::milliseconds ms_per_tick = std::chrono::milliseconds(16);
+		
+		// This is to simulate a long calculation of a tick.
 		//ms_per_tick += std::chrono::milliseconds(0);
 		
 		std::chrono::milliseconds tick_ms = std::chrono::milliseconds(0);
@@ -516,12 +533,10 @@ int main(int argc, char **argv){
 			
 			//Run the simulation.
 			for(auto iter = game_state["players"]->objectValues.begin(); iter != game_state["players"]->objectValues.end(); ++iter){
-				//DEBUG("INP PLAYER " << iter->second->GetStr("input"))
-				char direction = iter->second->GetStr("i")[0];
-				char turn = iter->second->GetStr("i")[1];
+				//DEBUG("PLAYER INPUT: " << iter->second->GetStr("input"))
 				
-				double x = std::stod(iter->second->GetStr("x"));
-				double y = std::stod(iter->second->GetStr("y"));
+				// Handle speed.
+				char direction = iter->second->GetStr("i")[0];
 				double speed = std::stod(iter->second->GetStr("s"));
 				
 				if(direction == 'f'){
@@ -530,7 +545,7 @@ int main(int argc, char **argv){
 					}
 				}else if(direction == 'b'){
 					if(speed > -maxSpeed){
-						speed -= acceleration;
+						speed -= backAcceleration;
 					}
 				}else{
 					if(std::abs(speed) <= acceleration){
@@ -542,12 +557,11 @@ int main(int argc, char **argv){
 					}
 				}
 				
-				// Handle turning.
-				
+				// Handle turning speed.
+				char turn = iter->second->GetStr("i")[1];
 				double rotation = std::stod(iter->second->GetStr("r"));
 				double turnSpeed = std::stod(iter->second->GetStr("ts"));
 				
-				//DEBUG(turn)
 				if(turn == 'l'){
 					if(turnSpeed < maxTurnSpeed){
 						turnSpeed += turnAcceleration;
@@ -566,9 +580,14 @@ int main(int argc, char **argv){
 					}
 				}
 				
+				// Handle movement.
+				double x = std::stod(iter->second->GetStr("x"));
+				double y = std::stod(iter->second->GetStr("y"));
+				
 				x += speed * std::cos(rotation);
 				y += speed * -1 * std::sin(rotation);
 				
+				iter->second->objectValues["i"]->stringValue = iter->second->GetStr("i");
 				iter->second->objectValues["x"]->stringValue = std::to_string(x);
 				iter->second->objectValues["y"]->stringValue = std::to_string(y);
 				iter->second->objectValues["s"]->stringValue = std::to_string(speed);
@@ -665,7 +684,7 @@ int main(int argc, char **argv){
 				client_details[fd] = new JsonObject(OBJECT);
 				client_details[fd]->objectValues["handle"] = new JsonObject(msg->GetStr("handle"));
 			}
-			
+			// ELSE do nothing because they have already spawned.
 		}else{
 			DEBUG("JUNK: " << msg->stringify())
 		}

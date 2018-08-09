@@ -31,6 +31,7 @@ private:
 			offset = 2;
 		}
 
+		// I think this occurs sometimes, and it doesn't appear to matter.
 		if(PACKET_LIMIT < payload_length + offset){
 			ERROR("DIDNT READ ALL DATA")
 			DEBUG("L:" << len)
@@ -126,30 +127,29 @@ public:
 		return frame.str();
 	}
 
-	ssize_t recv(int fd, const char* data, size_t data_length){
-		#if defined(DO_DEBUG)
-			// Simulates latency.
-			std::this_thread::sleep_for(std::chrono::milliseconds(35));
-			if(static_cast<int>(data[0]) == 3 &&
-			static_cast<int>(data[1]) == -23){
-				DEBUG("WS DISCONNECToooo! " << fd)
-				return -1;
-			}
-		#endif
-		
+	ssize_t recv(int fd, const char* data, size_t data_length){		
 		if(this->client_handshake_complete[fd]){
-			std::string message = this->parse_frame(data, data_length);
-			//PRINT("RECV:" << message)
 			//DEBUG("CHAT RECV:" << data << " on " << fd);
+			//PRINT("RECV:" << message)
+			std::string message = this->parse_frame(data, data_length);
 		
+			#if defined(DO_DEBUG)
+				// Simulate latency. (Mostly for multiplayer game testing.)
+				std::this_thread::sleep_for(std::chrono::milliseconds(35));
+				
+			#endif
+			
+			// TODO: I think this is the websocket client from the browser sending a disconnect frame. Ok.
 			if(static_cast<int>(message[0]) == 3 &&
 			static_cast<int>(message[1]) == -23){
 				DEBUG("WS DISCONNECT! " << fd)
 				return -1;
 			}
+			
+			//DEBUG("PINGPONG")
 			if(message == "ping"){
 				message = "pong";
-				//TODO: SOME SERVERS DONT NEED PINGPONG? ALSO THIS IS NOT THREADED OOF
+				// TODO: REVISIT THIS. IS IT NECESSARY? CAN WE SEGFAULT IF ANOTHER THREAD WRITES?
 				if(this->server->send(fd, message.c_str(), message.length())){
 					DEBUG("Send handshake failed.")
 					return -1;
