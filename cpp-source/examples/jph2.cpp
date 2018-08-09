@@ -485,8 +485,8 @@ int main(int argc, char **argv){
 	
 	// I don't see a reason why this needs TLS.
 	// You can currently spoof other players, but you cant control the movement of players.
-	WebsocketServer game_server(static_cast<uint16_t>(chat_port), 10);
-	//TlsWebsocketServer game_server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
+	//WebsocketServer game_server(static_cast<uint16_t>(chat_port), 10);
+	TlsWebsocketServer game_server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
 	
 	// Unlike the structure in TcpServer, this structure indicates "joined players".
 	// Need to build out a larger UI and corresponding events for players.
