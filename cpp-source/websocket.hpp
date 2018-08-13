@@ -150,10 +150,10 @@ public:
 			if(message == "ping"){
 				message = "pong";
 				// TODO: REVISIT THIS. IS IT NECESSARY? CAN WE SEGFAULT IF ANOTHER THREAD WRITES?
-				if(this->server->send(fd, message.c_str(), message.length())){
-					DEBUG("Send handshake failed.")
-					return -1;
-				}
+				//if(this->server->send(fd, message.c_str(), message.length())){
+				//	DEBUG("Send handshake failed.")
+				//	return -1;
+				//}
 				return static_cast<ssize_t>(message.length());
 			}
 			//PRINT("WEBSOCKET ONREAD")
