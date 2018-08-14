@@ -2,8 +2,8 @@
 
 # Used for development locally.
 
-yum makecache fast
-yum -y upgrade
+# yum makecache fast
+# yum -y upgrade
 
 yum -y install postgresql-server postgresql-contrib postgresql-libs postgis
 
@@ -16,11 +16,13 @@ fi
 systemctl start postgresql
 systemctl enable postgresql
 
-cp ./scripts/extras/tables.sql /tables.sql
+dir=$(dirname $BASH_SOURCE)
+
+cp $dir/tables.sql /tables.sql
 chmod 666 /tables.sql
 chown postgres:postgres /tables.sql
 
-cp ./scripts/extras/pg_hba.conf /var/lib/pgsql/data/pg_hba.conf
+cp $dir/pg_hba.conf /var/lib/pgsql/data/pg_hba.conf
 chown postgres:postgres /var/lib/pgsql/data/pg_hba.conf
 chmod 600 /var/lib/pgsql/data/pg_hba.conf
 systemctl restart postgresql

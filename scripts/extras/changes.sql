@@ -11,4 +11,4 @@ ALTER TABLE users ALTER color SET DEFAULT 'gold';
 7/26/2018
 
 
-UPDATE access_types SET description = 'Has blogging privilege';
+UPDATE access_types SET description = 'Has blogging privilege' WHERE id = 2;

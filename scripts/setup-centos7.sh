@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$(whoami)" != "root" ]; then
+	echo "This must be run as root"
+	exit 1
+fi
+
 cd $(dirname "${BASH_SOURCE[0]}")/../
 
 # openssl req -x509 -nodes -sha256 -newkey rsa:4096 -keyout extras/self-signed-ssl/ssl.key -out extras/self-signed-ssl/ssl.crt
@@ -31,3 +36,4 @@ cd artifacts/argon2
 make
 make install
 ldconfig
+
