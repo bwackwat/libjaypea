@@ -80,7 +80,7 @@ ALTER TABLE access_types ALTER created SET DEFAULT now();
 INSERT INTO access_types (id, name, description) VALUES (
 	1,
 	'Administrator',
-	'Has complete administrative priviliges.'
+	'Has complete administrative privilige.'
 );
 
 INSERT INTO access_types (id, name, description) VALUES (

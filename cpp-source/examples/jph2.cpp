@@ -177,7 +177,7 @@ int main(int argc, char **argv){
 			if(temp_users->arrayValues.size() == 0){
 				access->Insert(std::unordered_map<std::string, JsonObject*> {
 					{"owner_id", new JsonObject(newuser->GetStr("id"))},
-					{"access_types_id", new JsonObject("1")}});
+					{"access_type_id", new JsonObject("1")}});
 			}
 		}
 		
