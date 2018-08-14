@@ -595,7 +595,7 @@ int main(int argc, char **argv){
 					turnSpeeds.erase(event->player);
 					
 					// They can respawn after this.
-					DEBUG("DELETE" << event->player + "tank")
+					DEBUG("DELETE " << event->player + "tank")
 					delete game_state["players"]->objectValues[event->player];
 					game_state["players"]->objectValues.erase(event->player);
 				}else{
