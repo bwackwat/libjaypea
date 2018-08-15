@@ -112,9 +112,23 @@ JsonObject* PgSqlModel::Where(std::string key, std::string value){
 		check += " ORDER BY created DESC;";
 	}
 	
+	std::string col_list;
+	for(size_t j = 0; j < this->cols.size(); ++j){
+		if(!(this->cols[j]->flags & COL_HIDDEN)){
+			if(strcmp(this->cols[j]->name, "location") == 0){
+				col_list += "ST_AsGeoJSON(location) as location";
+			}else{
+				col_list += this->cols[j]->name;
+			}
+			if(j + 1 < this->cols.size()){
+				col_list += ", ";
+			}
+		}
+	}
+	
 	try{
-		DEBUG("PSQL|" << "SELECT * FROM " << this->table << " WHERE " << key << " = " << txn.quote(value) << check)
-		pqxx::result res = txn.exec("SELECT * FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check);
+		DEBUG("PSQL|" << "SELECT " << col_list << " FROM " << this->table << " WHERE " << key << " = " << txn.quote(value) << check)
+		pqxx::result res = txn.exec("SELECT " + col_list + " FROM " + this->table + " WHERE " + key + " = " + txn.quote(value) + check);
 		txn.commit();
 		
 		return this->ResultToJson(&res);
@@ -155,6 +169,25 @@ JsonObject* PgSqlModel::Insert(std::unordered_map<std::string, JsonObject*> valu
 	
 	sql << "INSERT INTO " << this->table << " (" ;
 	
+	std::string location;
+	if(this->HasColumn("location")){
+		if(values.count("longitude") &&
+		values.count("latitude")){
+			location = "ST_GeographyFromText(" + txn.quote("POINT(" + values["longitude"]->stringValue + " "
+				+ values["latitude"]->stringValue + ")") + ")";
+				
+			//delete values["longitude"];
+			values.erase("longitude");
+			
+			//delete values["latitude"];
+			values.erase("latitude");
+			
+			values["location"] = new JsonObject("placeholder");
+		}else{
+			return Error("Missing location information.");
+		}
+	}
+	
 	for(auto iter = values.begin(); iter != values.end(); ++iter){
 		if(!this->HasColumn(iter->first)){
 			PRINT("BAD KEY: " + iter->first)
@@ -173,7 +206,11 @@ JsonObject* PgSqlModel::Insert(std::unordered_map<std::string, JsonObject*> valu
 			PRINT("BAD KEY: " + iter->first)
 			return Error("Bad key.");
 		}
-		sql << txn.quote(iter->second->stringValue);
+		if(iter->first == "location"){
+			sql << location;
+		}else{
+			sql << txn.quote(iter->second->stringValue);
+		}
 		if(std::next(iter) != values.end()){
 			sql << ", ";
 		}

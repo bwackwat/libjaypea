@@ -135,7 +135,7 @@ public:
 		
 			#if defined(DO_DEBUG)
 				// Simulate latency. (Mostly for multiplayer game testing.)
-				std::this_thread::sleep_for(std::chrono::milliseconds(35));
+				std::this_thread::sleep_for(std::chrono::milliseconds(70));
 				
 			#endif
 			

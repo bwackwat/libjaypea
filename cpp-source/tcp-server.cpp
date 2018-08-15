@@ -230,7 +230,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 		if(close(*fd) < 0){
 			perror("close");
 		}
-		DEBUG(this->name << ": " << *fd << " done on " << thread_id)
+		DEBUG(this->name << ": " << *fd << " done on thread " << thread_id)
 		if(this->on_disconnect != nullptr){
 			this->on_disconnect(*fd);
 		}
@@ -273,7 +273,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				timer_fd = client_to_timer_map[the_fd];
 				client_to_timer_map.erase(the_fd);
 				timer_to_client_map.erase(timer_fd);
-				ERROR(the_fd << " and timer " << timer_fd << " on error.")
+				ERROR(the_fd << " and timer " << timer_fd << " thread " << thread_id)
 				if(close(timer_fd) < 0){
 					perror("close timer_fd on error");
 				}
@@ -345,7 +345,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 							break;
 						}else{
 							if(inet_ntop(AF_INET, &this->accept_client.sin_addr.s_addr, client_detail, sizeof(client_detail)) != 0){
-								PRINT(this->name << ": Connection from " << client_detail << " on " << new_fd)
+								PRINT(this->name << ": Connection from " << client_detail << " on " << new_fd << " thread " << thread_id)
 								this->fd_to_details_map[new_fd] = std::string(client_detail);
 							}else{
 								perror("inet_ntop!");
@@ -382,7 +382,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 										client_to_timer_map[new_fd] = timer_fd;
 										new_event.events = EVENTS;
 										new_event.data.fd = timer_fd;
-										DEBUG(this->name << ": new timer fd " << timer_fd << " on " << the_fd)
+										DEBUG(this->name << ": new timer fd " << timer_fd << " on " << new_fd << " thread " << thread_id)
 										if(epoll_ctl(timeout_epoll_fd, EPOLL_CTL_ADD, timer_fd, &new_event) < 0){
 											perror("epoll_ctl timer add");
 										}

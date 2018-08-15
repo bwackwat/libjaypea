@@ -14,7 +14,7 @@ sleep 1
 
 xterm -geometry 100x27 \
 -T "watcher building examples" \
--e scripts/python/watcher.py cpp-source/examples/,artifacts/libjaypea.so,artifacts/libjaypeap.so,scripts/build-example.sh "scripts/build-example.sh DEBUG" &
+-e scripts/python/watcher.py cpp-source/examples/,cpp-source/examples/jph2/,artifacts/libjaypea.so,artifacts/libjaypeap.so,scripts/build-example.sh "scripts/build-example.sh DEBUG" &
 
 sleep 1
 
