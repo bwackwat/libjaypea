@@ -37,3 +37,13 @@ auto delete_poi = [&](JsonObject* json, JsonObject* token)->std::string{
 	return poi->Delete(json->GetStr("id"))->stringify();
 };
 
+auto read_poi_by_username = [&](JsonObject* json)->std::string{
+	JsonObject* temp_users = users->Where("username", json->GetStr("username"));
+	
+	if(temp_users->arrayValues.size() == 0){
+		return NO_SUCH_ITEM;
+	}
+	
+	return poi->Where("owner_id", temp_users->arrayValues[0]->GetStr("id"))->stringify();
+};
+

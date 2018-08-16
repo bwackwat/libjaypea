@@ -80,6 +80,8 @@ int main(int argc, char **argv){
 	api.route("PUT", "/poi", update_poi, {{"id", STRING}, {"values", OBJECT}}, std::chrono::seconds(2));
 	api.route("DELETE", "/poi", delete_poi, {{"id", STRING}});
 	
+	api.route("GET", "/poi/by/username", read_poi_by_username, {{"username", STRING}});
+	
 	#include "jph2/chat.cpp"
 	
 	api.route("GET", "/chat", read_chat);
