@@ -96,17 +96,26 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 		diff = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::system_clock::now().time_since_epoch()) - send_start;
 	}
-	if(err != SSL_ERROR_NONE){
-		// TODO: This code tries to check if the connection has already been closed.
-		// It is not a solution for anything currently, but an interesting note.
-		
-		//if(close(fd) && errno == EBADF){
-		//	DEBUG(fd << " IS CLOSED, IGNORING?")
-		//	return true;
-		//}
-		ERROR("SSL_write: " << err)
-		return true;
+	switch(err){
+		case SSL_ERROR_NONE:
+			break;
+		case SSL_ERROR_WANT_WRITE:
+			PRINT("WANT WRITE " << fd)
+			// Nothing to read, nonblocking mode.
+			return 0;
+		case SSL_ERROR_ZERO_RETURN:
+			ERROR("server write zero " << fd)
+			return true;
+		case SSL_ERROR_SYSCALL:
+			PRINT(this->name << ": write SSL_ERROR_SYSCALL")
+			ERR_print_errors_fp(stdout);
+			return true;
+		default:
+			ERROR("other SSL_write " << err << " from " << fd)
+			ERR_print_errors_fp(stdout);
+			return true;
 	}
+	
 	//DEBUG("SSL_write took milliseconds: " << diff.count())
 	if(len != static_cast<int>(data_length)){
 		ERROR("Invalid number of bytes written...")
@@ -127,27 +136,45 @@ ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length){
  */
 ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length,
 std::function<ssize_t(int, char*, size_t)> callback){
-	int len = SSL_read(this->client_ssl[fd], data, static_cast<int>(data_length));
-	int err = SSL_get_error(this->client_ssl[fd], len);
-	switch(err){
-	case SSL_ERROR_NONE:
-		break;
-	case SSL_ERROR_WANT_READ:
-		PRINT("WANT READ " << fd)
-		// Nothing to read, nonblocking mode.
-		return 0;
-	case SSL_ERROR_ZERO_RETURN:
-		ERROR("server read zero " << fd)
-		return -2;
-	case SSL_ERROR_SYSCALL:
-		PRINT(this->name << ": SSL_ERROR_SYSCALL")
-		ERR_print_errors_fp(stdout);
-		return -3;
-	default:
-		ERROR("other SSL_read " << err << " from " << fd)
-		ERR_print_errors_fp(stdout);
-		return -1;
+	int len = 0, err = SSL_ERROR_WANT_READ;
+	std::chrono::milliseconds recv_start = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch());
+	std::chrono::milliseconds diff = std::chrono::milliseconds(0);
+	std::chrono::milliseconds timeout = std::chrono::milliseconds(10000);
+
+	while(err == SSL_ERROR_WANT_READ){
+		if(diff > timeout){
+			PRINT("SSL_read timeout...")
+			return true;
+		}
+
+		len = SSL_read(this->client_ssl[fd], data, static_cast<int>(data_length));
+		err = SSL_get_error(this->client_ssl[fd], len);
+
+		diff = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::system_clock::now().time_since_epoch()) - recv_start;
 	}
+	switch(err){
+		case SSL_ERROR_NONE:
+			break;
+		case SSL_ERROR_WANT_READ:
+			PRINT("WANT READ " << fd)
+			// Nothing to read, nonblocking mode.
+			return 0;
+		case SSL_ERROR_ZERO_RETURN:
+			ERROR("server read zero " << fd)
+			return -2;
+		case SSL_ERROR_SYSCALL:
+			PRINT(this->name << ": read SSL_ERROR_SYSCALL")
+			ERR_print_errors_fp(stdout);
+			return -3;
+		default:
+			ERROR("other SSL_read " << err << " from " << fd)
+			ERR_print_errors_fp(stdout);
+			return -1;
+	}
+	
+	//DEBUG("SSL_read took milliseconds: " << diff.count())
 	data[len] = 0;
 	return callback(fd, data, static_cast<size_t>(len));
 }
