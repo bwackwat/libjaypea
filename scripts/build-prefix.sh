@@ -25,9 +25,9 @@ case "${argv[@]}" in
 		((argc-=1))
 		argv=( "${argv[@]/"PROD"}" )
 		;;
-	*"DEBUG"*)
+	*)
 		echo "DEBUG MODE"
-		extra="-O0 -DDO_DEBUG -g"
+		extra="-O0 -DDO_DEBUG -g3"
 		# -lefence Electric Fence (memory protection tool)
 		# Flags for gperftools:
 		# -pg -lprofile -ltcmalloc -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
@@ -35,8 +35,6 @@ case "${argv[@]}" in
 		((argc-=1))
 		argv=( "${argv[@]/"DEBUG"}" )
 		;;
-	*)
-		extra="-O0"
 esac
 
 libs="-lpthread -lssl -lcryptopp -largon2"
@@ -45,4 +43,4 @@ libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \
 $dir/cpp-source/*.cpp -o $library"
 
-compiler="clang++ -std=c++11 -I$dir/cpp-source $library  -lcryptopp -lpqxx $warn $extra"
+compiler="clang++ -std=c++11 -I$dir/cpp-source $library -lcryptopp -lpqxx $warn $extra"

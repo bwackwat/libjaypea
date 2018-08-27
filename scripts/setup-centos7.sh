@@ -27,13 +27,26 @@ systemctl restart ntpd
 
 mkdir -p artifacts
 
+# Build argon2.
+
 if [ -d "artifacts/argon2" ]; then
 	rm -rf artifacts/argon2
 fi
-
 git clone https://github.com/P-H-C/phc-winner-argon2.git artifacts/argon2
 cd artifacts/argon2
 make
 make install
 ldconfig
+cd ../
+
+# Build cryptopp.
+
+#if [ -d "artifacts/cryptopp" ]; then
+#	rm -rf artifacts/cryptopp
+#fi
+#git clone https://github.com/weidai11/cryptopp artifacts/cryptopp
+#cd artifacts/cryptopp
+#make
+#ldconfig
+#cd ../
 

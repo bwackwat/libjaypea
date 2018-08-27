@@ -39,13 +39,13 @@ struct Event{
 	// 0 connect
 	// 1 disconnect
 	// 3 destroy tank
-	byte type;
+	uint8_t type;
 	
 	int fd;
 	std::string player;
 	
-	Event(byte ntype, int nfd, std::string nplayer): type(ntype), fd(nfd), player(nplayer){}
-	Event(byte ntype, std::string nplayer): type(ntype), player(nplayer){}
+	Event(uint8_t ntype, int nfd, std::string nplayer): type(ntype), fd(nfd), player(nplayer){}
+	Event(uint8_t ntype, std::string nplayer): type(ntype), player(nplayer){}
 };
 std::queue<Event *> game_event_queue;
 

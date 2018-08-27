@@ -28,3 +28,5 @@ xterm -geometry 100x30 \
 -T "watcher running jph2" \
 -e scripts/python/watcher.py binaries/jph2,extras/configuration.json "binaries/jph2" &
 
+./scripts/python/migration/backup.py
+

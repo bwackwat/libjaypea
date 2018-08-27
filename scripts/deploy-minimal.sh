@@ -53,7 +53,7 @@ wget https://$3/build/libjaypeap.so -O artifacts/libjaypeap.so
 
 wget https://$3/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=libjaypea-api -O libjaypea-api.configuration.json
 rm libjaypea-api
-wget -N https://build.bwackwat.com/build/libjaypea-api
+wget -N https://$3/build/libjaypea-api
 chmod +x libjaypea-api
 
 wget https://$3/api/host-service?token=abc123'&'host=dev.bwackwat.com'&'service=http-redirecter -O http-redirecter.configuration.json

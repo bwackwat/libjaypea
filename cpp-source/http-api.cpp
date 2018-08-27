@@ -363,7 +363,7 @@ void HttpApi::start(void){
 									token->parse(this->encryptor->decrypt(JsonObject::deescape(r_obj.GetStr("token"))).c_str());
 									response_body = this->routemap[route]->token_function(&r_obj, token);
 								}catch(const std::exception& e){
-									PRINT(e.what())
+									DEBUG(e.what())
 									response_body = INSUFFICIENT_ACCESS;
 								}
 							}
