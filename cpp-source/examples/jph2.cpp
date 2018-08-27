@@ -8,38 +8,16 @@
 #include "tls-websocket-server.hpp"
 
 int main(int argc, char **argv){
-	std::string hostname;
-	std::string admin;
-	std::string public_directory;
-	std::string ssl_certificate;
-	std::string ssl_private_key;
-	int http_port;
-	int https_port;
-	int chat_port;
-	int cache_megabytes = 30;
-	std::string connection_string;
-	
-	Util::define_argument("hostname", hostname, {"-hn"});
-	Util::define_argument("admin", hostname, {"-a"});
-	Util::define_argument("public_directory", public_directory, {"-pd"});
-	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});
-	Util::define_argument("ssl_private_key", ssl_private_key, {"-key"});
-	Util::define_argument("http_port", &http_port, {"-p"});
-	Util::define_argument("https_port", &https_port, {"-sp"});
-	Util::define_argument("chat_port", &chat_port, {"-cp"});
-	Util::define_argument("cache_megabytes", &cache_megabytes,{"-cm"});
-	Util::define_argument("postgresql_connection", connection_string, {"-pcs"});
-	Util::parse_arguments(argc, argv, "This is an HTTP(S) JSON API which hold routes for jph2.net.");
-	
-	TlsEpollServer server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(https_port), 10);
-	SymmetricEncryptor encryptor;
-	HttpApi api(public_directory, &server, &encryptor);
-	api.set_file_cache_size(cache_megabytes);
+	#include "jph2/initialization.cpp"
 	
 	#include "jph2/models.cpp"
 	
 	api.route("GET", "/", [&](JsonObject*)->std::string{
-		return "{\"result\":\"Welcome to the API V1!\",\n\"routes\":" + api.routes_string + "}";
+		return "{\"result\":\"Welcome to the API V1!\"}";
+	});
+	
+	api.route("GET", "/routes", [&](JsonObject*)->std::string{
+		return api.routes_string;
 	});
 	
 	#include "jph2/users.cpp"
@@ -100,6 +78,17 @@ int main(int argc, char **argv){
 			return "APPLICATION ENDING";
 		});
 	#endif
+	
+	api.route("POST", "/backup", [&](JsonObject*, JsonObject* token)->std::string{
+		JsonObject* accesses = access->Where("owner_id", token->GetStr("id"));
+		for(auto it = accesses->arrayValues.begin(); it != accesses->arrayValues.end(); ++it){
+			if((*it)->GetStr("access_type_id") == "1"){
+				return Util::exec_and_wait("pg_dump -U postgres webservice");
+			}
+		}
+	
+		return INSUFFICIENT_ACCESS;
+	});
 	
 	api.start();
 	

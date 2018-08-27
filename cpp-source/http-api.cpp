@@ -78,12 +78,19 @@ void HttpApi::start(void){
 
 	this->routes_object = new JsonObject(OBJECT);
 	for(auto iter = this->routemap.begin(); iter != this->routemap.end(); ++iter){
-		routes_object->objectValues[iter->first] = new JsonObject(ARRAY);
+		routes_object->objectValues[iter->first] = new JsonObject(OBJECT);
+		routes_object->objectValues[iter->first]->objectValues["rate_limit"] =
+			new JsonObject(std::to_string(iter->second->minimum_ms_between_call.count()));
+		routes_object->objectValues[iter->first]->objectValues["parameters"] = new JsonObject(ARRAY);
+		
 		for(auto &field : iter->second->requires){
-			routes_object->objectValues[iter->first]->arrayValues.push_back(new JsonObject(field.first));
+			routes_object->objectValues[iter->first]->objectValues["parameters"]->arrayValues.push_back(new JsonObject(field.first));
+		}
+		if(iter->second->token_function != nullptr){
+			routes_object->objectValues[iter->first]->objectValues["parameters"]->arrayValues.push_back(new JsonObject("token"));
 		}
 	}
-	this->routes_string = routes_object->stringify(true);
+	this->routes_string = routes_object->stringify();
 
 	//PRINT("HttpApi running with routes: " << this->routes_string)
 	
@@ -357,7 +364,7 @@ void HttpApi::start(void){
 									response_body = this->routemap[route]->token_function(&r_obj, token);
 								}catch(const std::exception& e){
 									PRINT(e.what())
-									response_body = "{\"error\":\"Insufficient access.\"}";
+									response_body = INSUFFICIENT_ACCESS;
 								}
 							}
 						}else{
