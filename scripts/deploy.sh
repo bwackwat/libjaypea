@@ -33,6 +33,8 @@ python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "sc
 
 python -u scripts/python/watcher.py binaries/$3 "binaries/$3 --chat_port 11000 -key artifacts/ssl.key -crt artifacts/ssl.crt -pcs \"dbname=webservice user=$2 password=$5\"" forever > logs/$3-watcher.log 2>&1 &
 
+./scripts/dead-site-checker.py https://localhost:10443 binaries/jph2 > logs/dead-site-checker.log 2>&1 &
+
 EOF
 
 chmod +x artifacts/start.sh
