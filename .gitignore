@@ -1,7 +1,2 @@
-logs/*
-binaries/*
-artifacts/*
-.vagrant/
-public-html/build/*
 gmon.out
 *.pyc

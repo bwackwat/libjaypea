@@ -4,12 +4,10 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 source scripts/build-prefix.sh
 
-mkdir -p $dir/public-html/build
-
 function build {
 	if [ $argc -eq 0 ] || [[ "$1" = *"$argv"* ]]; then
-		echo "compiling binaries/$1"
-		eval "$compiler $2 $dir/cpp-source/examples/$1.cpp -o $dir/binaries/$1"
+		echo "compiling artifacts/$1"
+		eval "$compiler $2 $dir/cpp-source/examples/$1.cpp -o $dir/artifacts/$1"
 	fi
 }
 
@@ -47,3 +45,4 @@ build chat-client
 build echo-server
 build tcp-client
 build tcp-event-client
+

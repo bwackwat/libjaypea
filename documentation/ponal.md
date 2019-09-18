@@ -39,7 +39,7 @@ Usage: "exit"
 ## Example
 
 ```bash
-./bin/ponal << EOF
+./artifacts/ponal << EOF
 get test
 set test apples
 set test
@@ -71,18 +71,20 @@ Expect:
 ```bash
 #!/bin/bash
 
-./bin/build-all.sh
+./scripts/build-library.sh
 
-./bin/ponald --port 12345 --quiet &
+./scripts/build-example.sh
+
+./artifacts/ponald --port 12345 --quiet &
 
 # Let ponald start.
 sleep 1
 
-./bin/ponal --port 12345 <<< "set connection_string dbname=test user=postgres password=aq12ws"
+./artifacts/ponal --port 12345 <<< "set connection_string dbname=test user=postgres password=aq12ws"
 
 echo
 
-connection_string="$(./bin/ponal --port 12345 <<< 'get connection_string')"
+connection_string="$(./artifacts/ponal --port 12345 <<< 'get connection_string')"
 
 echo "${connection_string}"
 ```

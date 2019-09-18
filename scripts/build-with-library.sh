@@ -11,6 +11,6 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 source scripts/build-prefix.sh
 
-echo "compiling $1 as libjaypea/binaries/$2"
+echo "compiling $1 as libjaypea/artifacts/$2"
 
-eval "$compiler $3 $thisdir/$1 -o $dir/binaries/$2"
+eval "$compiler $3 $thisdir/$1 -o $dir/artifacts/$2"
