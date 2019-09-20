@@ -1,2 +1,3 @@
 gmon.out
 *.pyc
+.vscode/

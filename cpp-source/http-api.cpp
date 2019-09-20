@@ -18,6 +18,13 @@ encryptor(0)
 	this->server->set_timeout(10);
 }
 
+void HttpApi::form_route(std::string method, std::string path, std::function<std::string(JsonObject*)> function,
+std::unordered_map<std::string, JsonType> requires,
+std::chrono::milliseconds rate_limit,
+bool requires_human){
+	this->routemap[method + " " + path] = new Route(function, requires, rate_limit, requires_human);
+}
+
 void HttpApi::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function,
 std::unordered_map<std::string, JsonType> requires,
 std::chrono::milliseconds rate_limit,
@@ -33,7 +40,7 @@ std::unordered_map<std::string, JsonType> requires,
 std::chrono::milliseconds rate_limit,
 bool requires_human){
 	if(encryptor == 0){
-		PRINT("You tried to add a route that uses encryption. Please provide an encryptor in the HttpApi constructor")
+		PRINT("You tried to add a route that uses an encrypted token. Please provide an encryptor in the HttpApi constructor")
 		exit(1);
 	}
 	if(path[path.length() - 1] != '/'){
@@ -147,13 +154,13 @@ void HttpApi::start(void){
 
 			struct stat route_stat;
 			if(lstat(clean_route.c_str(), &route_stat) < 0){
-				// perror("lstat");
+				DEBUG("lstat error")
 				response_body = HTTP_404;
 				response_header = response_header.replace(9, 6, "404 Not Found");
 			}else if(S_ISDIR(route_stat.st_mode)){
 				clean_route += "/index.html";
 				if(lstat(clean_route.c_str(), &route_stat) < 0){
-					// perror("lstat index.html");
+					DEBUG("lstat index.html error")
 					response_body = HTTP_404;
 					response_header = response_header.replace(9, 6, "404 Not Found");
 				}
@@ -302,7 +309,15 @@ void HttpApi::start(void){
 				}
 			}
 
-			PRINT((r_type == API ? "APIR: " : "HTTPAPIR: ") << route)
+			if(r_type == API){
+				PRINT("API ROUTE: " << route)
+			}else if(r_type == HTTP_API){
+					PRINT("HTTP API ROUTE: " << route)
+			}else if(r_type == HTTP_FORM){
+					PRINT("HTTP FORM ROUTE: " << route)
+			}else{
+					PRINT("UNKNOWN ROUTE: " << route)
+			}
 
 			if(this->routemap.count(route)){
 				if(this->routemap[route]->minimum_ms_between_call.count() > 0){

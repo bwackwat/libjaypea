@@ -94,6 +94,14 @@ public:
 		bool requires_human = false
 	);
 
+	void form_route(std::string method,
+		std::string path,
+		std::function<std::string(JsonObject*)> function,
+		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),
+		std::chrono::milliseconds rate_limit = std::chrono::milliseconds(0),
+		bool requires_human = false
+	);
+
 	void route(std::string method,
 		std::string path,
 		std::function<std::string(JsonObject*, JsonObject*)> function,

@@ -5,6 +5,11 @@
 # yum makecache fast
 # yum -y upgrade
 
+if [ $# -lt 1 ]; then
+	echo "Usage: pgsql-centos7.sh <password>"
+	exit
+fi
+
 yum -y install postgresql-server postgresql-contrib postgresql-libs postgis
 
 export PGDATA=/data

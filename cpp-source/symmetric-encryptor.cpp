@@ -110,7 +110,7 @@ std::string SymmetricEncryptor::decrypt(std::string data){
 		new CryptoPP::StringSink(encrypted_data)));
 
 	if(encrypted_data.length() % 32 != 0 || encrypted_data.length() == 0){
-		throw std::runtime_error("Bad encrpyted data size (" + std::to_string(encrypted_data.length()) + ").");
+		//throw std::runtime_error("Bad encrpyted data size (" + std::to_string(encrypted_data.length()) + ").");
 	}
 
 	CryptoPP::StringSource pipeline2(encrypted_data, true,

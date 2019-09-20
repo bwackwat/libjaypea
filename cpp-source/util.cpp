@@ -22,7 +22,7 @@
 std::vector<struct Argument*> Util::arguments;
 
 bool Util::verbose = false;
-std::string Util::config_path = "extras/configuration.json";
+std::string Util::config_path = "artifacts/configuration.json";
 std::string Util::libjaypea_path;
 JsonObject Util::config_object;
 
@@ -324,6 +324,58 @@ void Util::set_blocking(int fd){
 	fcntl(fd, F_SETFL, flags);
 }
 
+std::string Util::urlEncode(std::string str){
+	std::string new_str = "";
+	char c;
+	int ic;
+	const char* chars = str.c_str();
+	char bufHex[10];
+	size_t len = strlen(chars);
+
+	for(size_t i = 0; i < len; i++){
+		c = chars[i];
+		ic = c;
+
+		if(c==' '){
+			new_str += '+';
+		}else if(isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~'){
+			new_str += c;
+		}else{
+			sprintf(bufHex,"%X",c);
+			if(ic < 16){
+				new_str += "%0"; 
+			}else{
+				new_str += "%";
+			}
+			new_str += bufHex;
+		}
+	}
+	return new_str;
+}
+
+std::string Util::urlDecode(std::string str){
+	std::string result;
+	char ch;
+	size_t i, len = str.length();
+	int ii;
+
+	for(i = 0; i < len; i++){
+		if(str[i] != '%'){
+			if(str[i] == '+'){
+				result += ' ';
+			}else{
+				result += str[i];
+			}
+		}else{
+			sscanf(str.substr(i + 1, 2).c_str(), "%x", &ii);
+			ch = static_cast<char>(ii);
+			result += ch;
+			i = i + 2;
+		}
+	}
+	return result;
+}
+
 std::string Util::get_redirection_html(const std::string& hostname){
 	std::string response_body = "<!doctype html><html>\n"
 		"<head>\n"
@@ -535,6 +587,59 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 		
 		request_obj->parse(it);
 		return HTTP_API;
+	}else if(request_obj->HasObj("Content-Type", STRING) && request_obj->GetStr("Content-Type") == "application/x-www-form-urlencoded"){
+		DEBUG(it)
+		
+		state = 1;
+		new_key = "";
+		new_value = "";
+
+		/*
+			1 = get encoded key
+			2 = get encoded value
+		*/
+
+		for(; *it; ++it){
+			switch(*it){
+			case '&':
+				if(!request_obj->objectValues.count(new_key)){
+					request_obj->objectValues[new_key] = new JsonObject();
+				}
+				request_obj->objectValues[new_key]->type = NOTYPE;
+				request_obj->objectValues[new_key]->parse(new_value.c_str());
+				if(request_obj->objectValues[new_key]->type == NOTYPE){
+					request_obj->objectValues[new_key]->type = STRING;
+					request_obj->objectValues[new_key]->stringValue = urlDecode(new_value);
+				}
+				state = 1;
+				new_key = "";
+				new_value = "";
+				continue;
+			case '=':
+				state = 2;
+				continue;
+			default:
+				if(state == 1){
+					new_key += *it;
+				}else if(state == 2){
+					new_value += *it;
+				}
+			}
+		}
+		// Save the final value.
+		if(state == 2){
+			if(!request_obj->objectValues.count(new_key)){
+				request_obj->objectValues[new_key] = new JsonObject();
+			}
+			request_obj->objectValues[new_key]->type = NOTYPE;
+			request_obj->objectValues[new_key]->parse(new_value.c_str());
+			if(request_obj->objectValues[new_key]->type == NOTYPE){
+				request_obj->objectValues[new_key]->type = STRING;
+				request_obj->objectValues[new_key]->stringValue = urlDecode(new_value);
+			}
+		}
+		DEBUG(request_obj->stringify())
+		return HTTP_FORM;
 	}
 
 	return HTTP;

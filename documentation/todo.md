@@ -2,6 +2,14 @@
 
 This is where my TODO list piles up forever. It is basically a detailed log of the sticky notes which I write improvements on, collect on my desk, and begin to ignore.
 
+## 9/18/2019
+
+1. API route signatures are limited. URL parameters are different form or JSON parameters, so there are many ways to expect data. Solution here involves having a few more route() overrides with different required parameter types.
+2. Encrypt passwords on the client side using session-based keys. This prevents unencrypted passwords from being found in log files, etc.
+3. Make the jph2.netAPI more RESTful.
+4. JSON-based database modeling. Migrations need to be able to reliably diff JSON and appropriately update PostgreSQL. This could be a large implementation. Simpler to hack Django and use those migrations?
+5. 
+
 ## 8/8/2018
 
 1. Eliminate all memory leaks. Most are not harmful. Use valgrind and Electric Fence as noted in build-prefix.sh.

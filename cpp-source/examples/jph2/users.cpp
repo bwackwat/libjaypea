@@ -19,6 +19,9 @@ auto create_user = [&](JsonObject* json)->std::string{
 	JsonObject* temp_users = users->All();
 	
 	if(json->objectValues["values"]->HasObj("password", STRING)){
+		if(json->objectValues["values"]->objectValues["password"]->stringValue.length() < 16){
+			return "{\"error\":\"Password must have at least 16 characters.\"}";
+		}
 		json->objectValues["values"]->objectValues["password"]->stringValue = 
 			Util::hash_value_argon2d(json->objectValues["values"]->objectValues["password"]->stringValue);
 	}
@@ -52,6 +55,9 @@ auto update_user = [&](JsonObject* json, JsonObject* token)->std::string{
 		json->objectValues.erase("id");
 	}
 	if(json->objectValues["values"]->objectValues.count("password")){
+		if(json->objectValues["values"]->objectValues["password"]->stringValue.length() < 16){
+			return "{\"error\":\"Password must have at least 16 characters.\"}";
+		}
 		json->objectValues["values"]->objectValues["password"]->stringValue = 
 			Util::hash_value_argon2d(json->objectValues["values"]->objectValues["password"]->stringValue);
 	}

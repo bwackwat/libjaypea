@@ -68,6 +68,7 @@ struct Argument {
 enum RequestResult {
 	HTTP,
 	HTTP_API,
+	HTTP_FORM,
 	API,
 	JSON
 };
@@ -100,6 +101,8 @@ public:
 	static bool strict_compare_inequal(const char* first, const char* second, int count = -1);
 	static void set_non_blocking(int fd);
 	static void set_blocking(int fd);
+	static std::string urlEncode(std::string str);
+	static std::string urlDecode(std::string str);
 
 	static std::string get_redirection_html(const std::string& hostname);
 	static bool endsWith(const std::string& str, const std::string& suffix);

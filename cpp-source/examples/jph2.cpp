@@ -6,6 +6,7 @@
 #include "pgsql-model.hpp"
 #include "websocket-server.hpp"
 #include "tls-websocket-server.hpp"
+#include "tls-client-manager.hpp"
 
 int main(int argc, char **argv){
 	#include "jph2/initialization.cpp"
@@ -13,7 +14,7 @@ int main(int argc, char **argv){
 	#include "jph2/models.cpp"
 	
 	api.route("GET", "/", [&](JsonObject*)->std::string{
-		return "{\"result\":\"Welcome to the API V1!\"}";
+		return "{\"result\":\"Welcome to the jph2.net API!\"}";
 	});
 	
 	api.route("GET", "/routes", [&](JsonObject*)->std::string{
@@ -69,6 +70,23 @@ int main(int argc, char **argv){
 	#include "jph2/http-redirecter.cpp"
 	
 	#include "jph2/tanks-wss.cpp"
+
+	api.form_route("POST", "/contact.html", [&](JsonObject* json)->std::string{
+		if(json->GetStr("message").length() < 10){
+			return "{\"error\":\"Please send a message...\"}";
+		}
+		char response[PACKET_LIMIT];
+
+		if(http_client.post(443, "api.sendgrid.com", "/v3/mail/send",
+		{{"Content-Type", "application/json"},
+		{"Authorization", "Bearer " + sendgrid_key}},
+		"{\"personalizations\": [{\"to\": [{\"email\": \"" + admin_email + "\"}]}],\"from\": {\"email\": \"" + admin_email + "\"},\"subject\": \"Message from " + json->GetStr("name") + "\",\"content\": [{\"type\": \"text/plain\", \"value\": \"" + json->GetStr("email") + json->GetStr("message") + "\"}]}",
+		response)){
+			PRINT("FAILED TO SEND EMAIL: " + json->GetStr("name") + ", " + json->GetStr("email") + ", " + json->GetStr("message"))
+		}
+
+		return "{\"status\":\"Sent.\"}";
+	}, {{"secret", STRING}, {"name", STRING}, {"email", STRING}, {"message", STRING}}, std::chrono::seconds(2));
 	
 	#if defined(DO_DEBUG)
 		api.route("GET", "/end", [&](JsonObject*)->std::string{

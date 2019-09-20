@@ -7,9 +7,10 @@
 #include <iostream>
 
 #include "json.hpp"
+#include "util.hpp"
 
-//#define DEBUG(msg) std::cout << msg << std::endl;
-#define DEBUG(msg)
+//#define JDEBUG(msg) std::cout << msg << std::endl;
+#define JDEBUG(msg)
 #define PRINT(msg) std::cout << msg << std::endl;
 
 std::map<enum JsonType, std::string> JsonObject::typeString = {
@@ -25,14 +26,14 @@ const char* JsonObject::parse(const char* str){
 	JsonObject* value;
 	const char* it;
 	
-	DEBUG("PARSE: " << str)
+	JDEBUG("PARSE: " << str)
 
 	for(it = str; *it; ++it){
-		DEBUG("LOOP:" << it)
+		JDEBUG("LOOP:" << it)
 		switch(*it){
 		case '\\':
 			++it;
-			DEBUG("ESCAPE TO: " << *it)
+			JDEBUG("ESCAPE TO: " << *it)
 			if(*it == 'n' ||
 			*it == 'r' ||
 			*it == 't'){
@@ -42,11 +43,11 @@ const char* JsonObject::parse(const char* str){
 		case '"':
 			if(this->type == NOTYPE){
 				this->type = STRING;
-				DEBUG("START STRING")
+				JDEBUG("START STRING")
 				continue;
 			}else if(this->type == STRING){
 				this->stringValue = ss.str();
-				DEBUG("SET STRING")
+				JDEBUG("SET STRING")
 				return ++it;
 			}else if(this->type == OBJECT){
 				if(objState == NOSTATE){
@@ -54,76 +55,76 @@ const char* JsonObject::parse(const char* str){
 					continue;
 				}else if(objState == GETKEY){
 					objState = GOTKEY;
-					DEBUG("GOT OBJ KEY: " << ss.str())
+					JDEBUG("GOT OBJ KEY: " << ss.str())
 					continue;
 				}
 			}else if(this->type == ARRAY){
-				DEBUG(*it << "NEW ARRAY STR")
+				JDEBUG(*it << "NEW ARRAY STR")
 				value = new JsonObject();
 				it = value->parse(it);
 				--it;
 				arrayValues.push_back(value);
-				DEBUG(*it << "GOT STR: " << value->stringify())
+				JDEBUG(*it << "GOT STR: " << value->stringify())
 				continue;
 			}
 			break;
 		case '{':
 			if(this->type == NOTYPE){
 				this->type = OBJECT;
-				DEBUG("START OBJ")
+				JDEBUG("START OBJ")
 				continue;
 			}else if(this->type == ARRAY){
-				DEBUG("PARSE OBJ")
+				JDEBUG("PARSE OBJ")
 				value = new JsonObject();
 				it = value->parse(it);
 				arrayValues.push_back(value);
-				DEBUG(*it << "GOT OBJ: " << value->stringify())
+				JDEBUG(*it << "GOT OBJ: " << value->stringify())
 			}
 			break;
 		case '}':
 			if(this->type == OBJECT){
 				if(objState == NOSTATE){
-					DEBUG(*it << "ENDOBJECT")
+					JDEBUG(*it << "ENDOBJECT")
 					return it;
 				}else{
-					DEBUG("EXTRA!!! " << *it)
+					JDEBUG("EXTRA!!! " << *it)
 				}
 			}else if(this->type == ARRAY){
-				DEBUG("EXPECTED ] ! or else")
+				JDEBUG("EXPECTED ] ! or else")
 				return it;
 			}else{
-				DEBUG("GOT } !?!?!?!?!!?!?")
+				JDEBUG("GOT } !?!?!?!?!!?!?")
 			}
 			break;
 		case '[':
 			if(this->type == NOTYPE){
 				this->type = ARRAY;
-				DEBUG("START ARRAY")
+				JDEBUG("START ARRAY")
 				continue;
 			}/*else if(this->type == STRING){
 				this->stringValue = ss.str();
-				DEBUG("RESCUE STRING FROM ARRAY START")
+				JDEBUG("RESCUE STRING FROM ARRAY START")
 				return ++it;
 			}*/else if(this->type == ARRAY){
 				value = new JsonObject();
 				it = value->parse(it);
 				arrayValues.push_back(value);
-				DEBUG("GOT ARR: " << value->stringify())
+				JDEBUG("GOT ARR: " << value->stringify())
 				continue;
 			}
 			break;
 		case ']':
 			if(this->type == ARRAY){
-				DEBUG("ARRAYEND")
+				JDEBUG("ARRAYEND")
 				return it;
 			}/*else if(this->type == STRING){
 				this->stringValue = ss.str();
-				DEBUG("RESCUE STRING FROM ARRAY END")
+				JDEBUG("RESCUE STRING FROM ARRAY END")
 				return it;
 			}*/else if(this->type == OBJECT){
 				if(objState != GETKEY &&
 				objState != GETVALUE){
-					DEBUG("RESCUE OBJECT FROM ARRAY END")
+					JDEBUG("RESCUE OBJECT FROM ARRAY END")
 					return it;
 				}
 			}
@@ -131,18 +132,18 @@ const char* JsonObject::parse(const char* str){
 		case ':':
 			if(this->type == OBJECT){
 				if(objState == GOTKEY){
-					DEBUG("GETTING VAL!")
+					JDEBUG("GETTING VAL!")
 					value = new JsonObject();
 					it = value->parse(it);
 					if(value->type != OBJECT && value->type != ARRAY){
-						DEBUG("IS A | " << typeString[value->type])
+						JDEBUG("IS A | " << typeString[value->type])
 						--it;
 					}
 					objectValues[ss.str()] = value;
-					DEBUG("GOT VAL: " << value->stringify() << " FOR " << ss.str())
+					JDEBUG("GOT VAL: " << value->stringify() << " FOR " << ss.str())
 					ss.str(std::string());
 					objState = NOSTATE;
-					DEBUG("... " << it)
+					JDEBUG("... " << it)
 				}
 			}
 			break;
@@ -165,9 +166,9 @@ std::string JsonObject::escape(std::string value){
 	escaped << '"';
 	for(size_t i = 0; i < value.length(); ++i){
 		if(static_cast<int>(value[i]) < 32 || static_cast<int>(value[i]) > 126){
-			DEBUG("WEIRD: " << value << " " << i << " " << value[i])
-			DEBUG("WEIRD: " << value << " " << i << " " << std::hex << static_cast<int>(value[i]))
-			DEBUG("WEIRD: " << value << " " << i << " " << std::dec << static_cast<int>(value[i]))
+			JDEBUG("WEIRD: " << value << " " << i << " " << value[i])
+			JDEBUG("WEIRD: " << value << " " << i << " " << std::hex << static_cast<int>(value[i]))
+			JDEBUG("WEIRD: " << value << " " << i << " " << std::dec << static_cast<int>(value[i]))
 		}
 		if(value[i] == '\n'){
 			escaped << "\\n";
@@ -311,6 +312,14 @@ std::string JsonObject::GetStr(const char* key){
 		throw new std::exception();
 	}
 	return this->objectValues[key]->stringValue;
+}
+
+std::string JsonObject::GetURLDecodedStr(const char* key){
+	if(!this->objectValues.count(key)){
+		PRINT("Missing key: " << key)
+		throw new std::exception();
+	}
+	return Util::urlDecode(this->objectValues[key]->stringValue);
 }
 
 JsonObject* JsonObject::operator[](const char* key){

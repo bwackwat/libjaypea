@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ $# -lt 5 ]; then
-	echo "Usage: deploy.sh <install directory> <username> <application name> <hostname> <db password>"
+if [ $# -lt 8 ]; then
+	echo "Usage: deploy.sh <install directory> <username> <application name> <hostname> <db password> <http port> <https port> <tanks port>"
 	exit
 fi
 
@@ -27,9 +27,9 @@ python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "sc
 
 # Start the application server.
 
-python -u scripts/python/watcher.py artifacts/$3 "artifacts/$3 --chat_port 11000 -key artifacts/ssl.key -crt artifacts/ssl.crt -pcs \"dbname=webservice user=$2 password=$5\"" forever > logs/$3-watcher.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/$3 "artifacts/$3" forever > logs/$3-watcher.log 2>&1 &
 
-./scripts/dead-site-checker.py https://localhost:10443 artifacts/jph2 > logs/dead-site-checker.log 2>&1 &
+./scripts/dead-site-checker.sh https://localhost:$6 artifacts/jph2 > logs/dead-site-checker.log 2>&1 &
 
 EOF
 
@@ -58,9 +58,9 @@ EOF
 systemctl enable libjaypea
 
 firewall-offline-cmd --zone=public --add-masquerade
-firewall-offline-cmd --zone=public --add-forward-port=port=80:proto=tcp:toport=10080
-firewall-offline-cmd --zone=public --add-forward-port=port=443:proto=tcp:toport=10443
-firewall-offline-cmd --zone=public --add-forward-port=port=8000:proto=tcp:toport=11000
+firewall-offline-cmd --zone=public --add-forward-port=port=80:proto=tcp:toport=$6
+firewall-offline-cmd --zone=public --add-forward-port=port=443:proto=tcp:toport=$7
+firewall-offline-cmd --zone=public --add-forward-port=port=8000:proto=tcp:toport=$8
 
 # Must stop http-redirecter.
 # certbot certonly --standalone --http-01-port 10080 --domain $4 -n --agree-tos --email $6

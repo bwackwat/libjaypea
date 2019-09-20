@@ -25,8 +25,6 @@ systemctl restart firewalld
 systemctl enable ntpd
 systemctl restart ntpd
 
-mkdir -p artifacts
-
 # Build argon2.
 # 9/17/2019 NO LONGER NECESSARY.
 # Argon2 is now grabbed from yum.

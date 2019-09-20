@@ -52,6 +52,7 @@ void EventClient::run(std::function<ssize_t(int, const char*, size_t)> new_on_re
 			}
 		}
 		running = false;
+		PRINT("TRY ");
 		for(Connection* connection : this->connections){
 			switch(connection->state){
 			case DISCONNECTED:
@@ -107,6 +108,7 @@ void EventClient::run(std::function<ssize_t(int, const char*, size_t)> new_on_re
 							this->close_client(connection);
 						}
 					}
+					PRINT("Connected.")
 				}
 				running = true;
 				break;
