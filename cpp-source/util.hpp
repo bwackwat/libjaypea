@@ -101,14 +101,15 @@ public:
 	static bool strict_compare_inequal(const char* first, const char* second, int count = -1);
 	static void set_non_blocking(int fd);
 	static void set_blocking(int fd);
-	static std::string urlEncode(std::string str);
-	static std::string urlDecode(std::string str);
+	static std::string url_encode(std::string str);
+	static std::string url_decode(std::string str);
+	static void replace_all(std::string& source, const std::string& from, const std::string& to); 
 
 	static std::string get_redirection_html(const std::string& hostname);
 	static bool endsWith(const std::string& str, const std::string& suffix);
 	static bool startsWith(const std::string& str, const std::string& prefix);
 
-	static enum RequestResult parse_http_api_request(const char* request, JsonObject* request_obj);
+	static enum RequestResult parse_http_request(const char* request, JsonObject* request_obj);
 
 	static std::string sha256_hash(std::string data);
 	static std::string hash_value_argon2d(std::string password);

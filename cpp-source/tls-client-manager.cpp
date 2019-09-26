@@ -110,6 +110,9 @@ bool TlsClientManager::post(uint16_t port, std::string hostname, std::string pat
 	for(auto iter = headers.begin(); iter != headers.end(); ++iter){
 		request += iter->first + ": " + iter->second + "\n";
 	}
+
+	//std::regex_replace(body, std::regex("\n"), "<br>");
+	Util::replace_all(body, "\r\n", "<br>");
 	
 	request += "Content-Length: " + std::to_string(body.length()) + "\r\n\r\n";
 	request += body;

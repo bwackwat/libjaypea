@@ -27,9 +27,41 @@
 #define INSUFFICIENT_ACCESS "{\"error\":\"Insufficient access.\"}"
 #define NO_SUCH_ITEM "{\"error\":\"That record doesn't exist.\"}"
 
+class HttpResponse{
+public:
+	std::string start = "HTTP/1.1";
+	std::string status = "200 Ok";
+	std::unordered_map<std::string, std::string> headers = std::unordered_map<std::string, std::string>();
+	std::string body = "";
+
+	std::string str(){
+		std::string response = start + " " + status + "\r\n";
+		for(auto iter = this->headers.begin(); iter != this->headers.end(); ++iter){
+			response += iter->first + ": " + iter->second + "\r\n";
+		}
+		response += "\r\n";
+		return response + this->body;
+	}
+};
+
+class View{
+public:
+	std::string route = "";
+	std::unordered_map<std::string, std::string> parameters = std::unordered_map<std::string, std::string>();
+
+	View(){}
+
+	View(std::string new_route)
+	:route(new_route){}
+	
+	View(std::string new_route, std::unordered_map<std::string, std::string> new_parameters)
+	:route(new_route), parameters(new_parameters){}
+};
+
 class Route{
 public:
 	std::function<std::string(JsonObject*)> function;
+	std::function<View(JsonObject*)> form_function;
 	std::function<std::string(JsonObject*, JsonObject*)> token_function;
 	std::function<ssize_t(JsonObject*, int)> raw_function;
 
@@ -44,6 +76,16 @@ public:
 		std::chrono::milliseconds new_rate_limit,
 		bool new_requires_human)
 	:function(new_function),
+	requires(new_requires),
+	requires_human(new_requires_human),
+	minimum_ms_between_call(new_rate_limit)
+	{}
+
+	Route(std::function<View(JsonObject*)> new_function,
+		std::unordered_map<std::string, JsonType> new_requires,
+		std::chrono::milliseconds new_rate_limit,
+		bool new_requires_human)
+	:form_function(new_function),
 	requires(new_requires),
 	requires_human(new_requires_human),
 	minimum_ms_between_call(new_rate_limit)
@@ -96,13 +138,13 @@ public:
 
 	void form_route(std::string method,
 		std::string path,
-		std::function<std::string(JsonObject*)> function,
+		std::function<View(JsonObject*)> function,
 		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),
 		std::chrono::milliseconds rate_limit = std::chrono::milliseconds(0),
 		bool requires_human = false
 	);
 
-	void route(std::string method,
+	void authenticated_route(std::string method,
 		std::string path,
 		std::function<std::string(JsonObject*, JsonObject*)> function,
 		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),
@@ -110,7 +152,7 @@ public:
 		bool requires_human = false
 	);
 
-	void route(std::string method,
+	void raw_route(std::string method,
 		std::string path,
 		std::function<ssize_t(JsonObject*, int)> function,
 		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),

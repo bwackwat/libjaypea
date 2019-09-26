@@ -42,6 +42,7 @@ public:
 	
 	bool HasObj(const std::string& key, enum JsonType t);
 	std::string GetStr(const char* key);
+	std::string GetURLEncodedStr(const char* key);
 	std::string GetURLDecodedStr(const char* key);
 	JsonObject* operator[](const char* index);
 	JsonObject* operator[](size_t index);

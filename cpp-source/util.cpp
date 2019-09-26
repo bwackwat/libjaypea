@@ -324,7 +324,7 @@ void Util::set_blocking(int fd){
 	fcntl(fd, F_SETFL, flags);
 }
 
-std::string Util::urlEncode(std::string str){
+std::string Util::url_encode(std::string str){
 	std::string new_str = "";
 	char c;
 	int ic;
@@ -353,7 +353,7 @@ std::string Util::urlEncode(std::string str){
 	return new_str;
 }
 
-std::string Util::urlDecode(std::string str){
+std::string Util::url_decode(std::string str){
 	std::string result;
 	char ch;
 	size_t i, len = str.length();
@@ -374,6 +374,19 @@ std::string Util::urlDecode(std::string str){
 		}
 	}
 	return result;
+}
+
+void Util::replace_all(std::string& source, const std::string& from, const std::string& to){
+	// std::string::size_type position = 0;
+	// while((position = source.find(from, position)) != std::string::npos){
+	// 	source.replace(position, from.size(), to);
+	// 	position += to.size();
+	// }
+		size_t position = 0;
+	while((position = source.find(from, position)) != std::string::npos) {
+		source.replace(position, from.length(), to);
+		position += to.length();
+	}
 }
 
 std::string Util::get_redirection_html(const std::string& hostname){
@@ -400,7 +413,7 @@ std::string Util::get_redirection_html(const std::string& hostname){
 	return response;
 }
 
-enum RequestResult Util::parse_http_api_request(const char* request, JsonObject* request_obj){
+enum RequestResult Util::parse_http_request(const char* request, JsonObject* request_obj){
 	const char* it = request;
 	bool exit_http_parse = false;
 	
@@ -609,7 +622,8 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 				request_obj->objectValues[new_key]->parse(new_value.c_str());
 				if(request_obj->objectValues[new_key]->type == NOTYPE){
 					request_obj->objectValues[new_key]->type = STRING;
-					request_obj->objectValues[new_key]->stringValue = urlDecode(new_value);
+					//request_obj->objectValues[new_key]->stringValue = urlDecode(new_value);
+					request_obj->objectValues[new_key]->stringValue = new_value;
 				}
 				state = 1;
 				new_key = "";
@@ -635,7 +649,8 @@ enum RequestResult Util::parse_http_api_request(const char* request, JsonObject*
 			request_obj->objectValues[new_key]->parse(new_value.c_str());
 			if(request_obj->objectValues[new_key]->type == NOTYPE){
 				request_obj->objectValues[new_key]->type = STRING;
-				request_obj->objectValues[new_key]->stringValue = urlDecode(new_value);
+				//request_obj->objectValues[new_key]->stringValue = urlDecode(new_value);
+				request_obj->objectValues[new_key]->stringValue = new_value;
 			}
 		}
 		DEBUG(request_obj->stringify())
@@ -659,7 +674,7 @@ std::string Util::sha256_hash(std::string data){
 
 bool Util::endsWith(const std::string& str, const std::string& suffix)
 {
-	return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+	return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
 }
 
 bool Util::startsWith(const std::string& str, const std::string& prefix)

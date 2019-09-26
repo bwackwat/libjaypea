@@ -8,6 +8,7 @@
 #include <typeinfo>
 #include <atomic>
 #include <cstdio>
+#include <regex>
 
 #include <stdio.h>
 #include <stdarg.h>

@@ -161,7 +161,7 @@ public:
 		}
 
 		JsonObject request_obj(OBJECT);
-		Util::parse_http_api_request(data, &request_obj);
+		Util::parse_http_request(data, &request_obj);
 		//DEBUG("JPON: " << request_obj.stringify(true))
 		if(!request_obj.HasObj("Sec-WebSocket-Key", STRING)){
 			DEBUG("Bad websocket request.")

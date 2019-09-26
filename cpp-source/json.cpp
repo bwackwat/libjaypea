@@ -314,14 +314,22 @@ std::string JsonObject::GetStr(const char* key){
 	return this->objectValues[key]->stringValue;
 }
 
+std::string JsonObject::GetURLEncodedStr(const char* key){
+	if(!this->objectValues.count(key)){
+		PRINT("Missing key: " << key)
+		throw new std::exception();
+	}
+	return Util::url_encode(this->objectValues[key]->stringValue);
+}
+
+
 std::string JsonObject::GetURLDecodedStr(const char* key){
 	if(!this->objectValues.count(key)){
 		PRINT("Missing key: " << key)
 		throw new std::exception();
 	}
-	return Util::urlDecode(this->objectValues[key]->stringValue);
+	return Util::url_decode(this->objectValues[key]->stringValue);
 }
-
 JsonObject* JsonObject::operator[](const char* key){
 	return this->objectValues[key];
 }
