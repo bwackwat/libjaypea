@@ -102,12 +102,8 @@ void HttpApi::start(void){
 	};
 
 	this->server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
-		//DEBUG("RECV:" << data)
-		
 		JsonObject request_object(OBJECT);
 		enum RequestResult request_type = Util::parse_http_request(data, &request_object);
-		
-		DEBUG("JSON: " << request_object.stringify(true))
 		
 		View view;
 		HttpResponse response;
@@ -177,6 +173,8 @@ void HttpApi::start(void){
 					response.headers["Content-Type"] = "text/html";
 				}else if(Util::endsWith(clean_route, ".svg")){
 					response.headers["Content-Type"] = "image/svg+xml";
+				}else if(Util::endsWith(clean_route, ".js")){
+					response.headers["Content-Type"] = "text/javascript";
 				}else{
 					response.headers["Content-Type"] = "text/plain";
 				}
@@ -197,6 +195,7 @@ void HttpApi::start(void){
 							// Send entire response with updated length.
 							response.headers["Content-Length"] = std::to_string(response.body.length());
 							std::string result = response.str();
+							response.body.clear();
 							if(this->server->send(fd, result.c_str(), result.length())){
 								return -1;
 							}
@@ -204,6 +203,7 @@ void HttpApi::start(void){
 							// Send headers.
 							response.headers["Content-Length"] = std::to_string(cached_file->data_length);
 							std::string result = response.str();
+							response.body.clear();
 							if(this->server->send(fd, result.c_str(), result.length())){
 								return -1;
 							}
@@ -223,12 +223,13 @@ void HttpApi::start(void){
 							}
 						}
 					}
-					PRINT("Cached file served: " << clean_route)
+					DEBUG("Cached file served: " << clean_route << " with " << cached_file->data_length << " bytes as " << response.headers["Content-Type"])
 				}else{
 					// Only send headers if HEAD.
 					if(request_object.GetStr("method") == "HEAD"){
 						response.headers["Content-Length"] = std::to_string(route_stat.st_size);
 						std::string result = response.str();
+						response.body.clear();
 						if(this->server->send(fd, result.c_str(), result.length())){
 							return -1;
 						}
@@ -251,6 +252,7 @@ void HttpApi::start(void){
 						if(route_stat.st_size >= BUFFER_LIMIT || !is_html){
 							response.headers["Content-Length"] = std::to_string(route_stat.st_size);
 							std::string result = response.str();
+							response.body.clear();
 							if(this->server->send(fd, result.c_str(), result.length())){
 								return -1;
 							}
@@ -293,6 +295,7 @@ void HttpApi::start(void){
 								// Send headers with updated length.
 								response.headers["Content-Length"] = std::to_string(response.body.length());
 								std::string result = response.str();
+								response.body.clear();
 								if(this->server->send(fd, result.c_str(), result.length())){
 									if(cached_file != 0){
 										this->file_cache_mutex.unlock();
@@ -488,4 +491,3 @@ HttpApi::~HttpApi(){
 	}
 	DEBUG("API DELETED")
 }
-

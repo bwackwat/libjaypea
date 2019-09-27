@@ -222,6 +222,7 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 	}
 	if(err != SSL_ERROR_NONE){
 		ERROR("SSL_accept " << *new_client_fd << ';' << err)
+		ERR_print_errors_fp(stdout);
 		return true;
 	}
 	DEBUG(this->name << ": SSL_accept took milliseconds: " << diff.count())

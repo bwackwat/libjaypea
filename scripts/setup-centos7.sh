@@ -13,7 +13,7 @@ yum -y install epel-release
 
 yum -y install git firewalld fail2ban certbot ntp gperftools psmisc git-lfs
 yum -y install clang gcc-c++ libpqxx-devel vim python-pip python-devel
-yum -y install libstdc++-static libstdc++ cryptopp cryptopp-devel openssl openssl-devel argon2
+yum -y install libstdc++-static libstdc++ cryptopp cryptopp-devel openssl openssl-devel argon2 libargon2-devel
 
 pip install --upgrade pip
 pip install psutil
