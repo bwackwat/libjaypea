@@ -29,6 +29,11 @@
 
 class HttpResponse{
 public:
+	HttpResponse(){}
+
+	HttpResponse(std::string new_status, std::unordered_map<std::string, std::string> new_headers, std::string new_body)
+	:status(new_status), headers(new_headers), body(new_body){}
+
 	std::string start = "HTTP/1.1";
 	std::string status = "200 Ok";
 	std::unordered_map<std::string, std::string> headers = std::unordered_map<std::string, std::string>();
@@ -48,6 +53,7 @@ class View{
 public:
 	std::string route = "";
 	std::unordered_map<std::string, std::string> parameters = std::unordered_map<std::string, std::string>();
+	ssize_t size;
 
 	View(){}
 
@@ -171,4 +177,10 @@ private:
 	SymmetricEncryptor* encryptor;
 
 	std::unordered_map<std::string, Route*> routemap;
+
+	ssize_t respond(int fd, HttpResponse* response);
+	ssize_t respond_404(int fd);
+	ssize_t respond_cached_file(int fd, HttpResponse* response, CachedFile* cached_file);
+	ssize_t respond_parameterized_view(int fd, View* view, HttpResponse* response);
+	ssize_t respond_view(int fd, View* view, HttpResponse* response);
 };

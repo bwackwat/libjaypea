@@ -86,7 +86,7 @@ int main(int argc, char **argv){
 		}
 
 		return View("/thanks.html");
-	}, {{"secret", STRING}, {"name", STRING}, {"email", STRING}, {"message", STRING}}, std::chrono::seconds(10));
+	}, {{"secret", STRING}, {"name", STRING}, {"email", STRING}, {"message", STRING}}, std::chrono::seconds(10), true);
 	
 	#if defined(DO_DEBUG)
 		api.route("GET", "/end", [&](JsonObject*)->std::string{

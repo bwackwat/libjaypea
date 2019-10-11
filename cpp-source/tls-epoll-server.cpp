@@ -124,6 +124,16 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 	return false;
 }
 
+/**
+ * See TlsEpollServer::send(int fd, const char* data, size_t data_length)
+ */ 
+ssize_t TlsEpollServer::send(int fd, std::string data){
+	if(this->send(fd, data.c_str(), data.length())){
+		return -1;
+	}
+	return data.length();
+}
+
 ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length){
 	return this->recv(fd, data, data_length, this->on_read);
 }

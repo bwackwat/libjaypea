@@ -111,14 +111,10 @@ bool TlsClientManager::post(uint16_t port, std::string hostname, std::string pat
 		request += iter->first + ": " + iter->second + "\n";
 	}
 
-	//std::regex_replace(body, std::regex("\n"), "<br>");
 	Util::replace_all(body, "\r\n", "<br>");
 	
 	request += "Content-Length: " + std::to_string(body.length()) + "\r\n\r\n";
 	request += body;
-
-	PRINT("\nREQUEST:")
-	PRINT(request)
 
 	return this->communicate(hostname, port, request.c_str(), request.length(), response);
 }
@@ -128,9 +124,6 @@ bool TlsClientManager::get(uint16_t port, std::string hostname, std::string path
 	request += "Host: " + hostname + "\n";
 	request += "Connection: close\n";
 	request += "Accept: */*\r\n\r\n";
-
-	PRINT("\nREQUEST:")
-	PRINT(request)
 
 	return this->communicate(hostname, port, request.c_str(), request.length(), response);
 }
@@ -197,14 +190,12 @@ bool TlsClientManager::communicate(std::string hostname, uint16_t port, const ch
 		PRINT("Client problem sending...")
 		return true;
 	}
-	DEBUG("sent: " << request)
 
 	if(this->recv(ssl, response, PACKET_LIMIT) < 0){
 		SSL_free(ssl);
 		PRINT("Client problem receiving...")
 		return true;
 	}
-	DEBUG("received: " << response)
 
 	SSL_free(ssl);
 	return false;
