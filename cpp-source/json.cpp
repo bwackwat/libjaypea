@@ -289,7 +289,6 @@ JsonObject::JsonObject(enum JsonType new_type)
 JsonObject::JsonObject(std::string new_stringValue)
 :type(STRING), stringValue(new_stringValue){}
 
-// NOTYPE is important in this constructor for the parsing strategy.
 JsonObject::JsonObject()
 :type(NOTYPE){}
 
@@ -321,7 +320,6 @@ std::string JsonObject::GetURLEncodedStr(const char* key){
 	}
 	return Util::url_encode(this->objectValues[key]->stringValue);
 }
-
 
 std::string JsonObject::GetURLDecodedStr(const char* key){
 	if(!this->objectValues.count(key)){

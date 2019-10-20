@@ -616,15 +616,16 @@ enum RequestResult Util::parse_http_request(const char* request, JsonObject* req
 }
 
 std::string Util::sha256_hash(std::string data){
-	std::string hash;
 	CryptoPP::SHA256 hasher;
+	std::string digest;
 
 	CryptoPP::StringSource source(data, true,
 		new CryptoPP::HashFilter(hasher,
-		new CryptoPP::Base64Encoder(
-		new CryptoPP::StringSink(hash))));
+	//	new CryptoPP::Base64Encoder(
+		new CryptoPP::HexEncoder(
+		new CryptoPP::StringSink(digest))));
 
-	return hash;
+	return digest;
 }
 
 bool Util::endsWith(const std::string& str, const std::string& suffix)

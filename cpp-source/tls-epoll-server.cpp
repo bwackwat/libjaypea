@@ -187,7 +187,12 @@ std::function<ssize_t(int, char*, size_t)> callback){
 	
 	//DEBUG("SSL_read took milliseconds: " << diff.count())
 	data[len] = 0;
-	return callback(fd, data, static_cast<size_t>(len));
+
+	if(callback(fd, data, static_cast<size_t>(len)) < 0){
+		return -1;
+	}
+
+	return len;
 }
 
 /**

@@ -25,7 +25,7 @@ int main(int argc, char **argv){
 	api.route("POST", "/login", login, {{"username", STRING}, {"password", STRING}}, std::chrono::seconds(1));
 	api.authenticated_route("POST", "/token", check_token);
 	
-	api.route("POST", "/user", create_user, {{"values", OBJECT}}, std::chrono::hours(1));
+	api.route("POST", "/user", create_user, {{"values", OBJECT}}, std::chrono::seconds(2));
 	api.authenticated_route("POST", "/get/users", read_users);
 	api.authenticated_route("PUT", "/user", update_user, {{"values", OBJECT}}, std::chrono::seconds(2));
 	

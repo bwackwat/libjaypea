@@ -53,23 +53,17 @@ bool requires_human){
 static std::random_device rd;
 static std::mt19937 mt(rd());
 static const char captcha_set[] =
-        "23456789$@!+=*"
+        "23456789$@!=*"
         "ABCDEFGHJKMNPQRSTUVWXYZ"
         "abcdefghijkmnpqrstuvwxyz";
 static std::uniform_int_distribution<size_t> distribution(0, sizeof(captcha_set) - 2);
 static std::string get_captcha(){
 	std::string captcha = "";
-	DEBUG(captcha_set)
-	DEBUG(sizeof(captcha_set))
 	for(int i = 0; i < 6; i++){
-		size_t index = distribution(mt);
-		char letter = captcha_set[index];
-		DEBUG(index << ":" << letter)
-		captcha += letter;
+		captcha += captcha_set[distribution(mt)];
 	}
 	return captcha;
 }
-static std::unordered_map<int, std::string> client_captchas;
 
 ssize_t HttpApi::respond(int fd, HttpResponse* response){
 	if(!response->headers.count("Content-Length")){
@@ -229,6 +223,7 @@ ssize_t HttpApi::respond_http(int fd, View* view, HttpResponse* response){
 
 	// If the modified time changed, clear the cache.
 	if(this->file_cache.count(clean_route) && route_stat.st_mtime != this->file_cache[clean_route]->modified){
+		DEBUG("Erase " << clean_route)
 		this->file_cache.erase(clean_route);
 	}
 
@@ -286,9 +281,9 @@ ssize_t HttpApi::respond_http(int fd, View* view, HttpResponse* response){
 
 			return respond(fd, response);
 		}else{
+			DEBUG("Cached file served: " << clean_route << " with " << cached_file->data_length << " bytes as " << response->headers["Content-Type"])
 			return respond_cached_file(fd, response, cached_file);
 		}
-		DEBUG("Cached file served: " << clean_route << " with " << cached_file->data_length << " bytes as " << response->headers["Content-Type"])
 	}else{
 		view->size = route_stat.st_size;
 		if(view->size < BUFFER_LIMIT && is_html){
@@ -298,8 +293,6 @@ ssize_t HttpApi::respond_http(int fd, View* view, HttpResponse* response){
 			return respond_view(fd, view, response);
 		}
 	}
-	
-	return this->respond_404(fd);
 }
 
 void HttpApi::start(void){
@@ -328,23 +321,37 @@ void HttpApi::start(void){
 		//DEBUG(request_object.stringify(true))
 
 
+		Session* session;
 
-		// if(request_object.HasObj("libjaypea-session", STRING)){
-		// }
-		// if(!request_object.HasObj("libjaypea-session", STRING)){
-		// 	std::string input = this->server->fd_to_details_map[fd];
-		// 	if(request_object.HasObj("User-Agent", STRING)){
-		// 		input += request_object.GetStr("User-Agent");
-		// 	}
-		// 	DEBUG("SESSION IN: " << input)
-		// 	std::string output = Util::sha256_hash(input);
-		// 	output[output.length() - 1] = 0;
-		// 	DEBUG("SESSION OUT: " << output)
+		// If the session key is bad or if it has expired (1 hour).
+		if(request_object.HasObj("libjaypea-session", STRING)){
+			if(!this->sessions.count(request_object.GetStr("libjaypea-session"))){
+				request_object.objectValues.erase("libjaypea-session");
+			}else if(std::chrono::duration_cast<std::chrono::seconds>(
+			std::chrono::system_clock::now().time_since_epoch()) - this->sessions[request_object.GetStr("libjaypea-session")]->created
+			> std::chrono::seconds(3600)){
+				request_object.objectValues.erase("libjaypea-session");
+			}
+		}
 
-		// 	response.headers["libjaypea-session"] = output;
+		if(!request_object.HasObj("libjaypea-session", STRING)){
+			std::string input = this->server->fd_to_details_map[fd];
+			if(request_object.HasObj("User-Agent", STRING)){
+				input += request_object.GetStr("User-Agent");
+			}
+			if(request_object.HasObj("Host", STRING)){
+				input += request_object.GetStr("Host");
+			}
+			request_object.objectValues["libjaypea-session"] = new JsonObject(Util::sha256_hash(input));
+		}
 
-		// 	this->sessions[output] = Session();
-		// }
+		response.headers["libjaypea-session"] = request_object.GetStr("libjaypea-session");
+		if(!this->sessions.count(response.headers["libjaypea-session"])){
+			this->sessions[response.headers["libjaypea-session"]] = new Session();
+		}
+
+		session = this->sessions[response.headers["libjaypea-session"]];
+
 
 		if(request_object.HasObj("method", STRING)){
 			view.method = request_object.GetStr("method");
@@ -358,22 +365,25 @@ void HttpApi::start(void){
 		}
 
 		if(request_type == HTTP_API || request_type == API){
-			if(view.route[view.route.length() - 1] != '/'){
-				view.route += '/';
+			if(route_key[route_key.length() - 1] != '/'){
+				route_key += '/';
 			}
 		}
 
-		DEBUG("ROUTING: "<< route_key)
-
 		if(request_type != HTTP){
-			if(route_key == "GET /api/captcha"){
-				client_captchas[fd] = get_captcha();
-				DEBUG("CAPTCHA: " << client_captchas[fd])
+			if(route_key == "GET /api/captcha/"){
+				if(request_object.HasObj("new", STRING)){
+					if(request_object.GetStr("new") == "true"){
+						session->captcha.clear();
+					}
+				}
+				if(session->captcha.empty()){
+					session->captcha = get_captcha();
+				}
 				if(Util::secret_captcha_url.empty()){
-					response.body = "{\"result\":\"<h1>" + client_captchas[fd] + "</h1>\"}";
+					response.body = "{\"result\":\"<h3>" + session->captcha + "</h3>\"}";
 				}else{
-					std::string captcha = Util::https_client.get(Util::secret_captcha_url + "&secret=" + client_captchas[fd]);
-					response.body = captcha;
+					response.body = Util::https_client.get(Util::secret_captcha_url + "&secret=" + session->captcha);
 				}
 				return respond(fd, &response);
 			}
@@ -396,15 +406,17 @@ void HttpApi::start(void){
 					std::chrono::milliseconds diff = now -
 					this->routemap[route_key]->client_ms_at_call[this->server->fd_to_details_map[fd]];
 
-					if(diff < this->routemap[route_key]->minimum_ms_between_call){
-						DEBUG("DIFF: " << diff.count() << "\nMINIMUM: " << this->routemap[route_key]->minimum_ms_between_call.count())
-						if(request_type == HTTP_FORM){
-							view.parameters["status"] = "This route is rate-limited.";
-							return respond_http(fd, &view, &response);
+					#if not defined(DO_DEBUG)
+						if(diff < this->routemap[route_key]->minimum_ms_between_call){
+							DEBUG("DIFF: " << diff.count() << "\nMINIMUM: " << this->routemap[route_key]->minimum_ms_between_call.count())
+							if(request_type == HTTP_FORM){
+								view.parameters["status"] = "This route is rate-limited.";
+								return respond_http(fd, &view, &response);
+							}
+							response.body = "{\"error\":\"This route is rate-limited.\"}";
+							return respond(fd, &response);
 						}
-						response.body = "{\"error\":\"This route is rate-limited.\"}";
-						return respond(fd, &response);
-					}
+					#endif
 				}
 				this->routemap[route_key]->client_ms_at_call[this->server->fd_to_details_map[fd]] = now;
 			}
@@ -430,7 +442,8 @@ void HttpApi::start(void){
 					response.body = "{\"error\":\"An answer is required for the captcha.\"}";
 					return respond(fd, &response);
 				}else{
-					if(request_object.GetStr("captcha") != client_captchas[fd]){
+					if(request_object.GetStr("captcha") != session->captcha){
+						session->captcha.clear();
 						if(request_type == HTTP_FORM){
 							view.parameters["status"] = "Provided answer to the captcha is incorrect.";
 							return respond_http(fd, &view, &response);
@@ -438,9 +451,11 @@ void HttpApi::start(void){
 						response.body = "{\"error\":\"Provided answer to the captcha is incorrect.\"}";
 						return respond(fd, &response);
 					}
+					session->captcha.clear();
 				}
 			}
 		}
+
 
 		if(request_type == HTTP_FORM){
 			if(this->routemap[route_key]->form_function == nullptr){
@@ -449,10 +464,9 @@ void HttpApi::start(void){
 			}
 
 			view = this->routemap[route_key]->form_function(&request_object);
-			DEBUG("NEW VIEW: " << view.method)
-			DEBUG("NEW VIEW: " << view.route)
 			request_type = HTTP;
 		}
+
 
 		if(request_type == HTTP_API){
 			if(this->routemap[route_key]->function != nullptr){

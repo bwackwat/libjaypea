@@ -433,6 +433,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 					this->close_client(&the_fd, close_client_callback);
 				}else if(len >= PACKET_LIMIT){
 					ERROR("OVERFLOAT more to read uh oh!")
+					DEBUG(len << "|||" << packet << "|||")
 				}else if(len == 0){
 					PRINT("RECEIVE ZERO?!")
 				}else{

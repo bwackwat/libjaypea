@@ -117,9 +117,9 @@ public:
 
 class Session{
 public:
-	std::string captcha = "";
+	std::string captcha;
 	std::chrono::seconds created = std::chrono::duration_cast<std::chrono::seconds>(
-			std::chrono::system_clock::now().time_since_epoch());
+		std::chrono::system_clock::now().time_since_epoch());
 };
 
 class HttpApi{
@@ -159,7 +159,7 @@ public:
 	void set_file_cache_size(int megabytes);
 private:
 	std::unordered_map<std::string, CachedFile*> file_cache;
-	std::unordered_map<std::string, Session> sessions;
+	std::unordered_map<std::string, Session*> sessions;
 	int file_cache_remaining_bytes = 30 * 1024 * 1024; // 30MB cache.
 	std::mutex file_cache_mutex;
 	std::string public_directory;
