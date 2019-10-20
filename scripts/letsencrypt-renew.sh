@@ -1,13 +1,16 @@
 #!/bin/bash
 
-if [ $# -lt 1 ]; then
-	echo "Usage: $0 <domain>"
+if [ $# -lt 3 ]; then
+	echo "Usage: $0 </opt/libjaypea> <domain> <port>"
 	exit
 fi
 
-certbot certonly --standalone --tls-sni-01-port 10443 --domain $1
+systemctl stop libjaypea
 
-cp /etc/letsencrypt/live/$1/fullchain.pem /opt/libjaypea/artifacts/
+certbot certonly --standalone --http-01-port $3 --domain $2
 
-cp /etc/letsencrypt/live/$1/privkey.pem /opt/libjaypea/artifacts/
+systemctl start libjaypea
 
+cp /etc/letsencrypt/live/$2/fullchain.pem $1/artifacts/
+
+cp /etc/letsencrypt/live/$2/privkey.pem $1/artifacts/
