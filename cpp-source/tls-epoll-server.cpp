@@ -131,7 +131,7 @@ ssize_t TlsEpollServer::send(int fd, std::string data){
 	if(this->send(fd, data.c_str(), data.length())){
 		return -1;
 	}
-	return data.length();
+	return static_cast<ssize_t>(data.length());
 }
 
 ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length){
@@ -164,6 +164,7 @@ std::function<ssize_t(int, char*, size_t)> callback){
 		diff = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::system_clock::now().time_since_epoch()) - recv_start;
 	}
+
 	switch(err){
 		case SSL_ERROR_NONE:
 			break;

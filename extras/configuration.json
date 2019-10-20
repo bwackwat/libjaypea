@@ -6,6 +6,7 @@
 	"tanks_port": "11000",
 	"admin_email": "email@example.com",
 	"sendgrid_key": "https://sendgrid.com/docs/ui/account-and-settings/api-keys/",
+	"secret_captcha_url": "example.com/captcha",
 	"postgresql_connection": "dbname=webservice user=postgres password=abc123",
 	"ssl_certificate": "extras/self-signed-ssl/ssl.crt",
 	"ssl_private_key":"extras/self-signed-ssl/ssl.key",

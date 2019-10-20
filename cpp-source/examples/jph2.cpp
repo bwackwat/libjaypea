@@ -6,7 +6,6 @@
 #include "pgsql-model.hpp"
 #include "websocket-server.hpp"
 #include "tls-websocket-server.hpp"
-#include "tls-client-manager.hpp"
 
 int main(int argc, char **argv){
 	#include "jph2/initialization.cpp"
@@ -77,7 +76,7 @@ int main(int argc, char **argv){
 		}
 		char response[PACKET_LIMIT];
 
-		if(https_client.post(443, "api.sendgrid.com", "/v3/mail/send",
+		if(Util::https_client.post(443, "api.sendgrid.com", "/v3/mail/send",
 		{{"Content-Type", "application/json"},
 		{"Authorization", "Bearer " + sendgrid_key}},
 		"{\"personalizations\": [{\"to\": [{\"email\": \"" + admin_email + "\"}]}],\"from\": {\"email\": \"" + admin_email + "\"},\"subject\": \"JPH2, " + json->GetURLDecodedStr("name") + "\",\"content\": [{\"type\": \"text/html\", \"value\": \"<h2>" + json->GetURLDecodedStr("email") + "</h2><br>" + json->GetURLDecodedStr("message") + "\"}]}",
@@ -86,7 +85,7 @@ int main(int argc, char **argv){
 		}
 
 		return View("/thanks.html");
-	}, {{"secret", STRING}, {"name", STRING}, {"email", STRING}, {"message", STRING}}, std::chrono::seconds(10), true);
+	}, {{"name", STRING}, {"email", STRING}, {"captcha", STRING}, {"message", STRING}}, std::chrono::seconds(5), true);
 	
 	#if defined(DO_DEBUG)
 		api.route("GET", "/end", [&](JsonObject*)->std::string{

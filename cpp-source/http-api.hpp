@@ -52,6 +52,7 @@ public:
 class View{
 public:
 	std::string route = "";
+	std::string method = "";
 	std::unordered_map<std::string, std::string> parameters = std::unordered_map<std::string, std::string>();
 	ssize_t size;
 
@@ -69,7 +70,6 @@ public:
 	std::function<std::string(JsonObject*)> function;
 	std::function<View(JsonObject*)> form_function;
 	std::function<std::string(JsonObject*, JsonObject*)> token_function;
-	std::function<ssize_t(JsonObject*, int)> raw_function;
 
 	std::unordered_map<std::string, JsonType> requires;
 	bool requires_human;
@@ -106,16 +106,6 @@ public:
 	requires_human(new_requires_human),
 	minimum_ms_between_call(new_rate_limit)
 	{}
-
-	Route(std::function<ssize_t(JsonObject*, int)> new_raw_function,
-		std::unordered_map<std::string, JsonType> new_requires,
-		std::chrono::milliseconds new_rate_limit,
-		bool new_requires_human)
-	:raw_function(new_raw_function),
-	requires(new_requires),
-	requires_human(new_requires_human),
-	minimum_ms_between_call(new_rate_limit)
-	{}
 };
 
 class CachedFile{
@@ -123,6 +113,13 @@ public:
 	char* data;
 	size_t data_length;
 	time_t modified;
+};
+
+class Session{
+public:
+	std::string captcha = "";
+	std::chrono::seconds created = std::chrono::duration_cast<std::chrono::seconds>(
+			std::chrono::system_clock::now().time_since_epoch());
 };
 
 class HttpApi{
@@ -158,18 +155,11 @@ public:
 		bool requires_human = false
 	);
 
-	void raw_route(std::string method,
-		std::string path,
-		std::function<ssize_t(JsonObject*, int)> function,
-		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),
-		std::chrono::milliseconds rate_limit = std::chrono::milliseconds(0),
-		bool requires_human = false
-	);
-
 	void start(void);
 	void set_file_cache_size(int megabytes);
 private:
 	std::unordered_map<std::string, CachedFile*> file_cache;
+	std::unordered_map<std::string, Session> sessions;
 	int file_cache_remaining_bytes = 30 * 1024 * 1024; // 30MB cache.
 	std::mutex file_cache_mutex;
 	std::string public_directory;
@@ -183,4 +173,5 @@ private:
 	ssize_t respond_cached_file(int fd, HttpResponse* response, CachedFile* cached_file);
 	ssize_t respond_parameterized_view(int fd, View* view, HttpResponse* response);
 	ssize_t respond_view(int fd, View* view, HttpResponse* response);
+	ssize_t respond_http(int fd, View* view, HttpResponse* response);
 };

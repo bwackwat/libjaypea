@@ -26,7 +26,6 @@ Util::define_argument("postgresql_connection", connection_string, {"-pcs"});
 Util::parse_arguments(argc, argv, "This is a server application for jph2.net.");
 
 TlsEpollServer server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(https_port), 10);
-TlsClientManager https_client;
 SymmetricEncryptor encryptor;
 HttpApi api(public_directory, &server, &encryptor);
 api.set_file_cache_size(cache_megabytes);

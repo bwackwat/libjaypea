@@ -25,11 +25,8 @@ bool Util::verbose = false;
 std::string Util::config_path = "artifacts/configuration.json";
 std::string Util::libjaypea_path;
 JsonObject Util::config_object;
-
-//std::string Util::distribution_keyfile = std::string();
-//std::string Util::distribution_start_ip_address = std::string();
-//int Util::distribution_start_port = 0;
-//DistributedNode* Util::distribution_node = 0;
+TlsClientManager Util::https_client;
+std::string Util::secret_captcha_url = "";
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
 	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_STRING, std::ref(value), 0, 0}));
@@ -57,23 +54,6 @@ static std::string get_exe_path(){
 	backtrace_symbols_fd(array, size, STDERR_FILENO);
 	exit(1);
 }
-
-/*
-size_t Util::read_size_t(const char* data){
-	return static_cast<size_t>(
-		static_cast<unsigned char>(data[0]) +
-		(static_cast<unsigned char>(data[1]) << 8) + 
-		(static_cast<unsigned char>(data[2]) << 16) + 
-		(static_cast<unsigned char>(data[3]) << 24));
-}
-
-void Util::write_size_t(size_t value, char* data){
-	data[0] = static_cast<unsigned char>(value);
-	data[1] = static_cast<unsigned char>(value) >> 8;
-	data[2] = static_cast<unsigned char>(value) >> 16;
-	data[3] = static_cast<unsigned char>(value) >> 24;
-}
-*/
 
 void Util::write_file(std::string filename, std::string content){
 	std::ofstream file(filename);
@@ -115,9 +95,7 @@ std::string Util::exec_and_wait(const char* cmd){
 void Util::parse_arguments(int argc, char** argv, std::string description){
 	define_argument("verbose", &verbose, {"-v"});
 	define_argument("configuration_file", config_path, {"-cf"});
-	//define_argument("distribution_keyfile", distribution_keyfile, {"-dk"});
-	//define_argument("distribution_start_ip_address", distribution_start_ip_address, {"-dsip"});
-	//define_argument("distribution_start_port", &distribution_start_port, {"-dsp"});
+	define_argument("secret_captcha_url", secret_captcha_url, {"-scu"});
 	
 	PRINT("------------------------------------------------------")
 
@@ -249,7 +227,6 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 			(std::istreambuf_iterator<char>()));
 		config_object.parse(config_data.c_str());
 		PRINT("Loaded " << config_path)
-		// PRINT(config_object.stringify(true))
 		for(auto& arg : arguments){
 			if(config_object.objectValues.count(arg->name)){
 				if(arg->set){
@@ -278,16 +255,9 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 	}else{
 		PRINT("Could not open " << config_path << ", ignoring.")
 	}
-
 	
 	PRINT("------------------------------------------------------")
 	
-	/*distribution_node = new DistributedNode(distribution_keyfile);
-
-	if(!distribution_start_ip_address.empty() &&
-	distribution_start_port != 0){
-		distribution_node->add_client(distribution_start_ip_address.c_str(), static_cast<uint16_t>(distribution_start_port));
-	}*/
 }
 
 /*
@@ -377,12 +347,7 @@ std::string Util::url_decode(std::string str){
 }
 
 void Util::replace_all(std::string& source, const std::string& from, const std::string& to){
-	// std::string::size_type position = 0;
-	// while((position = source.find(from, position)) != std::string::npos){
-	// 	source.replace(position, from.size(), to);
-	// 	position += to.size();
-	// }
-		size_t position = 0;
+	size_t position = 0;
 	while((position = source.find(from, position)) != std::string::npos) {
 		source.replace(position, from.length(), to);
 		position += to.length();
@@ -416,8 +381,6 @@ std::string Util::get_redirection_html(const std::string& hostname){
 enum RequestResult Util::parse_http_request(const char* request, JsonObject* request_obj){
 	const char* it = request;
 	bool exit_http_parse = false;
-	
-	//DEBUG("REQUEST|" << request << "|END")
 
 	request_obj->objectValues["method"] = new JsonObject("GET");
 	request_obj->objectValues["route"] = new JsonObject(STRING);
@@ -438,8 +401,8 @@ enum RequestResult Util::parse_http_request(const char* request, JsonObject* req
 		request_obj->objectValues["method"]->stringValue = "PUT";
 		it += 5;
 	}else{
+		// HTTP start is missing. Assume pure API request.
 		request_obj->parse(it);
-		// Your HTTP is just getting ignored.
 		return API;
 	}
 	
@@ -560,7 +523,7 @@ enum RequestResult Util::parse_http_request(const char* request, JsonObject* req
 		case 0:
 		case 1:
 		case 4:
-		case 6: //TODO: Other escape sequences. (e.g. '&' cannot exist in URL param value)
+		case 6: // TODO: Use Util::url_decode()
 			if(*it == '%'){
 				if(*(it + 1) == '2' && *(it + 2) == '6'){
 					it++;
@@ -591,18 +554,12 @@ enum RequestResult Util::parse_http_request(const char* request, JsonObject* req
 		}
 	}
 
-	if(request_obj->objectValues["route"]->stringValue.length() >= 4 &&
-	request_obj->objectValues["route"]->stringValue.substr(0, 4) == "/api"){
-		if(request_obj->HasObj("Content-Length", STRING) &&
-		std::strlen(it) != static_cast<unsigned long>(std::stol(request_obj->GetStr("Content-Length")))){
-			return JSON;
-		}
-		
+	if(request_obj->HasObj("Content-Type", STRING) && request_obj->GetStr("Content-Type") == "application/json"){
 		request_obj->parse(it);
 		return HTTP_API;
-	}else if(request_obj->HasObj("Content-Type", STRING) && request_obj->GetStr("Content-Type") == "application/x-www-form-urlencoded"){
-		DEBUG(it)
-		
+	}
+	
+	if(request_obj->HasObj("Content-Type", STRING) && request_obj->GetStr("Content-Type") == "application/x-www-form-urlencoded"){
 		state = 1;
 		new_key = "";
 		new_value = "";
@@ -622,7 +579,6 @@ enum RequestResult Util::parse_http_request(const char* request, JsonObject* req
 				request_obj->objectValues[new_key]->parse(new_value.c_str());
 				if(request_obj->objectValues[new_key]->type == NOTYPE){
 					request_obj->objectValues[new_key]->type = STRING;
-					//request_obj->objectValues[new_key]->stringValue = urlDecode(new_value);
 					request_obj->objectValues[new_key]->stringValue = new_value;
 				}
 				state = 1;
@@ -649,11 +605,10 @@ enum RequestResult Util::parse_http_request(const char* request, JsonObject* req
 			request_obj->objectValues[new_key]->parse(new_value.c_str());
 			if(request_obj->objectValues[new_key]->type == NOTYPE){
 				request_obj->objectValues[new_key]->type = STRING;
-				//request_obj->objectValues[new_key]->stringValue = urlDecode(new_value);
 				request_obj->objectValues[new_key]->stringValue = new_value;
 			}
 		}
-		DEBUG(request_obj->stringify())
+
 		return HTTP_FORM;
 	}
 

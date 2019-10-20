@@ -21,10 +21,10 @@ SymmetricEpollServer::SymmetricEpollServer(std::string keyfile, uint16_t port, s
 encryptor(keyfile){}
 
 ssize_t SymmetricEpollServer::send(int fd, std::string data){
-	if(this->encryptor.send(fd, data.c_str(), data.length()), &this->write_counter[fd]){
+	if(this->encryptor.send(fd, data.c_str(), data.length(), &this->write_counter[fd])){
 		return -1;
 	}
-	return data.length();
+	return static_cast<ssize_t>(data.length());
 }
 
 bool SymmetricEpollServer::send(int fd, const char* data, size_t data_length){

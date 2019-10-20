@@ -81,7 +81,7 @@ int main(int argc, char **argv){
 	int port = 443;
 	bool http = false;
 	int cache_megabytes = 30;
-	std::string password = "aq12ws";
+	std::string password = "";
 
 	Util::define_argument("public_directory", public_directory, {"-pd"});
 	Util::define_argument("ssl_certificate", ssl_certificate, {"-crt"});

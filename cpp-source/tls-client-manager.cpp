@@ -3,109 +3,15 @@
 
 TlsClientManager::TlsClientManager(bool new_verbose)
 :name("TlsClientManager"),
-verbose(new_verbose){}
-
-bool TlsClientManager::send(SSL* ssl, const char* data, size_t data_length){
-	int len = 0, err = SSL_ERROR_WANT_WRITE;
-	std::chrono::milliseconds send_start = std::chrono::duration_cast<std::chrono::milliseconds>(
-		std::chrono::system_clock::now().time_since_epoch());
-	std::chrono::milliseconds diff = std::chrono::milliseconds(0);
-	std::chrono::milliseconds timeout = std::chrono::milliseconds(10000);
-
-	while(err == SSL_ERROR_WANT_WRITE){
-		if(diff > timeout){
-			PRINT("Client SSL_write timeout...")
-			return true;
-		}
-
-		len = SSL_write(ssl, data, static_cast<int>(data_length));
-		err = SSL_get_error(ssl, len);
-		PRINT("SENT " << len << " BYTES")
-
-		diff = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::system_clock::now().time_since_epoch()) - send_start;
-	}
-	switch(err){
-		case SSL_ERROR_NONE:
-			break;
-		case SSL_ERROR_WANT_WRITE:
-			PRINT("CLIENT WANT WRITE " << ssl)
-			// Nothing to read, nonblocking mode.
-			return 0;
-		case SSL_ERROR_ZERO_RETURN:
-			ERROR("CLIENT write zero " << ssl)
-			return true;
-		case SSL_ERROR_SYSCALL:
-			PRINT(this->name << ": CLIENT write SSL_ERROR_SYSCALL")
-			ERR_print_errors_fp(stdout);
-			return true;
-		default:
-			ERROR("CLIENT other SSL_write " << err << " from " << ssl)
-			ERR_print_errors_fp(stdout);
-			return true;
-	}
-	
-	//DEBUG("SSL_write took milliseconds: " << diff.count())
-	if(len != static_cast<int>(data_length)){
-		ERROR("Invalid number of bytes written...")
-	}
-	return false;
-}
-
-ssize_t TlsClientManager::recv(SSL* ssl, char* data, size_t data_length){
-	int len = 0, err = SSL_ERROR_WANT_READ;
-	std::chrono::milliseconds recv_start = std::chrono::duration_cast<std::chrono::milliseconds>(
-		std::chrono::system_clock::now().time_since_epoch());
-	std::chrono::milliseconds diff = std::chrono::milliseconds(0);
-	std::chrono::milliseconds timeout = std::chrono::milliseconds(10000);
-
-	while(err == SSL_ERROR_WANT_READ){
-		if(diff > timeout){
-			PRINT("CLIENT SSL_read timeout...")
-			return true;
-		}
-
-		len = SSL_read(ssl, data, static_cast<int>(data_length));
-		err = SSL_get_error(ssl, len);
-
-		if(err != SSL_ERROR_WANT_READ){
-			PRINT(err)
-			ERR_print_errors_fp(stdout);
-		}
-
-		diff = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::system_clock::now().time_since_epoch()) - recv_start;
-	}
-	switch(err){
-		case SSL_ERROR_NONE:
-			break;
-		case SSL_ERROR_WANT_READ:
-			PRINT("CLIENT WANT READ " << ssl)
-			// Nothing to read, nonblocking mode.
-			return 0;
-		case SSL_ERROR_ZERO_RETURN:
-			ERROR("CLIENT server read zero " << ssl)
-			return -2;
-		case SSL_ERROR_SYSCALL:
-			PRINT(this->name << ": CLIENT read SSL_ERROR_SYSCALL")
-			ERR_print_errors_fp(stdout);
-			return -3;
-		default:
-			ERROR("CLIENT other SSL_read " << err << " from " << ssl)
-			ERR_print_errors_fp(stdout);
-			return -1;
-	}
-	
-	//DEBUG("SSL_read took milliseconds: " << diff.count())
-	data[len] = 0;
-	return len;
+verbose(new_verbose){
 }
 
 bool TlsClientManager::post(uint16_t port, std::string hostname, std::string path, std::unordered_map<std::string, std::string> headers, std::string body, char* response){
-	std::string request = "POST " + path + " HTTP/1.1\n";
-	request += "Host: " + hostname + "\n";
-	request += "Connection: close\n";
-	request += "Accept: */*\n";
+	std::string request = "POST " + path + " HTTP/1.1\r\n";
+	request += "Host: " + hostname + "\r\n";
+	request += "Connection: close\r\n";
+	request += "User-Agent: libjaypea\r\n";
+	request += "Accept: */*\r\n";
 
 	for(auto iter = headers.begin(); iter != headers.end(); ++iter){
 		request += iter->first + ": " + iter->second + "\n";
@@ -119,60 +25,80 @@ bool TlsClientManager::post(uint16_t port, std::string hostname, std::string pat
 	return this->communicate(hostname, port, request.c_str(), request.length(), response);
 }
 
-bool TlsClientManager::get(uint16_t port, std::string hostname, std::string path, char* response){
-	std::string request = "GET " + path + " HTTP/1.1\n";
-	request += "Host: " + hostname + "\n";
-	request += "Connection: close\n";
+std::string TlsClientManager::get_body(uint16_t port, std::string hostname, std::string path){
+	std::string request = "GET " + path + " HTTP/1.1\r\n";
+	request += "Host: " + hostname + "\r\n";
+	request += "Connection: close\r\n";
+	request += "User-Agent: libjaypea\r\n";
 	request += "Accept: */*\r\n\r\n";
 
-	return this->communicate(hostname, port, request.c_str(), request.length(), response);
+	char response[PACKET_LIMIT];
+
+	if(this->communicate(hostname, port, request.c_str(), request.length(), response)){
+		return "{\"error\":\"Failed to communicate to host " + hostname + ".\"}";
+	}
+
+	std::string response_str = std::string(response);
+	std::size_t body_separator = response_str.find("\r\n\r\n", 0);
+
+	if(body_separator == std::string::npos){
+		return response_str;
+	}
+
+	return response_str.substr(body_separator + 4, response_str.length());
+}
+
+std::string TlsClientManager::get(std::string url){
+	std::size_t slash = url.find('/', 0);
+	std::string hostname = url.substr(0, slash);
+	std::string path = url.substr(slash);
+
+	return this->get_body(443, hostname, path);
 }
 
 bool TlsClientManager::communicate(std::string hostname, uint16_t port, const char* request, size_t length, char* response){
 	int fd;
+	ssize_t len;
 	if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
 		perror("reconnect socket");
 		return true;
 	}
 
-	// Reuse the host for the duration of a stable connection.
-	if(!this->host_addresses.count(hostname)){
-		struct hostent* host;
-		if((host = gethostbyname(hostname.c_str())) == 0){
-			perror("gethostbyname");
-			return true;
-		}
-		this->host_addresses[hostname] = *reinterpret_cast<struct in_addr*>(host->h_addr);
+	struct hostent* host;
+	if((host = gethostbyname(hostname.c_str())) == 0){
+		perror("gethostbyname");
+		return true;
 	}
 
-	struct sockaddr_in* server_address = new struct sockaddr_in();
-	bzero(&(server_address->sin_zero), 8);
-	server_address->sin_family = AF_INET;
-	server_address->sin_addr = this->host_addresses[hostname];
-	server_address->sin_port = htons(port);
+	struct sockaddr_in server_address;
+	bzero(&server_address, sizeof(struct sockaddr_in));
+	server_address.sin_family = AF_INET;
+	server_address.sin_addr = *reinterpret_cast<struct in_addr*>(host->h_addr);
+	server_address.sin_port = htons(port);
 
-	while(true){
-		if(connect(fd, reinterpret_cast<struct sockaddr*>(server_address), sizeof(struct sockaddr_in)) < 0){
-			if(errno !=  EINPROGRESS && errno != EALREADY){
-				perror("connect");
-				return true;
-			}
-			// Still connecting, cooooool.
-		}else{
-			break;
-		}
+	if(inet_pton(AF_INET, hostname.c_str(), &(server_address.sin_addr)) < 0){
+		perror("inet_pton");
+		return true;
 	}
+
+	if(connect(fd, (struct sockaddr*)&server_address, sizeof(server_address)) < 0){
+		perror("connect");
+		return true;
+	}
+
 	SSL_library_init();
-	SSLeay_add_ssl_algorithms();
+	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
+
 	const SSL_METHOD *meth = TLSv1_2_client_method();
 	SSL_CTX *ctx = SSL_CTX_new(meth);
+	SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
+
 	SSL* ssl = SSL_new(ctx);
 	if (!ssl) {
 		perror("SSL_new");
 		return true;
 	}
-	SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
 
 	SSL_set_fd(ssl, fd);
 	int err = SSL_connect(ssl);
@@ -183,19 +109,67 @@ bool TlsClientManager::communicate(std::string hostname, uint16_t port, const ch
 
 	PRINT("SSL connection using " << SSL_get_cipher(ssl))
 
-	Util::set_non_blocking(fd);
+	//Util::set_non_blocking(fd);
 
-	if(this->send(ssl, request, length)){
-		SSL_free(ssl);
-		PRINT("Client problem sending...")
+	if(SSL_write(ssl, request, static_cast<int>(length)) < 0){
+		perror("SSL_write");
 		return true;
 	}
 
-	if(this->recv(ssl, response, PACKET_LIMIT) < 0){
-		SSL_free(ssl);
-		PRINT("Client problem receiving...")
-		return true;
-	}
+	std::chrono::milliseconds recv_start = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch());
+	std::chrono::milliseconds diff = std::chrono::milliseconds(0);
+	std::chrono::milliseconds timeout = std::chrono::milliseconds(10000);
+	char buffer[PACKET_LIMIT];
+	int offset = 0;
+	do{
+		if(diff > timeout){
+			PRINT("CLIENT SSL_read timeout...")
+			break;
+		}
+		len = SSL_read(ssl, buffer, PACKET_LIMIT);
+		err = SSL_get_error(ssl, static_cast<int>(len));
+		switch(err){
+		case SSL_ERROR_NONE: 
+			//printf("SSL_ERROR_NONE\n");
+			break;
+		case SSL_ERROR_WANT_READ:
+			printf("SSL_ERROR_WANT_READ\n");
+			break;
+		case SSL_ERROR_WANT_WRITE:
+			printf("SSL_ERROR_WANT_WRITE\n");
+			// This happens when the server thinks we want to keep the connection open... Close it!
+			len = 0;
+			break;
+		case SSL_ERROR_ZERO_RETURN:
+			printf("SSL_ERROR_ZERO_RETURN\n");  
+			break;
+		default:
+			break;
+		}
+
+		if((len > 0) && (err == SSL_ERROR_NONE)){
+			buffer[len] = 0;
+			memcpy(response + offset, buffer, static_cast<size_t>(len));
+			offset += len;
+			response[offset] = 0;
+		}else if((len < 0)  && (err == SSL_ERROR_WANT_READ)){
+			printf("len < 0 \n");
+			if (errno != EAGAIN)
+			{
+				printf("len < 0 errno != EAGAIN \n");
+				perror ("read");
+			}
+			break;
+		}else if(len == 0){
+			break;
+		}
+
+		diff = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::system_clock::now().time_since_epoch()) - recv_start;
+	}while(ssl && len > 0);
+
+	DEBUG("COMMUNICATED WITH " << hostname)
 
 	SSL_free(ssl);
 	return false;
