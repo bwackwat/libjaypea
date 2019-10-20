@@ -54,8 +54,8 @@ static std::random_device rd;
 static std::mt19937 mt(rd());
 static const char captcha_set[] =
         "23456789$@!=*"
-        "ABCDEFGHJKMNPQRSTUVWXYZ"
-        "abcdefghijkmnpqrstuvwxyz";
+        "ABCDEFGHJKMNPQRST"
+        "abcdefghijkmnprstuvwxyz";
 static std::uniform_int_distribution<size_t> distribution(0, sizeof(captcha_set) - 2);
 static std::string get_captcha(){
 	std::string captcha = "";
@@ -125,7 +125,23 @@ ssize_t HttpApi::respond_parameterized_view(int fd, View* view, HttpResponse* re
 	// Make parameter substitutions.
 	response->body = std::string(buffer, static_cast<unsigned long>(len));
 	for(auto iter = view->parameters.begin(); iter != view->parameters.end(); ++iter){
-		Util::replace_all(response->body, '{' + iter->first + '}', iter->second);
+		Util::replace_all(response->body, "{{{" + iter->first + "}}}", iter->second);
+	}
+	std::size_t parameter_start = response->body.find("{{{");
+	std::size_t parameter_end = std::string::npos;
+	if(parameter_start != std::string::npos){
+		parameter_end = response->body.find("}}}");
+	}
+	std::string parameter;
+	while(parameter_start != std::string::npos && parameter_end != std::string::npos){
+		parameter = response->body.substr(parameter_start, parameter_end - parameter_start + 3);
+		DEBUG("FOUND PARAMETER: " << parameter_start << "," << parameter_end << ": " << parameter)
+		Util::replace_all(response->body, parameter, "");
+		parameter_start = response->body.find("{{{");
+		parameter_end = std::string::npos;
+		if(parameter_start != std::string::npos){
+			parameter_end = response->body.find("}}}");
+		}
 	}
 
 	return this->respond(fd, response);
@@ -276,9 +292,26 @@ ssize_t HttpApi::respond_http(int fd, View* view, HttpResponse* response){
 			// Make parameter substitutions.
 			response->body = std::string(cached_file->data, cached_file->data_length);
 			for(auto iter = view->parameters.begin(); iter != view->parameters.end(); ++iter){
-				Util::replace_all(response->body, '{' + iter->first + '}', iter->second);
+				Util::replace_all(response->body, "{{{" + iter->first + "}}}", iter->second);
+			}
+			std::size_t parameter_start = response->body.find("{{{");
+			std::size_t parameter_end = std::string::npos;
+			if(parameter_start != std::string::npos){
+				parameter_end = response->body.find("}}}");
+			}
+			std::string parameter;
+			while(parameter_start != std::string::npos && parameter_end != std::string::npos){
+				parameter = response->body.substr(parameter_start, parameter_end - parameter_start + 3);
+				DEBUG("FOUND CACHE PARAMETER: " << parameter_start << "," << parameter_end << ": " << parameter)
+				Util::replace_all(response->body, parameter, "");
+				parameter_start = response->body.find("{{{");
+				parameter_end = std::string::npos;
+				if(parameter_start != std::string::npos){
+					parameter_end = response->body.find("}}}");
+				}
 			}
 
+			DEBUG("Cached file served and parameterized: " << clean_route << " with " << cached_file->data_length << " bytes as " << response->headers["Content-Type"])
 			return respond(fd, response);
 		}else{
 			DEBUG("Cached file served: " << clean_route << " with " << cached_file->data_length << " bytes as " << response->headers["Content-Type"])
@@ -372,6 +405,7 @@ void HttpApi::start(void){
 
 		if(request_type != HTTP){
 			if(route_key == "GET /api/captcha/"){
+				response.headers["Content-Type"] = "text/html";
 				if(request_object.HasObj("new", STRING)){
 					if(request_object.GetStr("new") == "true"){
 						session->captcha.clear();
@@ -381,7 +415,7 @@ void HttpApi::start(void){
 					session->captcha = get_captcha();
 				}
 				if(Util::secret_captcha_url.empty()){
-					response.body = "{\"result\":\"<h3>" + session->captcha + "</h3>\"}";
+					response.body = "<h3>" + session->captcha + "</h3>\"}";
 				}else{
 					response.body = Util::https_client.get(Util::secret_captcha_url + "&secret=" + session->captcha);
 				}
@@ -397,6 +431,10 @@ void HttpApi::start(void){
 				return respond(fd, &response);
 			}
 
+			for(auto iter = this->routemap[route_key]->requires.begin(); iter != this->routemap[route_key]->requires.end(); ++iter){
+				view.parameters[iter->first] = request_object.GetURLDecodedStr(iter->first);
+			}
+
 			// For all but regular HTTP requests, check millseconds since last call by IP address.
 			if(this->routemap[route_key]->minimum_ms_between_call.count() > 0){
 				std::chrono::milliseconds now = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -410,10 +448,10 @@ void HttpApi::start(void){
 						if(diff < this->routemap[route_key]->minimum_ms_between_call){
 							DEBUG("DIFF: " << diff.count() << "\nMINIMUM: " << this->routemap[route_key]->minimum_ms_between_call.count())
 							if(request_type == HTTP_FORM){
-								view.parameters["status"] = "This route is rate-limited.";
+								view.parameters["status"] = "This route is rate-limited, wait a bit.";
 								return respond_http(fd, &view, &response);
 							}
-							response.body = "{\"error\":\"This route is rate-limited.\"}";
+							response.body = "{\"error\":\"This route is rate-limited, wait a bit.\"}";
 							return respond(fd, &response);
 						}
 					#endif
@@ -422,7 +460,8 @@ void HttpApi::start(void){
 			}
 
 			for(auto iter = this->routemap[route_key]->requires.begin(); iter != this->routemap[route_key]->requires.end(); ++iter){
-				if(!request_object.HasObj(iter->first, iter->second)){
+				if(!request_object.HasObj(iter->first, iter->second) ||
+				(request_object.HasObj(iter->first, STRING) && request_object.GetStr(iter->first).empty())){
 					if(request_type == HTTP_FORM){
 						view.parameters["status"] = "'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".";
 						return respond_http(fd, &view, &response);
@@ -430,7 +469,6 @@ void HttpApi::start(void){
 					response.body = "{\"error\":\"'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".\"}";
 					return respond(fd, &response);
 				}
-				DEBUG("\t" << iter->first << ": " << request_object.objectValues[iter->first]->stringify(true))
 			}
 
 			if(this->routemap[route_key]->requires_human){

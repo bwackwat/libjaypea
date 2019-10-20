@@ -49,6 +49,14 @@ std::string TlsClientManager::get_body(uint16_t port, std::string hostname, std:
 }
 
 std::string TlsClientManager::get(std::string url){
+	if(Util::startsWith(url, "http://")){
+		PRINT("Only https:// is supported.")
+		throw new std::exception();
+	}
+	if(Util::startsWith(url, "https://")){
+		url = url.substr(8);
+	}
+
 	std::size_t slash = url.find('/', 0);
 	std::string hostname = url.substr(0, slash);
 	std::string path = url.substr(slash);

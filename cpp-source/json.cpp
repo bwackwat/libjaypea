@@ -101,11 +101,7 @@ const char* JsonObject::parse(const char* str){
 				this->type = ARRAY;
 				JDEBUG("START ARRAY")
 				continue;
-			}/*else if(this->type == STRING){
-				this->stringValue = ss.str();
-				JDEBUG("RESCUE STRING FROM ARRAY START")
-				return ++it;
-			}*/else if(this->type == ARRAY){
+			}else if(this->type == ARRAY){
 				value = new JsonObject();
 				it = value->parse(it);
 				arrayValues.push_back(value);
@@ -117,11 +113,7 @@ const char* JsonObject::parse(const char* str){
 			if(this->type == ARRAY){
 				JDEBUG("ARRAYEND")
 				return it;
-			}/*else if(this->type == STRING){
-				this->stringValue = ss.str();
-				JDEBUG("RESCUE STRING FROM ARRAY END")
-				return it;
-			}*/else if(this->type == OBJECT){
+			}else if(this->type == OBJECT){
 				if(objState != GETKEY &&
 				objState != GETVALUE){
 					JDEBUG("RESCUE OBJECT FROM ARRAY END")
@@ -166,9 +158,9 @@ std::string JsonObject::escape(std::string value){
 	escaped << '"';
 	for(size_t i = 0; i < value.length(); ++i){
 		if(static_cast<int>(value[i]) < 32 || static_cast<int>(value[i]) > 126){
-			JDEBUG("WEIRD: " << value << " " << i << " " << value[i])
-			JDEBUG("WEIRD: " << value << " " << i << " " << std::hex << static_cast<int>(value[i]))
-			JDEBUG("WEIRD: " << value << " " << i << " " << std::dec << static_cast<int>(value[i]))
+			JDEBUG("SPECIAL: " << value << " " << i << " " << value[i])
+			JDEBUG("SPECIAL: " << value << " " << i << " " << std::hex << static_cast<int>(value[i]))
+			JDEBUG("SPECIAL: " << value << " " << i << " " << std::dec << static_cast<int>(value[i]))
 		}
 		if(value[i] == '\n'){
 			escaped << "\\n";
@@ -185,8 +177,6 @@ std::string JsonObject::escape(std::string value){
 		}
 	}
 	escaped << '"';
-	//PRINT(value)
-	//PRINT(escaped)
 	return escaped.str();
 }
 
@@ -212,8 +202,6 @@ std::string JsonObject::deescape(std::string value){
 			deescaped << value[i];
 		}
 	}
-	//PRINT(value)
-	//PRINT(escaped)
 	return deescaped.str();
 }
 
@@ -305,7 +293,7 @@ bool JsonObject::HasObj(const std::string& key, enum JsonType t){
 	return this->objectValues.count(key) && this->objectValues[key]->type == t;
 }
 
-std::string JsonObject::GetStr(const char* key){
+std::string JsonObject::GetStr(std::string key){
 	if(!this->objectValues.count(key)){
 		PRINT("Missing key: " << key)
 		throw new std::exception();
@@ -313,7 +301,7 @@ std::string JsonObject::GetStr(const char* key){
 	return this->objectValues[key]->stringValue;
 }
 
-std::string JsonObject::GetURLEncodedStr(const char* key){
+std::string JsonObject::GetURLEncodedStr(std::string key){
 	if(!this->objectValues.count(key)){
 		PRINT("Missing key: " << key)
 		throw new std::exception();
@@ -321,21 +309,21 @@ std::string JsonObject::GetURLEncodedStr(const char* key){
 	return Util::url_encode(this->objectValues[key]->stringValue);
 }
 
-std::string JsonObject::GetURLDecodedStr(const char* key){
+std::string JsonObject::GetURLDecodedStr(std::string key){
 	if(!this->objectValues.count(key)){
 		PRINT("Missing key: " << key)
 		throw new std::exception();
 	}
 	return Util::url_decode(this->objectValues[key]->stringValue);
 }
+
+
 JsonObject* JsonObject::operator[](const char* key){
 	return this->objectValues[key];
 }
-
 JsonObject* JsonObject::operator[](size_t index){
 	return this->arrayValues[index];
 }
-
 JsonObject* JsonObject::operator[](const std::string& key){
 	return this->objectValues[key];
 }

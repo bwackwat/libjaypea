@@ -71,11 +71,7 @@ int main(int argc, char **argv){
 	#include "jph2/tanks-wss.cpp"
 
 	api.form_route("POST", "/contact.html", [&](JsonObject* json)->View{
-		if(json->GetStr("message").length() < 10){
-			return View("/contact.html", {{"status", "Please send a longer message..."}});
-		}
 		char response[PACKET_LIMIT];
-
 		if(Util::https_client.post(443, "api.sendgrid.com", "/v3/mail/send",
 		{{"Content-Type", "application/json"},
 		{"Authorization", "Bearer " + sendgrid_key}},
