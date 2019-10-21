@@ -354,6 +354,10 @@ void Util::replace_all(std::string& source, const std::string& from, const std::
 	}
 }
 
+void Util::perror(std::string str){
+	perror(str.c_str());
+}
+
 std::string Util::get_redirection_html(const std::string& hostname){
 	std::string response_body = "<!doctype html><html>\n"
 		"<head>\n"

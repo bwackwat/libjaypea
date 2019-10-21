@@ -101,7 +101,8 @@ public:
 	static void set_blocking(int fd);
 	static std::string url_encode(std::string str);
 	static std::string url_decode(std::string str);
-	static void replace_all(std::string& source, const std::string& from, const std::string& to); 
+	static void replace_all(std::string& source, const std::string& from, const std::string& to);
+	static void perror(std::string str);
 
 	static std::string get_redirection_html(const std::string& hostname);
 	static bool endsWith(const std::string& str, const std::string& suffix);

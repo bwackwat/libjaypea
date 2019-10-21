@@ -102,18 +102,18 @@ ssize_t HttpApi::respond_parameterized_view(int fd, View* view, HttpResponse* re
 	char buffer[BUFFER_LIMIT + 32];
 
 	if((file_fd = open(view->route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
-		perror("open file");
+		Util::perror("respond_parameterized_view open " + view->route);
 		return -1;
 	}
 
 	// Only "small html" should be "parameterized".
 	if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-		perror("read file");
+		Util::perror("respond_parameterized_view read " + view->route);
 		return -1;
 	}
 
 	if(close(file_fd) < 0){
-		perror("close file");
+		Util::perror("respond_parameterized_view read " + view->route);
 		return -1;
 	}
 
@@ -159,19 +159,19 @@ ssize_t HttpApi::respond_view(int fd, View* view, HttpResponse* response){
 	}
 
 	if((file_fd = open(view->route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
-		perror("open file");
+		Util::perror("respond_view open " + view->route);
 		return -1;
 	}
 
 	// Send all file data without parameterization.
 	while(file_fd > 0){
 		if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-			perror("read file");
+			Util::perror("respond_view read " + view->route);
 			return -1;
 		}
 		buffer[len] = 0;
 		if(this->server->send(fd, buffer, static_cast<size_t>(len))){
-			perror("send filepacket");
+			Util::perror("respond_view send " + view->route);
 			return -1;
 		}
 		// Not complete packet, no more to read.
@@ -181,7 +181,7 @@ ssize_t HttpApi::respond_view(int fd, View* view, HttpResponse* response){
 	}
 
 	if(close(file_fd) < 0){
-		perror("close file");
+		Util::perror("respond_view read " + view->route);
 		return -1;
 	}
 
@@ -257,13 +257,13 @@ ssize_t HttpApi::respond_http(int fd, View* view, HttpResponse* response){
 		ssize_t len;
 		char buffer[BUFFER_LIMIT + 32];
 		if((file_fd = open(clean_route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
-			perror("open caching file");
+			Util::perror("respond_http open " + clean_route);
 			this->file_cache_mutex.unlock();
 			return -1;
 		}
 		while(file_fd > 0){
 			if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-				perror("read caching file");
+				Util::perror("respond_http read " + clean_route);
 				this->file_cache_mutex.unlock();
 				return -1;
 			}
@@ -275,7 +275,7 @@ ssize_t HttpApi::respond_http(int fd, View* view, HttpResponse* response){
 			}
 		}
 		if(close(file_fd) < 0){
-			perror("close caching file");
+			Util::perror("respond_http close " + clean_route);
 			this->file_cache_mutex.unlock();
 			return -1;
 		}

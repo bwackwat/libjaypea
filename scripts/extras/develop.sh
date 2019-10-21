@@ -1,11 +1,12 @@
 #!/bin/bash
 
+systemctl stop libjaypea
+
 killall watcher.py
 killall python
 killall artifacts/jph2
 
-set -e
-set -x
+set -eux
 
 if [ ! -f "artifacts/configuration.json" ]; then
 	cp extras/configuration.json artifacts/configuration.json
