@@ -124,6 +124,16 @@ bool TlsEpollServer::send(int fd, const char* data, size_t data_length){
 	return false;
 }
 
+/**
+ * See TlsEpollServer::send(int fd, const char* data, size_t data_length)
+ */ 
+ssize_t TlsEpollServer::send(int fd, std::string data){
+	if(this->send(fd, data.c_str(), data.length())){
+		return -1;
+	}
+	return static_cast<ssize_t>(data.length());
+}
+
 ssize_t TlsEpollServer::recv(int fd, char* data, size_t data_length){
 	return this->recv(fd, data, data_length, this->on_read);
 }
@@ -154,6 +164,7 @@ std::function<ssize_t(int, char*, size_t)> callback){
 		diff = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::system_clock::now().time_since_epoch()) - recv_start;
 	}
+
 	switch(err){
 		case SSL_ERROR_NONE:
 			break;
@@ -176,7 +187,12 @@ std::function<ssize_t(int, char*, size_t)> callback){
 	
 	//DEBUG("SSL_read took milliseconds: " << diff.count())
 	data[len] = 0;
-	return callback(fd, data, static_cast<size_t>(len));
+
+	if(callback(fd, data, static_cast<size_t>(len)) < 0){
+		return -1;
+	}
+
+	return len;
 }
 
 /**
@@ -222,6 +238,7 @@ bool TlsEpollServer::accept_continuation(int* new_client_fd){
 	}
 	if(err != SSL_ERROR_NONE){
 		ERROR("SSL_accept " << *new_client_fd << ';' << err)
+		ERR_print_errors_fp(stdout);
 		return true;
 	}
 	DEBUG(this->name << ": SSL_accept took milliseconds: " << diff.count())

@@ -2,9 +2,6 @@
 
 dir=$(pwd)
 
-mkdir -p $dir/binaries
-mkdir -p $dir/artifacts
-
 argc=$#
 argv=($@)
 
@@ -43,4 +40,4 @@ libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \
 $dir/cpp-source/*.cpp -o $library"
 
-compiler="clang++ -std=c++11 -I$dir/cpp-source $library -lcryptopp -lpqxx $warn $extra"
+compiler="clang++ -std=c++11 -I$dir/cpp-source $library -lcryptopp -lpqxx -largon2 $warn $extra"

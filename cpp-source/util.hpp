@@ -28,9 +28,10 @@
 
 #include "json.hpp"
 #include "distributed-node.hpp"
+#include "tls-client-manager.hpp"
 #include "argon2.h"
 
-#define PACKET_LIMIT 8096
+#define PACKET_LIMIT 16384
 #define CONNECTIONS_LIMIT 2048
 #define FILE_PART_LIMIT 1024
 
@@ -65,11 +66,12 @@ struct Argument {
 	bool* boolean_value;
 };
 
+// If we can't determine HTTP, then it's a pure JSON API request.
 enum RequestResult {
 	HTTP,
 	HTTP_API,
-	API,
-	JSON
+	HTTP_FORM,
+	API
 };
 
 class Util{
@@ -81,11 +83,8 @@ public:
 	static std::string config_path;
 	static std::string libjaypea_path;
 	static JsonObject config_object;
-
-	//static std::string distribution_keyfile;
-	//static std::string distribution_start_ip_address;
-	//static int distribution_start_port;
-	//static DistributedNode* distribution_node;
+	static TlsClientManager https_client;
+	static std::string secret_captcha_url;
 
 	static void define_argument(std::string name, std::string& value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
 	static void define_argument(std::string name, int* value, std::vector<std::string> alts = {}, std::function<void()> callback = nullptr, bool required = false);
@@ -100,12 +99,15 @@ public:
 	static bool strict_compare_inequal(const char* first, const char* second, int count = -1);
 	static void set_non_blocking(int fd);
 	static void set_blocking(int fd);
+	static std::string url_encode(std::string str);
+	static std::string url_decode(std::string str);
+	static void replace_all(std::string& source, const std::string& from, const std::string& to); 
 
 	static std::string get_redirection_html(const std::string& hostname);
 	static bool endsWith(const std::string& str, const std::string& suffix);
 	static bool startsWith(const std::string& str, const std::string& prefix);
 
-	static enum RequestResult parse_http_api_request(const char* request, JsonObject* request_obj);
+	static enum RequestResult parse_http_request(const char* request, JsonObject* request_obj);
 
 	static std::string sha256_hash(std::string data);
 	static std::string hash_value_argon2d(std::string password);
@@ -113,4 +115,3 @@ public:
 	static void print_bits(const char* data, size_t data_length);
 	static void clean();
 };
-

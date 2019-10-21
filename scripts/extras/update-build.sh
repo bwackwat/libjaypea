@@ -6,12 +6,9 @@ git pull origin master
 scripts/build-library.sh PROD
 scripts/build-example.sh PROD
 
-# This is for the build server.
-
-mkdir -p build/
-
-cp -f artifacts/libjaypeap.so build/
-cp -f binaries/* build/
-cp -f artifacts/libjaypea.master.latest.commit build/
+# \ Run the command without aliases.
+\cp -f artifacts/libjaypeap.so ../affable-escapade/build/
+\cp -f artifacts/libjaypea.so ../affable-escapade/build/
+\cp -f artifacts/jph2 ../affable-escapade/build/
 
 touch artifacts/ready.lock

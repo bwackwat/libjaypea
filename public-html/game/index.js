@@ -1,7 +1,5 @@
 window.onload = function() {
 
-var status = document.getElementById("status");
-
 var msg;
 
 function connectionSuccess(e){

@@ -1,23 +1,20 @@
 #!/bin/bash
 
-if [ $# -lt 5 ]; then
-	echo "Usage: deploy.sh <install directory> <username> <application name> <hostname> <db password>"
+if [ $# -lt 8 ]; then
+	echo "Usage: deploy.sh <install directory> <username> <application name> <hostname> <db password> <http port> <https port> <tanks port>"
 	exit
 fi
 
 cd $1
 
-mkdir -p logs
-mkdir -p artifacts
-mkdir -p public-html/build
-
 scripts/setup-centos7.sh > logs/setup-centos7.log 2>&1
 
+rm artifacts/start.sh
 cat <<EOF >> artifacts/start.sh
 #!/bin/bash
 
 killall -q python
-killall -q $1/binaries/$3
+killall -q $1/artifacts/$3
 
 # Watch for changes to affable-escapade, and update.
 python -u scripts/python/git-commit-checker.py bwackwat affable-escapade > logs/affable-escapade-git-commit-checker.log 2>&1 &
@@ -31,9 +28,9 @@ python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "sc
 
 # Start the application server.
 
-python -u scripts/python/watcher.py binaries/$3 "binaries/$3 --chat_port 11000 -key artifacts/ssl.key -crt artifacts/ssl.crt -pcs \"dbname=webservice user=$2 password=$5\"" forever > logs/$3-watcher.log 2>&1 &
+python -u scripts/python/watcher.py artifacts/$3 "artifacts/$3" forever > logs/$3-watcher.log 2>&1 &
 
-./scripts/dead-site-checker.py https://localhost:10443 binaries/jph2 > logs/dead-site-checker.log 2>&1 &
+./scripts/dead-site-checker.sh https://localhost:$6 artifacts/jph2 > logs/dead-site-checker.log 2>&1 &
 
 EOF
 
@@ -41,6 +38,7 @@ chmod +x artifacts/start.sh
 
 touch $1/logs/start.log
 
+rm /etc/systemd/system/libjaypea.service
 cat <<EOF >> /etc/systemd/system/libjaypea.service
 [Unit]
 Description=libjaypea startup unit
@@ -53,7 +51,7 @@ KillMode=process
 WorkingDirectory=$1
 RemainAfterExit=true
 ExecStart=/bin/sh -c '$1/artifacts/start.sh 2>&1 > $1/logs/start.log'
-ExecStop=/bin/sh -c 'killall -q python && killall -q $1/binaries/$3'
+ExecStop=/bin/sh -c 'killall -q python && killall -q $1/artifacts/$3'
 
 [Install]
 WantedBy=default.target
@@ -61,10 +59,17 @@ EOF
 
 systemctl enable libjaypea
 
-firewall-offline-cmd --zone=public -add-masquerade
-firewall-offline-cmd --zone=public --add-forward-port=port=80:proto=tcp:toport=10080
-firewall-offline-cmd --zone=public --add-forward-port=port=443:proto=tcp:toport=10443
-firewall-offline-cmd --zone=public --add-forward-port=port=8000:proto=tcp:toport=11000
+firewall-offline-cmd --zone=public --add-masquerade
+firewall-offline-cmd --zone=public --add-forward-port=port=80:proto=tcp:toport=$6
+firewall-offline-cmd --zone=public --add-forward-port=port=443:proto=tcp:toport=$7
+firewall-offline-cmd --zone=public --add-forward-port=port=8000:proto=tcp:toport=$8
+
+#firewall-cmd --permanent --zone=public --add-masquerade
+#firewall-cmd --permanent --zone=public --add-forward-port=port=80:proto=tcp:toport=20080
+#firewall-cmd --permanent --zone=public --add-forward-port=port=443:proto=tcp:toport=20443
+#firewall-cmd --permanent --zone=public --add-forward-port=port=8000:proto=tcp:toport=28000
+#firewall-cmd --set-default-zone=public
+#firewall-cmd --reload
 
 # Must stop http-redirecter.
 # certbot certonly --standalone --http-01-port 10080 --domain $4 -n --agree-tos --email $6

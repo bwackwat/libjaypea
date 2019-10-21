@@ -11,7 +11,7 @@ os.stat(sys.argv[1])
 def enter_directory(dir, current_template):
 	items = os.listdir(dir)
 	next_template = ""
-	template_title = "MISSING TITLE" 	
+	template_title = "MISSING TITLE"
 	for item in items:
 		citem = os.path.join(dir, item)
 		if item == "template.html":
@@ -26,8 +26,8 @@ def enter_directory(dir, current_template):
 				sys.exit(1)
 			with open(citem, "r") as file:
 				nested_content = file.read()
-				title_start = nested_content.find("{TITLE:");
-				title_end = nested_content.find("}", title_start);
+				title_start = nested_content.find("{TITLE:")
+				title_end = nested_content.find("}", title_start)
 				title = nested_content[title_start + 7:title_end]
 				nested_content = nested_content.replace("{TITLE:" + title + "}", "")
 				
@@ -44,9 +44,9 @@ def enter_directory(dir, current_template):
 			with open(citem, "r") as oldfile, open(new_item, "w+") as newfile:
 				new_content = oldfile.read()
 				
-				title_start = new_content.find("{TITLE:");
+				title_start = new_content.find("{TITLE:")
 				if title_start > -1:
-					title_end = new_content.find("}", title_start);
+					title_end = new_content.find("}", title_start)
 					title = new_content[title_start + 7:title_end]
 					new_content = new_content.replace("{TITLE:" + title + "}", "")
 					next_template = next_template.replace("{TITLE}", title)

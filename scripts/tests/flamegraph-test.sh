@@ -8,7 +8,7 @@ port=4001
 
 HEAPPROFILE=artifacts/heap_profile
 
-./binaries/libjaypea-api -p $port &
+./artifacts/libjaypea-api -p $port &
 ljpid=$!
 
 echo "ljpid: $ljpid"

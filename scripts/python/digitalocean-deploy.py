@@ -1,6 +1,6 @@
 #!/bin/python
 
-import requests, json, random, string, sys, os, subprocess, time, getpass
+import requests, json, random, string, sys, os, subprocess, time, getpass, random
 
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
@@ -66,6 +66,17 @@ def deploy_monad_new_smallvm():
 	hostname = raw_input("Enter a hostname: ") or "jph2.net"
 	application = raw_input("Enter a libjaypea application name[jph2]: ") or "jph2"
 	email = raw_input("Enter your email address: ")
+	sendgrid_key = raw_input("Enter a SendGrid key for sending emails: ")
+
+	http_port = random.randrange(10000, 20000)
+
+	https_port = random.randrange(10000, 20000)
+	while https_port == http_port:
+		https_port = random.randrange(10000, 20000)
+		
+	tanks_port = random.randrange(10000, 20000)
+	while tanks_port == http_port or tanks_port == https_port:
+		tanks_port = random.randrange(10000, 20000)
 
 	key = ""
 	print "If the file path below doesn't exist or is invalid, a key will be generated and provided."
@@ -82,6 +93,23 @@ def deploy_monad_new_smallvm():
 
 # - semanage port -a -t ssh_port_t -p tcp 10022
 # - sed -i 's/^#Port .*/Port 10022/' /etc/ssh/sshd_config
+
+	configuration_json = """
+{
+	\"hostname\": \"{0}\",
+	\"public_directory\": \"../affable-escapade\",
+	\"http_port\": \"{1}\",
+	\"https_port\": \"{2}\",
+	\"tanks_port\": \"{3}\",
+	\"admin_email\": \"{4}\",
+	\"sendgrid_key\": \"{5}\",
+	\"postgresql_connection\": \"dbname=webservice user=postgres password={6}\",
+	\"ssl_certificate\": \"artifacts/ssl.crt\",
+	\"ssl_private_key\":\"artifacts/ssl.key\",
+	\"keyfile\":\"extras/keyfile\"
+}
+"""
+
 	cloud_config = """
 #cloud-config
 
@@ -91,10 +119,10 @@ runcmd:
  - sed -i 's/^PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
  - yum -y install git
  - git clone https://github.com/bwackwat/libjaypea /opt/libjaypea
+ - echo "{8}" >> /opt/libjaypea/artifacts/configuration.json
  - git clone https://github.com/bwackwat/affable-escapade /opt/affable-escapade
- - mkdir -p /opt/libjaypea/logs
  - chmod +x /opt/libjaypea/scripts/deploy.sh
- - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} {4} {5} > /opt/libjaypea/logs/deploy.log 2>&1
+ - /opt/libjaypea/scripts/deploy.sh /opt/libjaypea {0} {1} {2} {4} {5} {6} {7} > /opt/libjaypea/logs/deploy.log 2>&1
  - reboot
 """
 
@@ -103,7 +131,6 @@ runcmd:
 
 runcmd:
  - yum -y install wget
- - mkdir -p /opt/libjaypea/logs
  - cd /opt/libjaypea
  - wget https://raw.githubusercontent.com/bwackwat/libjaypea/master/scripts/deploy-minimal.sh
  - chmod +x deploy-minimal.sh
@@ -113,7 +140,8 @@ runcmd:
 	if((raw_input("Do you want to deploy a minimal server? (downloads from build server) [y]: ") or "y") == "y"):
 		cloud_config = minimal_config.format(newuser)
 	else:
-		cloud_config = cloud_config.format(newuser, application, hostname, key.strip(), dbpassword, email)
+		cloud_config = cloud_config.format(newuser, application, hostname, key.strip(), dbpassword, http_port, https_port,\
+		tanks_port, configuration_json.format(hostname, http_port, https_port, tanks_port, email, sendgrid_key, dbpassword))
 
 	print '-----------------------------------------------------------------'
 	print cloud_config

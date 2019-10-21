@@ -27,11 +27,49 @@
 #define INSUFFICIENT_ACCESS "{\"error\":\"Insufficient access.\"}"
 #define NO_SUCH_ITEM "{\"error\":\"That record doesn't exist.\"}"
 
+class HttpResponse{
+public:
+	HttpResponse(){}
+
+	HttpResponse(std::string new_status, std::unordered_map<std::string, std::string> new_headers, std::string new_body)
+	:status(new_status), headers(new_headers), body(new_body){}
+
+	std::string start = "HTTP/1.1";
+	std::string status = "200 Ok";
+	std::unordered_map<std::string, std::string> headers = std::unordered_map<std::string, std::string>();
+	std::string body = "";
+
+	std::string str(){
+		std::string response = start + " " + status + "\r\n";
+		for(auto iter = this->headers.begin(); iter != this->headers.end(); ++iter){
+			response += iter->first + ": " + iter->second + "\r\n";
+		}
+		response += "\r\n";
+		return response + this->body;
+	}
+};
+
+class View{
+public:
+	std::string route = "";
+	std::string method = "";
+	std::unordered_map<std::string, std::string> parameters = std::unordered_map<std::string, std::string>();
+	ssize_t size;
+
+	View(){}
+
+	View(std::string new_route)
+	:route(new_route){}
+	
+	View(std::string new_route, std::unordered_map<std::string, std::string> new_parameters)
+	:route(new_route), parameters(new_parameters){}
+};
+
 class Route{
 public:
 	std::function<std::string(JsonObject*)> function;
+	std::function<View(JsonObject*)> form_function;
 	std::function<std::string(JsonObject*, JsonObject*)> token_function;
-	std::function<ssize_t(JsonObject*, int)> raw_function;
 
 	std::unordered_map<std::string, JsonType> requires;
 	bool requires_human;
@@ -49,21 +87,21 @@ public:
 	minimum_ms_between_call(new_rate_limit)
 	{}
 
-	Route(std::function<std::string(JsonObject*, JsonObject*)> new_function,
+	Route(std::function<View(JsonObject*)> new_function,
 		std::unordered_map<std::string, JsonType> new_requires,
 		std::chrono::milliseconds new_rate_limit,
 		bool new_requires_human)
-	:token_function(new_function),
+	:form_function(new_function),
 	requires(new_requires),
 	requires_human(new_requires_human),
 	minimum_ms_between_call(new_rate_limit)
 	{}
 
-	Route(std::function<ssize_t(JsonObject*, int)> new_raw_function,
+	Route(std::function<std::string(JsonObject*, JsonObject*)> new_function,
 		std::unordered_map<std::string, JsonType> new_requires,
 		std::chrono::milliseconds new_rate_limit,
 		bool new_requires_human)
-	:raw_function(new_raw_function),
+	:token_function(new_function),
 	requires(new_requires),
 	requires_human(new_requires_human),
 	minimum_ms_between_call(new_rate_limit)
@@ -75,6 +113,13 @@ public:
 	char* data;
 	size_t data_length;
 	time_t modified;
+};
+
+class Session{
+public:
+	std::string captcha;
+	std::chrono::seconds created = std::chrono::duration_cast<std::chrono::seconds>(
+		std::chrono::system_clock::now().time_since_epoch());
 };
 
 class HttpApi{
@@ -94,17 +139,17 @@ public:
 		bool requires_human = false
 	);
 
-	void route(std::string method,
+	void form_route(std::string method,
 		std::string path,
-		std::function<std::string(JsonObject*, JsonObject*)> function,
+		std::function<View(JsonObject*)> function,
 		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),
 		std::chrono::milliseconds rate_limit = std::chrono::milliseconds(0),
 		bool requires_human = false
 	);
 
-	void route(std::string method,
+	void authenticated_route(std::string method,
 		std::string path,
-		std::function<ssize_t(JsonObject*, int)> function,
+		std::function<std::string(JsonObject*, JsonObject*)> function,
 		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),
 		std::chrono::milliseconds rate_limit = std::chrono::milliseconds(0),
 		bool requires_human = false
@@ -114,6 +159,7 @@ public:
 	void set_file_cache_size(int megabytes);
 private:
 	std::unordered_map<std::string, CachedFile*> file_cache;
+	std::unordered_map<std::string, Session*> sessions;
 	int file_cache_remaining_bytes = 30 * 1024 * 1024; // 30MB cache.
 	std::mutex file_cache_mutex;
 	std::string public_directory;
@@ -121,4 +167,11 @@ private:
 	SymmetricEncryptor* encryptor;
 
 	std::unordered_map<std::string, Route*> routemap;
+
+	ssize_t respond(int fd, HttpResponse* response);
+	ssize_t respond_404(int fd);
+	ssize_t respond_cached_file(int fd, HttpResponse* response, CachedFile* cached_file);
+	ssize_t respond_parameterized_view(int fd, View* view, HttpResponse* response);
+	ssize_t respond_view(int fd, View* view, HttpResponse* response);
+	ssize_t respond_http(int fd, View* view, HttpResponse* response);
 };

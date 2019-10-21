@@ -51,8 +51,8 @@ int main(int argc, char **argv){
 	}
 
 	SymmetricEncryptor encryptor;
-	std::string admin = "bwackwat";
-	std::string password = "aq12ws";
+	std::string admin = "";
+	std::string password = "";
 	std::string token = encryptor.encrypt(admin + password);
 	PRINT("ADMIN: " << admin)
 	PRINT("PASSWORD: " << password)

@@ -75,8 +75,12 @@ void EpollServer::close_client(int* fd, std::function<void(int*)> callback){
 	callback(fd);
 }
 
-bool EpollServer::send(int fd, std::string data){
-	return this->send(fd, data.c_str(), static_cast<size_t>(data.length()));
+ssize_t EpollServer::send(int fd, std::string data){
+	//return this->send(fd, data.c_str(), static_cast<size_t>(data.length()));
+	if(this->send(fd, data.c_str(), data.length())){
+		return -1;
+	}
+	return static_cast<ssize_t>(data.length());
 }
 
 /**
@@ -388,15 +392,6 @@ void EpollServer::run_thread(unsigned int thread_id){
 										}
 									}
 								}
-								/*
-								I found some docs that said this should work (and thus replace all the timerfds), but it doesn't?
-
-								recv_timeout.tv_sec = 10;
-								recv_timeout.tv_usec = 0;
-								if(setsockopt(new_fd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&recv_timeout), sizeof(struct timeval)) < 0){
-									perror("setsockopt new connection timeout");
-								}
-								*/
 								this->read_counter[new_fd] = 0;
 								this->write_counter[new_fd] = 0;
 								if(this->on_connect != nullptr){
@@ -438,6 +433,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 					this->close_client(&the_fd, close_client_callback);
 				}else if(len >= PACKET_LIMIT){
 					ERROR("OVERFLOAT more to read uh oh!")
+					DEBUG(len << "|||" << packet << "|||")
 				}else if(len == 0){
 					PRINT("RECEIVE ZERO?!")
 				}else{
@@ -478,15 +474,8 @@ void EpollServer::run(bool returning, unsigned int new_num_threads){
 	}
 
 	for(unsigned int i = 0; i < total; ++i){
-			std::thread next(&EpollServer::run_thread, this, i);
-			next.detach();
-			
-			//TODO: The code below working with the deconstructor code causes a SEGFAULT.
-			// Doesn't really matter, but I would like to resolve this eventually.
-			 
-			//std::thread* next = new std::thread(&EpollServer::run_thread, this, i);
-			//this->threads.push_back(next);
-			//next->detach();
+		std::thread next(&EpollServer::run_thread, this, i);
+		next.detach();
 	}
 
 	if(returning){
@@ -506,5 +495,3 @@ EpollServer::~EpollServer(){
 		DEBUG("THREAD JOINED AND DELETED")
 	}
 }
-
-

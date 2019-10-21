@@ -1,32 +1,25 @@
 #!/bin/bash
 
 killall watcher.py
+killall python
+killall artifacts/jph2
 
 set -e
+set -x
 
-sleep 1
+if [ ! -f "artifacts/configuration.json" ]; then
+	cp extras/configuration.json artifacts/configuration.json
+fi
 
-xterm -geometry 100x27 \
--T "watcher building libjaypea.so" \
--e scripts/python/watcher.py cpp-source/,scripts/build-library.sh,scripts/build-prefix.sh "scripts/build-library.sh DEBUG" &
+scripts/python/watcher.py cpp-source/,cpp-source/examples/,scripts/build-example.sh,scripts/build-library.sh,scripts/build-prefix.sh "scripts/build-library.sh DEBUG && scripts/build-example.sh DEBUG" > logs/develop-build-watcher.log 2>&1 &
 
-sleep 1
+scripts/python/watcher.py ../affable-escapade/,scripts/python/site-templater.py,scripts/python/site-indexer.py "scripts/python/site-indexer.py ../affable-escapade y && scripts/python/site-templater.py ../affable-escapade" > logs/site-scripts-watcher.log 2>&1 &
 
-xterm -geometry 100x27 \
--T "watcher building examples" \
--e scripts/python/watcher.py cpp-source/examples/,cpp-source/examples/jph2/,artifacts/libjaypea.so,artifacts/libjaypeap.so,scripts/build-example.sh "scripts/build-example.sh DEBUG" &
+scripts/python/watcher.py artifacts/jph2,artifacts/configuration.json "artifacts/jph2" > logs/jph2-watcher.log 2>&1 &
 
-sleep 1
+scripts/python/migration/backup.py
 
-xterm -geometry 100x5 \
--T "watcher preparing affable-escapade" \
--e scripts/python/watcher.py cpp-source/examples/,scripts/python/site-templater.py,scripts/python/site-indexer.py "scripts/python/site-indexer.py ../affable-escapade y && scripts/python/site-templater.py ../affable-escapade" &
+echo "DEVELOPMENT RESTARTED"
 
-sleep 1
-
-xterm -geometry 100x30 \
--T "watcher running jph2" \
--e scripts/python/watcher.py binaries/jph2,extras/configuration.json "binaries/jph2" &
-
-./scripts/python/migration/backup.py
+tail -f logs/develop-build-watcher.log
 

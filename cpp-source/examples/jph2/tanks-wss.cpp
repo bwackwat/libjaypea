@@ -1,8 +1,8 @@
 
 // TODO: This needs TLS because the page is loaded in TLS... Maybe make a special HTTP exception here.
 // You can currently spoof other players, but you cant control the movement of players.
-//WebsocketServer game_server(static_cast<uint16_t>(chat_port), 10);
-TlsWebsocketServer game_server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(chat_port), 10);
+//WebsocketServer game_server(static_cast<uint16_t>(tanks_port), 10);
+TlsWebsocketServer game_server(ssl_certificate, ssl_private_key, static_cast<uint16_t>(tanks_port), 10);
 
 // Unlike the structure in TcpServer, this structure indicates "joined players".
 // Need to build out a larger UI and corresponding events for players.

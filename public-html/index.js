@@ -10,7 +10,7 @@ function callAPI(method, route, data, callback){
 	var sendData = JSON.stringify(data);
 	var http = new XMLHttpRequest();
 	http.open(method, apiUrl + route, true);
-	http.setRequestHeader("Content-type", "application/json");
+	http.setRequestHeader("Content-Type", "application/json");
 	http.onreadystatechange = function(){
 		if(http.responseText === ""){
 			//Bloody OPTIONS pre-flight...

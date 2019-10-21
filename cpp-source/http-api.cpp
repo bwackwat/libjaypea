@@ -1,4 +1,5 @@
 #include <random>
+#include <regex>
 
 #include "http-api.hpp"
 
@@ -18,6 +19,13 @@ encryptor(0)
 	this->server->set_timeout(10);
 }
 
+void HttpApi::form_route(std::string method, std::string path, std::function<View(JsonObject*)> function,
+std::unordered_map<std::string, JsonType> requires,
+std::chrono::milliseconds rate_limit,
+bool requires_human){
+	this->routemap[method + " " + path] = new Route(function, requires, rate_limit, requires_human);
+}
+
 void HttpApi::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function,
 std::unordered_map<std::string, JsonType> requires,
 std::chrono::milliseconds rate_limit,
@@ -28,12 +36,12 @@ bool requires_human){
 	this->routemap[method + " /api" + path] = new Route(function, requires, rate_limit, requires_human);
 }
 
-void HttpApi::route(std::string method, std::string path, std::function<std::string(JsonObject*, JsonObject*)> function,
+void HttpApi::authenticated_route(std::string method, std::string path, std::function<std::string(JsonObject*, JsonObject*)> function,
 std::unordered_map<std::string, JsonType> requires,
 std::chrono::milliseconds rate_limit,
 bool requires_human){
 	if(encryptor == 0){
-		PRINT("You tried to add a route that uses encryption. Please provide an encryptor in the HttpApi constructor")
+		PRINT("You tried to add a route that uses an encrypted token. Please provide an encryptor in the HttpApi constructor.")
 		exit(1);
 	}
 	if(path[path.length() - 1] != '/'){
@@ -42,40 +50,285 @@ bool requires_human){
 	this->routemap[method + " /api" + path] = new Route(function, requires, rate_limit, requires_human);
 }
 
-void HttpApi::route(std::string method, std::string path, std::function<ssize_t(JsonObject*, int)> function,
-std::unordered_map<std::string, JsonType> requires,
-std::chrono::milliseconds rate_limit,
-bool requires_human){
-	if(path[path.length() - 1] != '/'){
-		path += '/';
-	}
-	this->routemap[method + " /api" + path] = new Route(function, requires, rate_limit, requires_human);
-}
-
-struct Question{
-	std::string q;
-	std::vector<std::string> a;
-};
-static struct Question questions[6] = {
-	{"What is the basic color of the sky?", {"blue"}},
-	{"What is the basic color of grass?", {"green"}},
-	{"What is the basic color of blood?", {"red"}},
-	{"What is the first name of the current president?", {"donald"}},
-	{"What is the last name of the current president?", {"trump"}},
-	{"How many planets are in the solar system?", {"8", "9"}}
-};
 static std::random_device rd;
 static std::mt19937 mt(rd());
-static std::uniform_int_distribution<size_t> dist(0, 5);
-static struct Question* get_question(){
-	return &questions[dist(mt)];
+static const char captcha_set[] =
+        "23456789$@!=*"
+        "ABCDEFGHJKMNPQRST"
+        "abcdefghijkmnprstuvwxyz";
+static std::uniform_int_distribution<size_t> distribution(0, sizeof(captcha_set) - 2);
+static std::string get_captcha(){
+	std::string captcha = "";
+	for(int i = 0; i < 6; i++){
+		captcha += captcha_set[distribution(mt)];
+	}
+	return captcha;
 }
-static std::unordered_map<int, struct Question*> client_questions;
+
+ssize_t HttpApi::respond(int fd, HttpResponse* response){
+	if(!response->headers.count("Content-Length")){
+		response->headers["Content-Length"] = std::to_string(response->body.length());
+	}
+	return this->server->send(fd, response->str());
+}
+
+ssize_t HttpApi::respond_404(int fd){
+	std::string basic_404_html = "<h1 style='text-align:center;'>404 Not Found</h1>";
+	HttpResponse response("404 Not Found", {{"Location", "404.html"}}, basic_404_html); 
+	return this->respond(fd, &response);
+}
+
+ssize_t HttpApi::respond_cached_file(int fd, HttpResponse* response, CachedFile* cached_file){
+	response->headers["Content-Length"] = std::to_string(cached_file->data_length);
+	ssize_t headers_size = this->respond(fd, response);
+	size_t buffer_size = BUFFER_LIMIT;
+	size_t offset = 0;
+	while(buffer_size == BUFFER_LIMIT){
+		if(offset + buffer_size > cached_file->data_length){
+			// Send final bytes.
+			buffer_size = cached_file->data_length % BUFFER_LIMIT;
+		}
+		if(this->server->send(fd, cached_file->data + offset, buffer_size)){
+			return -1;
+		}
+		offset += buffer_size;
+	}
+	return headers_size + static_cast<ssize_t>(cached_file->data_length);
+}
+
+ssize_t HttpApi::respond_parameterized_view(int fd, View* view, HttpResponse* response){
+	int file_fd;
+	ssize_t len;
+	char buffer[BUFFER_LIMIT + 32];
+
+	if((file_fd = open(view->route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
+		perror("open file");
+		return -1;
+	}
+
+	// Only "small html" should be "parameterized".
+	if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
+		perror("read file");
+		return -1;
+	}
+
+	if(close(file_fd) < 0){
+		perror("close file");
+		return -1;
+	}
+
+	if(len != view->size){
+		PRINT("COULDN'T READ WHOLE FILE SIZE")
+		return -1;
+	}
+
+	// Make parameter substitutions.
+	response->body = std::string(buffer, static_cast<unsigned long>(len));
+	for(auto iter = view->parameters.begin(); iter != view->parameters.end(); ++iter){
+		Util::replace_all(response->body, "{{{" + iter->first + "}}}", iter->second);
+	}
+	std::size_t parameter_start = response->body.find("{{{");
+	std::size_t parameter_end = std::string::npos;
+	if(parameter_start != std::string::npos){
+		parameter_end = response->body.find("}}}");
+	}
+	std::string parameter;
+	while(parameter_start != std::string::npos && parameter_end != std::string::npos){
+		parameter = response->body.substr(parameter_start, parameter_end - parameter_start + 3);
+		DEBUG("FOUND PARAMETER: " << parameter_start << "," << parameter_end << ": " << parameter)
+		Util::replace_all(response->body, parameter, "");
+		parameter_start = response->body.find("{{{");
+		parameter_end = std::string::npos;
+		if(parameter_start != std::string::npos){
+			parameter_end = response->body.find("}}}");
+		}
+	}
+
+	return this->respond(fd, response);
+}
+
+ssize_t HttpApi::respond_view(int fd, View* view, HttpResponse* response){
+	int file_fd;
+	ssize_t len;
+	char buffer[BUFFER_LIMIT + 32];
+
+	// Send headers.
+	if(this->respond(fd, response) < 0){
+		perror("send headers");
+		return -1;
+	}
+
+	if((file_fd = open(view->route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
+		perror("open file");
+		return -1;
+	}
+
+	// Send all file data without parameterization.
+	while(file_fd > 0){
+		if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
+			perror("read file");
+			return -1;
+		}
+		buffer[len] = 0;
+		if(this->server->send(fd, buffer, static_cast<size_t>(len))){
+			perror("send filepacket");
+			return -1;
+		}
+		// Not complete packet, no more to read.
+		if(len < BUFFER_LIMIT){
+			break;
+		}
+	}
+
+	if(close(file_fd) < 0){
+		perror("close file");
+		return -1;
+	}
+
+	return static_cast<ssize_t>(response->str().length()) + view->size;
+}
+
+ssize_t HttpApi::respond_http(int fd, View* view, HttpResponse* response){
+	std::string clean_route = this->public_directory;
+	for(size_t i = 0; i < view->route.length(); ++i){
+		if(i < view->route.length() - 1 &&
+		view->route[i] == '.' &&
+		view->route[i + 1] == '.'){
+			continue;
+		}
+		clean_route += view->route[i];
+	}
+
+	struct stat route_stat;
+	if(lstat(clean_route.c_str(), &route_stat) < 0){
+		DEBUG("lstat error")
+		return this->respond_404(fd);
+	}
+	
+	if(S_ISDIR(route_stat.st_mode)){
+		clean_route += "/index.html";
+		if(lstat(clean_route.c_str(), &route_stat) < 0){
+			DEBUG("lstat index.html error")
+			return this->respond_404(fd);
+		}
+	}
+
+	if(!S_ISREG(route_stat.st_mode)){
+		PRINT("Something other than a regular file was requested...")
+		return this->respond_404(fd);
+	}
+
+	bool is_html = Util::endsWith(clean_route, ".html");
+	if(Util::endsWith(clean_route, ".css")){
+		response->headers["Content-Type"] = "text/css";
+	}else if(is_html){
+		response->headers["Content-Type"] = "text/html";
+	}else if(Util::endsWith(clean_route, ".svg")){
+		response->headers["Content-Type"] = "image/svg+xml";
+	}else if(Util::endsWith(clean_route, ".js")){
+		response->headers["Content-Type"] = "text/javascript";
+	}else{
+		response->headers["Content-Type"] = "text/plain";
+	}
+
+	// Send regular file size for HEAD.
+	if(view->method == "HEAD"){
+		response->headers["Content-Length"] = std::to_string(route_stat.st_size);
+		return this->respond(fd, response);
+	}
+
+	// If the modified time changed, clear the cache.
+	if(this->file_cache.count(clean_route) && route_stat.st_mtime != this->file_cache[clean_route]->modified){
+		DEBUG("Erase " << clean_route)
+		this->file_cache.erase(clean_route);
+	}
+
+	// Cache the file.
+	if(!this->file_cache.count(clean_route) && this->file_cache_remaining_bytes > route_stat.st_size && this->file_cache_mutex.try_lock()){
+		CachedFile* cached_file = new CachedFile();
+		cached_file->data_length = static_cast<size_t>(route_stat.st_size);
+		DEBUG("Caching " << clean_route << " for " << route_stat.st_size << " bytes.")
+		cached_file->data = new char[route_stat.st_size];
+		cached_file->modified = route_stat.st_mtime;
+		this->file_cache[clean_route] = cached_file;
+		this->file_cache_remaining_bytes -= cached_file->data_length;
+
+		int file_fd, offset = 0;
+		ssize_t len;
+		char buffer[BUFFER_LIMIT + 32];
+		if((file_fd = open(clean_route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
+			perror("open caching file");
+			this->file_cache_mutex.unlock();
+			return -1;
+		}
+		while(file_fd > 0){
+			if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
+				perror("read caching file");
+				this->file_cache_mutex.unlock();
+				return -1;
+			}
+			buffer[len] = 0;
+			std::memcpy(cached_file->data + offset, buffer, static_cast<size_t>(len));
+			offset += len;
+			if(len < BUFFER_LIMIT){
+				break;
+			}
+		}
+		if(close(file_fd) < 0){
+			perror("close caching file");
+			this->file_cache_mutex.unlock();
+			return -1;
+		}
+		PRINT("File cached: " << clean_route)
+		this->file_cache_mutex.unlock();
+	}
+
+	// Send the file from the cache.
+	if(this->file_cache.count(clean_route)){
+		CachedFile* cached_file = file_cache[clean_route];
+		
+		// Only templatize if single packet .html.
+		if(cached_file->data_length < BUFFER_LIMIT && is_html){
+			// Make parameter substitutions.
+			response->body = std::string(cached_file->data, cached_file->data_length);
+			for(auto iter = view->parameters.begin(); iter != view->parameters.end(); ++iter){
+				Util::replace_all(response->body, "{{{" + iter->first + "}}}", iter->second);
+			}
+			std::size_t parameter_start = response->body.find("{{{");
+			std::size_t parameter_end = std::string::npos;
+			if(parameter_start != std::string::npos){
+				parameter_end = response->body.find("}}}");
+			}
+			std::string parameter;
+			while(parameter_start != std::string::npos && parameter_end != std::string::npos){
+				parameter = response->body.substr(parameter_start, parameter_end - parameter_start + 3);
+				DEBUG("FOUND CACHE PARAMETER: " << parameter_start << "," << parameter_end << ": " << parameter)
+				Util::replace_all(response->body, parameter, "");
+				parameter_start = response->body.find("{{{");
+				parameter_end = std::string::npos;
+				if(parameter_start != std::string::npos){
+					parameter_end = response->body.find("}}}");
+				}
+			}
+
+			DEBUG("Cached file served and parameterized: " << clean_route << " with " << cached_file->data_length << " bytes as " << response->headers["Content-Type"])
+			return respond(fd, response);
+		}else{
+			DEBUG("Cached file served: " << clean_route << " with " << cached_file->data_length << " bytes as " << response->headers["Content-Type"])
+			return respond_cached_file(fd, response, cached_file);
+		}
+	}else{
+		view->size = route_stat.st_size;
+		if(view->size < BUFFER_LIMIT && is_html){
+			// Send a single parameterized packet.
+			return respond_parameterized_view(fd, view, response);
+		}else{
+			return respond_view(fd, view, response);
+		}
+	}
+}
 
 void HttpApi::start(void){
-	std::string default_header = "HTTP/1.1 200 OK\n"
-		"Accept-Ranges: bytes\n";
-
 	this->routes_object = new JsonObject(OBJECT);
 	for(auto iter = this->routemap.begin(); iter != this->routemap.end(); ++iter){
 		routes_object->objectValues[iter->first] = new JsonObject(OBJECT);
@@ -92,331 +345,199 @@ void HttpApi::start(void){
 	}
 	this->routes_string = routes_object->stringify();
 
-	//PRINT("HttpApi running with routes: " << this->routes_string)
-	
-	this->server->on_connect = [&](int fd){
-		client_questions[fd] = get_question();
-	};
-
 	this->server->on_read = [&](int fd, const char* data, ssize_t data_length)->ssize_t{
-		//DEBUG("RECV:" << data)
-		
-		JsonObject r_obj(OBJECT);
-		enum RequestResult r_type = Util::parse_http_api_request(data, &r_obj);
+		JsonObject request_object(OBJECT);
+		View view;
+		HttpResponse response;
+		enum RequestResult request_type = Util::parse_http_request(data, &request_object);
 
-		std::string response_header = default_header;
-		std::string response_body = std::string();
-		std::string response = std::string();
-		
-		if(r_type == JSON){
-			char json_data[PACKET_LIMIT + 32];
-			
-			auto get_body_callback = [&](int, const char*, size_t dl)->ssize_t{
-				DEBUG("GOT JSON:" << json_data);
-				return static_cast<ssize_t>(dl);
-			};
-			
-			if(this->server->recv(fd, json_data, PACKET_LIMIT, get_body_callback) <= 0){
-				PRINT("FAILED TO GET JSON POST BODY");
-				return -1;
+		//DEBUG(request_object.stringify(true))
+
+
+		Session* session;
+
+		// If the session key is bad or if it has expired (1 hour).
+		if(request_object.HasObj("libjaypea-session", STRING)){
+			if(!this->sessions.count(request_object.GetStr("libjaypea-session"))){
+				request_object.objectValues.erase("libjaypea-session");
+			}else if(std::chrono::duration_cast<std::chrono::seconds>(
+			std::chrono::system_clock::now().time_since_epoch()) - this->sessions[request_object.GetStr("libjaypea-session")]->created
+			> std::chrono::seconds(3600)){
+				request_object.objectValues.erase("libjaypea-session");
 			}
-			
-			r_obj.parse(json_data);
-			
-			r_type = HTTP_API;
 		}
-		
-		//DEBUG("JSON: " << r_obj.stringify(true))
-		
-		std::string route = r_obj.GetStr("route");
-		
-		if(r_type == HTTP){
-			std::string clean_route = this->public_directory;
-			for(size_t i = 0; i < route.length(); ++i){
-				if(i < route.length() - 1 &&
-				route[i] == '.' &&
-				route[i + 1] == '.'){
-					continue;
-				}
-				clean_route += route[i];
-			}
-			
-			if(this->file_cache.count(clean_route + "/index.html")){
-				clean_route += "/index.html";
-			}
 
-			struct stat route_stat;
-			if(lstat(clean_route.c_str(), &route_stat) < 0){
-				// perror("lstat");
-				response_body = HTTP_404;
-				response_header = response_header.replace(9, 6, "404 Not Found");
-			}else if(S_ISDIR(route_stat.st_mode)){
-				clean_route += "/index.html";
-				if(lstat(clean_route.c_str(), &route_stat) < 0){
-					// perror("lstat index.html");
-					response_body = HTTP_404;
-					response_header = response_header.replace(9, 6, "404 Not Found");
-				}
+		if(!request_object.HasObj("libjaypea-session", STRING)){
+			std::string input = this->server->fd_to_details_map[fd];
+			if(request_object.HasObj("User-Agent", STRING)){
+				input += request_object.GetStr("User-Agent");
 			}
+			if(request_object.HasObj("Host", STRING)){
+				input += request_object.GetStr("Host");
+			}
+			request_object.objectValues["libjaypea-session"] = new JsonObject(Util::sha256_hash(input));
+		}
 
-			if(response_body.empty() && S_ISREG(route_stat.st_mode)){
-				if(this->file_cache.count(clean_route) &&
-				route_stat.st_mtime != this->file_cache[clean_route]->modified){
-					this->file_cache.erase(clean_route);
+		response.headers["libjaypea-session"] = request_object.GetStr("libjaypea-session");
+		if(!this->sessions.count(response.headers["libjaypea-session"])){
+			this->sessions[response.headers["libjaypea-session"]] = new Session();
+		}
+
+		session = this->sessions[response.headers["libjaypea-session"]];
+
+
+		if(request_object.HasObj("method", STRING)){
+			view.method = request_object.GetStr("method");
+		}
+		if(request_object.HasObj("route", STRING)){
+			view.route = request_object.GetStr("route");
+		}
+		std::string route_key = "GET /404.html";
+		if(request_object.HasObj("method", STRING) && request_object.HasObj("route", STRING)){
+			route_key = request_object.GetStr("method") + ' ' + request_object.GetStr("route");
+		}
+
+		if(request_type == HTTP_API || request_type == API){
+			if(route_key[route_key.length() - 1] != '/'){
+				route_key += '/';
+			}
+		}
+
+		if(request_type != HTTP){
+			if(route_key == "GET /api/captcha/"){
+				response.headers["Content-Type"] = "text/html";
+				if(request_object.HasObj("new", STRING)){
+					if(request_object.GetStr("new") == "true"){
+						session->captcha.clear();
+					}
 				}
-				if(this->file_cache.count(clean_route)){
-					// Send the file from the cache.
-					CachedFile* cached_file = file_cache[clean_route];
-
-					if(Util::endsWith(clean_route, ".css")){
-						response = response_header + "Content-Type: text/css\n";
-					}else if(Util::endsWith(clean_route, ".html")){
-						response = response_header + "Content-Type: text/html\n";
-					}else if(Util::endsWith(clean_route, ".svg")){
-						response = response_header + "Content-Type: image/svg+xml\n";
-					}else{
-						response = response_header + "Content-Type: text/plain\n";
-					}
-					response = response + "Content-Length: " + std::to_string(cached_file->data_length) + "\r\n\r\n";
-					if(this->server->send(fd, response.c_str(), response.length())){
-						return -1;
-					}
-					//DEBUG("DELI:" << response)
-					if(r_obj.GetStr("method") != "HEAD"){
-						size_t buffer_size = BUFFER_LIMIT;
-						size_t offset = 0;
-						while(buffer_size == BUFFER_LIMIT){
-							if(offset + buffer_size > cached_file->data_length){
-								// Send final bytes.
-								buffer_size = cached_file->data_length % BUFFER_LIMIT;
-							}
-							if(this->server->send(fd, cached_file->data + offset, buffer_size)){
-								return -1;
-							}
-							offset += buffer_size;
-						}
-					}
-					PRINT("Cached file served: " << clean_route)
+				if(session->captcha.empty()){
+					session->captcha = get_captcha();
+				}
+				if(Util::secret_captcha_url.empty()){
+					response.body = "<h3>" + session->captcha + "</h3>\"}";
 				}else{
-					if(Util::endsWith(clean_route, ".css")){
-						response = response_header + "Content-Type: text/css\n";
-					}else if(Util::endsWith(clean_route, ".html")){
-						response = response_header + "Content-Type: text/html\n";
-					}else if(Util::endsWith(clean_route, ".svg")){
-						response = response_header + "Content-Type: image/svg+xml\n";
-					}else{
-						response = response_header + "Content-Type: text/plain\n";
-					}
-					response = response + "Content-Length: " + std::to_string(route_stat.st_size) + "\r\n\r\n";
-					if(this->server->send(fd, response.c_str(), response.length())){
-						return -1;
-					}
-					//DEBUG("DELI:" << response)
-
-					if(r_obj.GetStr("method") != "HEAD"){
-						if(this->file_cache_remaining_bytes > route_stat.st_size && this->file_cache_mutex.try_lock()){
-							// Stick the file into the cache AND send it
-							CachedFile* cached_file = new CachedFile();
-							cached_file->data_length = static_cast<size_t>(route_stat.st_size);
-							DEBUG("Caching " << clean_route << " for " << route_stat.st_size << " bytes.")
-							cached_file->data = new char[route_stat.st_size];
-							cached_file->modified = route_stat.st_mtime;
-							int offset = 0;
-							this->file_cache[clean_route] = cached_file;
-							this->file_cache_remaining_bytes -= cached_file->data_length;
-
-							int file_fd;
-							ssize_t len;
-							char buffer[BUFFER_LIMIT + 32];
-							if((file_fd = open(clean_route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
-								perror("open file");
-								this->file_cache_mutex.unlock();
-								return 0;
-							}
-							while(file_fd > 0){
-								if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-									perror("read file");
-								this->file_cache_mutex.unlock();
-									return 0;
-								}
-								buffer[len] = 0;
-								// Only different line (copy into memory)
-								std::memcpy(cached_file->data + offset, buffer, static_cast<size_t>(len));
-								offset += len;
-								if(this->server->send(fd, buffer, static_cast<size_t>(len))){
-									this->file_cache_mutex.unlock();
-									return -1;
-								}
-								if(len < BUFFER_LIMIT){
-									break;
-								}
-							}
-							if(close(file_fd) < 0){
-								perror("close file");
-								this->file_cache_mutex.unlock();
-								return 0;
-							}
-							PRINT("File cached and served: " << clean_route)
-							this->file_cache_mutex.unlock();
-						}else{
-							// Send the file read-buffer style
-							int file_fd;
-							ssize_t len;
-							char buffer[BUFFER_LIMIT + 32];
-							if((file_fd = open(clean_route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
-								perror("open file");
-								return 0;
-							}
-							while(file_fd > 0){
-								if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-									perror("read file");
-									return 0;
-								}
-								buffer[len] = 0;
-								if(this->server->send(fd, buffer, static_cast<size_t>(len))){
-									return -1;
-								}
-								if(len < BUFFER_LIMIT){
-									break;
-								}
-							}
-							if(close(file_fd) < 0){
-								perror("close file");
-								return 0;
-							}
-							PRINT("File served: " << clean_route)
-						}
-					}
+					response.body = Util::https_client.get(Util::secret_captcha_url + "&secret=" + session->captcha);
 				}
-			}else{
-				PRINT("Something other than a regular file was requested...")
-				response_body = HTTP_404;
-				response_header = response_header.replace(9, 6, "404 Not Found");
+				return respond(fd, &response);
 			}
-		}else{
-			if(route.length() >= 4 &&
-			!Util::strict_compare_inequal(route.c_str(), "/api", 4)){
-				route = r_obj.GetStr("method") + ' ' + route;
-				if(route[route.length() - 1] != '/'){
-					route += '/';
+
+			if(!this->routemap.count(route_key)){
+				if(request_type == HTTP_FORM){
+					view.parameters["status"] = "Bad route.";
+					return respond_http(fd, &view, &response);
+				}
+				response.body = "{\"error\":\"Bad route.\"}";
+				return respond(fd, &response);
+			}
+
+			for(auto iter = this->routemap[route_key]->requires.begin(); iter != this->routemap[route_key]->requires.end(); ++iter){
+				view.parameters[iter->first] = request_object.GetURLDecodedStr(iter->first);
+			}
+
+			// For all but regular HTTP requests, check millseconds since last call by IP address.
+			if(this->routemap[route_key]->minimum_ms_between_call.count() > 0){
+				std::chrono::milliseconds now = std::chrono::duration_cast<std::chrono::milliseconds>(
+					std::chrono::system_clock::now().time_since_epoch());
+
+				if(this->routemap[route_key]->client_ms_at_call.count(this->server->fd_to_details_map[fd])){
+					std::chrono::milliseconds diff = now -
+					this->routemap[route_key]->client_ms_at_call[this->server->fd_to_details_map[fd]];
+
+					#if not defined(DO_DEBUG)
+						if(diff < this->routemap[route_key]->minimum_ms_between_call){
+							DEBUG("DIFF: " << diff.count() << "\nMINIMUM: " << this->routemap[route_key]->minimum_ms_between_call.count())
+							if(request_type == HTTP_FORM){
+								view.parameters["status"] = "This route is rate-limited, wait a bit.";
+								return respond_http(fd, &view, &response);
+							}
+							response.body = "{\"error\":\"This route is rate-limited, wait a bit.\"}";
+							return respond(fd, &response);
+						}
+					#endif
+				}
+				this->routemap[route_key]->client_ms_at_call[this->server->fd_to_details_map[fd]] = now;
+			}
+
+			for(auto iter = this->routemap[route_key]->requires.begin(); iter != this->routemap[route_key]->requires.end(); ++iter){
+				if(!request_object.HasObj(iter->first, iter->second) ||
+				(request_object.HasObj(iter->first, STRING) && request_object.GetStr(iter->first).empty())){
+					if(request_type == HTTP_FORM){
+						view.parameters["status"] = "'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".";
+						return respond_http(fd, &view, &response);
+					}
+					response.body = "{\"error\":\"'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".\"}";
+					return respond(fd, &response);
 				}
 			}
 
-			PRINT((r_type == API ? "APIR: " : "HTTPAPIR: ") << route)
-
-			if(this->routemap.count(route)){
-				if(this->routemap[route]->minimum_ms_between_call.count() > 0){
-					std::chrono::milliseconds now = std::chrono::duration_cast<std::chrono::milliseconds>(
-						std::chrono::system_clock::now().time_since_epoch());
-
-					if(this->routemap[route]->client_ms_at_call.count(this->server->fd_to_details_map[fd])){
-						std::chrono::milliseconds diff = now -
-						this->routemap[route]->client_ms_at_call[this->server->fd_to_details_map[fd]];
-
-						if(diff < this->routemap[route]->minimum_ms_between_call){
-							DEBUG("DIFF: " << diff.count() << "\nMINIMUM: " << this->routemap[route]->minimum_ms_between_call.count())
-							response_body = "{\"error\":\"This API route is rate-limited.\"}";
-						}else{
-							this->routemap[route]->client_ms_at_call[this->server->fd_to_details_map[fd]] = now;
-						}
-					}else{
-						this->routemap[route]->client_ms_at_call[this->server->fd_to_details_map[fd]] = now;
+			if(this->routemap[route_key]->requires_human){
+				if(!request_object.HasObj("captcha", STRING)){
+					if(request_type == HTTP_FORM){
+						view.parameters["status"] = "An answer is required for the captcha.";
+						return respond_http(fd, &view, &response);
 					}
-				}
-
-				if(response_body.empty()){
-					for(auto iter = this->routemap[route]->requires.begin(); iter != this->routemap[route]->requires.end(); ++iter){
-						if(!r_obj.HasObj(iter->first, iter->second)){
-							response_body = "{\"error\":\"'" + iter->first + "' requires a " + JsonObject::typeString[iter->second] + ".\"}";
-							break;
-						}else{
-							DEBUG("\t" << iter->first << ": " << r_obj.objectValues[iter->first]->stringify(true))
-						}
-					}
-				}
-
-				if(response_body.empty()){
-					if(this->routemap[route]->requires_human){
-						if(!r_obj.HasObj("answer", STRING)){
-							response_body = "{\"error\":\"You need to answer the question: " + client_questions[fd]->q + "\"}";
-						}else{
-							for(auto sa : client_questions[fd]->a){
-								if(r_obj.GetStr("answer") == sa){
-									response_body = this->routemap[route]->function(&r_obj);
-									client_questions[fd] = get_question();
-									break;
-								}
-							}
-							if(response_body.empty()){
-								response_body = "{\"error\":\"You provided an incorrect answer.\"}";
-							}
-						}
-					}else{
-						if(this->routemap[route]->function != nullptr){
-							response_body = this->routemap[route]->function(&r_obj);
-						}else if(this->routemap[route]->token_function != nullptr){
-							if(!r_obj.HasObj("token", STRING)){
-								response_body = "{\"error\":\"'token' requires a string.\"}";
-							}else{
-								JsonObject* token = new JsonObject();
-								try{
-									token->parse(this->encryptor->decrypt(JsonObject::deescape(r_obj.GetStr("token"))).c_str());
-									response_body = this->routemap[route]->token_function(&r_obj, token);
-								}catch(const std::exception& e){
-									DEBUG(e.what())
-									response_body = INSUFFICIENT_ACCESS;
-								}
-							}
-						}else{
-							if(this->routemap[route]->raw_function(&r_obj, fd) <= 0){
-								PRINT("RAW FUNCTION BAD")
-								return -1;
-							}
-							r_type = JSON;
-						}
-						if(response_body.empty()){
-							response_body = "{\"error\":\"The data could not be acquired.\"}";
-						}
-					}
-				}
-			}else if(route == "GET /api/question/"){
-				response_body = "{\"result\":\"Human verification question: " + client_questions[fd]->q + "\"}";
-			}else{
-				PRINT("BAD ROUTE: " + route)
-				response_body = "{\"error\":\"Invalid API route.\"}";
-			}
-		}
-		
-		if(!response_body.empty() && r_type != JSON){
-			if(r_type == API){
-				if(this->server->send(fd, response_body.c_str(), response_body.length())){
-					return -1;
-				}
-			}else{
-				if(r_type == HTTP){
-					if(Util::endsWith(route, ".css")){
-						response = response_header + "Content-Type: text/css\n";
-					}else if(Util::endsWith(route, ".svg")){
-						response = response_header + "Content-Type: image/svg+xml\n";
-					}else{
-						response = response_header + "Content-Type: text/html\n";
-					}
+					response.body = "{\"error\":\"An answer is required for the captcha.\"}";
+					return respond(fd, &response);
 				}else{
-					response = response_header + "Content-Type: application/json\n";
-				}
-				response = response + "Content-Length: " + std::to_string(response_body.length()) + "\r\n\r\n" + response_body;
-				if(this->server->send(fd, response.c_str(), response.length())){
-					return -1;
+					if(request_object.GetStr("captcha") != session->captcha){
+						session->captcha.clear();
+						if(request_type == HTTP_FORM){
+							view.parameters["status"] = "Provided answer to the captcha is incorrect.";
+							return respond_http(fd, &view, &response);
+						}
+						response.body = "{\"error\":\"Provided answer to the captcha is incorrect.\"}";
+						return respond(fd, &response);
+					}
+					session->captcha.clear();
 				}
 			}
 		}
+
+
+		if(request_type == HTTP_FORM){
+			if(this->routemap[route_key]->form_function == nullptr){
+				response.body = "{\"error\":\"Bad form route.\"}";
+				return respond(fd, &response);
+			}
+
+			view = this->routemap[route_key]->form_function(&request_object);
+			request_type = HTTP;
+		}
+
+
+		if(request_type == HTTP_API){
+			if(this->routemap[route_key]->function != nullptr){
+				response.body = this->routemap[route_key]->function(&request_object);
+				return respond(fd, &response);
+			}else if(this->routemap[route_key]->token_function != nullptr){
+				if(!request_object.HasObj("token", STRING)){
+					response.body = "{\"error\":\"'token' requires a string.\"}";
+					return respond(fd, &response);
+				}else{
+					JsonObject* token = new JsonObject();
+					try{
+						token->parse(this->encryptor->decrypt(JsonObject::deescape(request_object.GetStr("token"))).c_str());
+						response.body = this->routemap[route_key]->token_function(&request_object, token);
+						return respond(fd, &response);
+					}catch(const std::exception& e){
+						DEBUG(e.what())
+						response.body = INSUFFICIENT_ACCESS;
+						return respond(fd, &response);
+					}
+				}
+			}
+			request_type = HTTP;
+		}
+
+		if(request_type == HTTP){
+			return respond_http(fd, &view, &response);
+		}
 		
-		return data_length;
+		return this->respond_404(fd);
 	};
 
-	// Now run forever.
-
-	// As many threads as possible.
+	// Now run forever as many threads as possible.
 	this->server->run();
 	
 	// Single threaded.
@@ -440,4 +561,3 @@ HttpApi::~HttpApi(){
 	}
 	DEBUG("API DELETED")
 }
-

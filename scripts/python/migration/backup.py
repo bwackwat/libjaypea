@@ -41,7 +41,12 @@ filename = "artifacts/backups/" + filename + str(count) + ".sql"
 print "Saving backup SQL..."
 
 with open(filename, "w") as f:
-	token = requests.post(config["url"] + "api/login", json={"username": config["username"], "password": config["password"]}, verify=backup_verify).json()["token"]
+	token_request = requests.post(config["url"] + "api/login", json={"username": config["username"], "password": config["password"]}, verify=backup_verify).json()
+	try:
+		token = token_request["token"]
+	except KeyError as e:
+		print token_request
+		exit()
 	data = requests.post(config["url"] + "api/backup", json={"token": token}, verify=backup_verify).content
 	f.write(data)
 
