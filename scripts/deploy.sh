@@ -30,7 +30,7 @@ python -u scripts/python/watcher.py artifacts/libjaypea.master.latest.commit "sc
 
 python -u scripts/python/watcher.py artifacts/$3 "artifacts/$3" forever > logs/$3-watcher.log 2>&1 &
 
-./scripts/dead-site-checker.sh https://localhost:$6 artifacts/jph2 > logs/dead-site-checker.log 2>&1 &
+./scripts/dead-site-checker.sh http://localhost:$6 artifacts/jph2 > logs/dead-site-checker.log 2>&1 &
 
 EOF
 
