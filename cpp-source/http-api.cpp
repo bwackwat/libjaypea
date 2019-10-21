@@ -74,7 +74,7 @@ ssize_t HttpApi::respond(int fd, HttpResponse* response){
 
 ssize_t HttpApi::respond_404(int fd){
 	std::string basic_404_html = "<h1 style='text-align:center;'>404 Not Found</h1>";
-	HttpResponse response("404 Not Found", {{"Location", "404.html"}}, basic_404_html); 
+	HttpResponse response("302 Not Found", {{"Location", "404.html"}}, basic_404_html);
 	return this->respond(fd, &response);
 }
 
@@ -417,7 +417,7 @@ void HttpApi::start(void){
 				if(Util::secret_captcha_url.empty()){
 					response.body = "<h3>" + session->captcha + "</h3>\"}";
 				}else{
-					response.body = Util::https_client.get(Util::secret_captcha_url + "&secret=" + session->captcha);
+					response.body = Util::https_client.get(Util::secret_captcha_url + session->captcha);
 				}
 				return respond(fd, &response);
 			}
@@ -548,6 +548,7 @@ void HttpApi::start(void){
 
 void HttpApi::set_file_cache_size(int megabytes){
 	this->file_cache_remaining_bytes = megabytes * 1024 * 1024;
+	PRINT("Cache size set to " << megabytes << "MB.")
 }
 
 HttpApi::~HttpApi(){
