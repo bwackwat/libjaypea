@@ -51,7 +51,7 @@ KillMode=process
 WorkingDirectory=$1
 RemainAfterExit=true
 ExecStart=/bin/sh -c '$1/artifacts/start.sh 2>&1 > $1/logs/start.log'
-ExecStop=/bin/sh -c 'killall -q python && killall -q $1/artifacts/$3'
+ExecStop=/bin/sh -c 'killall -q dead-site-checker.sh && killall -q python && killall -q $1/artifacts/$3'
 
 [Install]
 WantedBy=default.target
