@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/python3
 
 import sys, dateutil.parser, psycopg2
 from bs4 import BeautifulSoup
@@ -6,14 +6,14 @@ from bs4 import BeautifulSoup
 #pip install saws beautifulsoup4 psycopg2
 	
 if len(sys.argv) < 2:
-	print "Usage: backup-from-html.py <html file>"
+	print("Usage: backup-from-html.py <html file>")
 	sys.exit(1)
 
 try:
 	conn = psycopg2.connect("dbname='webservice' user='postgres' password='abc123'")
 	cur = conn.cursor()
 except:
-	print "bad db connection"
+	print("bad db connection")
 	sys.exit(1)
 
 reload(sys)

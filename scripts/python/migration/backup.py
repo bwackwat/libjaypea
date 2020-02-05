@@ -1,10 +1,10 @@
-#!/bin/python
+#!/usr/bin/python3
 
 import requests, json, getpass, os, sys, datetime, urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 if len(sys.argv) > 1 and sys.argv[1] == "reset":
-	print "Resetting."
+	print("Resetting.")
 	if os.path.exists("artifacts/backup.json"):
 		os.remove("artifacts/backup.json")
 	exit()
@@ -38,14 +38,14 @@ while os.path.exists("artifacts/backups/" + filename + str(count) + ".sql"):
 	count += 1
 filename = "artifacts/backups/" + filename + str(count) + ".sql"
 
-print "Saving backup SQL..."
+print("Saving backup SQL...")
 
 with open(filename, "w") as f:
 	token_request = requests.post(config["url"] + "api/login", json={"username": config["username"], "password": config["password"]}, verify=backup_verify).json()
 	try:
 		token = token_request["token"]
 	except KeyError as e:
-		print token_request
+		print(token_request)
 		exit()
 	data = requests.post(config["url"] + "api/backup", json={"token": token}, verify=backup_verify).content
 	f.write(data)

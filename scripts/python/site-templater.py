@@ -1,9 +1,9 @@
-#!/bin/python
+#!/usr/bin/python3
 
 import os, sys
 
 if len(sys.argv) <= 1:
-	print "First argument must be relative directory with templates."
+	print("First argument must be relative directory with templates.")
 	sys.exit(1)
 
 os.stat(sys.argv[1])
@@ -16,13 +16,13 @@ def enter_directory(dir, current_template):
 		citem = os.path.join(dir, item)
 		if item == "template.html":
 			if next_template != "":
-				print "ERROR FOUND EXTRA TEMPLATE IN " + dir
+				print("ERROR FOUND EXTRA TEMPLATE IN " + dir)
 				sys.exit(1)
 			with open(citem, "r") as file:
 				next_template = file.read()
 		elif item == "nestedtemplate.html":
 			if next_template != "":
-				print "ERROR FOUND EXTRA TEMPLATE IN " + dir
+				print("ERROR FOUND EXTRA TEMPLATE IN " + dir)
 				sys.exit(1)
 			with open(citem, "r") as file:
 				nested_content = file.read()
@@ -40,7 +40,7 @@ def enter_directory(dir, current_template):
 		citem = os.path.join(dir, item)
 		if citem.endswith(".template.html"):
 			new_item = citem.replace(".template.html", ".html")
-			print "Replacing {CONTENT} in " + citem + " to " + new_item
+			print("Replacing {CONTENT} in " + citem + " to " + new_item)
 			with open(citem, "r") as oldfile, open(new_item, "w+") as newfile:
 				new_content = oldfile.read()
 				
@@ -51,7 +51,7 @@ def enter_directory(dir, current_template):
 					new_content = new_content.replace("{TITLE:" + title + "}", "")
 					next_template = next_template.replace("{TITLE}", title)
 					
-					print "FOUND TITLE " + title + " IN " + citem
+					print("FOUND TITLE " + title + " IN " + citem)
 					
 					title_start = next_template.find("<title>")
 					title_end = next_template.find("</title>", title_start)
@@ -65,4 +65,4 @@ def enter_directory(dir, current_template):
 
 enter_directory(sys.argv[1], "{CONTENT}")
 
-print "DONE!"
+print("DONE!")

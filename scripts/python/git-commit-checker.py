@@ -1,9 +1,9 @@
-#!/bin/python
+#!/usr/bin/python3
 
 import requests, json, time, datetime, traceback, sys
 
 if len(sys.argv) < 3:
-	print "Usage: git-commit-checker.py <repository owner> <repository name>"
+	print("Usage: git-commit-checker.py <repository owner> <repository name>")
 	sys.exit(1)
 
 owner = sys.argv[1]
@@ -24,10 +24,10 @@ def get_latest_commit(branch):
 	try:
 		return json.loads(requests.get(url, timeout=5).content)["object"]["sha"]
 	except:
-		print "-" * 60
-		print str(datetime.datetime.now())
+		print("-" * 60)
+		print(str(datetime.datetime.now()))
 		traceback.print_exc(file=sys.stdout)
-		print "-" * 60
+		print("-" * 60)
 		return 0
 
 while True:
@@ -38,6 +38,6 @@ while True:
 		commit_file = "artifacts/" + name + "." + branch + ".latest.commit"
 		with open(commit_file, "w") as f:
 			f.write(new_commit)
-		print "Wrote " + new_commit + " to " + commit_file + " (" + str(datetime.datetime.now()) + ")"
+		print("Wrote " + new_commit + " to " + commit_file + " (" + str(datetime.datetime.now()) + ")")
 		latest_commits[branch] = new_commit
 	time.sleep(120)

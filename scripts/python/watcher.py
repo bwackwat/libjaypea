@@ -1,9 +1,9 @@
-#!/bin/python
+#!/usr/bin/python3
 
 import subprocess, os, sys, time, atexit, signal, psutil, datetime
 
 if len(sys.argv) < 3:
-	print "Usage: watcher.py <directories and/or files to watch, comma separated> <command to terminate and repeat> <optional \"forever\">"
+	print("Usage: watcher.py <directories and/or files to watch, comma separated> <command to terminate and repeat> <optional \"forever\">")
 	sys.exit(1)
 
 forever = False
@@ -12,7 +12,7 @@ if len(sys.argv) > 3 and sys.argv[3] == "forever":
 
 watch = sys.argv[1].split(",")
 
-print "COMMAND: " + sys.argv[2]
+print("COMMAND: " + sys.argv[2])
 process = subprocess.Popen(sys.argv[2], shell=True, stdout=sys.stdout, stderr=sys.stderr)
 done = False
 
@@ -35,7 +35,7 @@ def file_changed(file):
 		filetime[file] = mtime
 	elif filetime[file] != mtime:
 		filetime[file] = mtime
-		print "CHANGE" + " (" + str(datetime.datetime.now()) + "): " + file
+		print("CHANGE" + " (" + str(datetime.datetime.now()) + "): " + file)
 		return True
 	return False
 	
@@ -61,13 +61,13 @@ def any_changed():
 			filetime[item] = 0
 	return False
 
-print "WATCHING FOR CHANGES (" + str(datetime.datetime.now()) + "): " + sys.argv[1]
+print("WATCHING FOR CHANGES (" + str(datetime.datetime.now()) + "): " + sys.argv[1])
 
 def restart():
 	global process
 	if process:
 		stop_process()
-	print "COMMAND: " + sys.argv[2]
+	print("COMMAND: " + sys.argv[2])
 	process = subprocess.Popen(sys.argv[2], shell=True, stdout=sys.stdout, stderr=sys.stderr)
 
 while True:
@@ -79,7 +79,7 @@ while True:
 				restart()
 			else:
 				done = True
-				print "DONE" + " (" + str(datetime.datetime.now()) + "), WATCHING FOR CHANGES: " + sys.argv[1]
+				print("DONE" + " (" + str(datetime.datetime.now()) + "), WATCHING FOR CHANGES: " + sys.argv[1])
 		time.sleep(1)
 		if any_changed():
 			restart()

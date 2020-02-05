@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # https://www.sketchengine.co.uk/word-lists/
 

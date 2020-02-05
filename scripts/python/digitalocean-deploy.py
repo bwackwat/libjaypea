@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/python3
 
 import requests, json, random, string, sys, os, subprocess, time, getpass, random
 
@@ -18,13 +18,13 @@ def generate_password():
 	return "".join(chars[ord(c) % len(chars)] for c in os.urandom(32))
 
 def rprint(response):
-	print '-----------------------------------------------------------------'
-	print response.status_code
+	print('-----------------------------------------------------------------')
+	print(response.status_code)
 	for key, value in response.headers.iteritems():
-		print key + ": " + value
+		print(key + ": " + value)
 	try:
 		response_json = json.loads(response.content)
-		print json.dumps(response_json, indent=4)
+		print(json.dumps(response_json, indent=4))
 		return response_json
 	except:
 		pass
@@ -33,19 +33,19 @@ def rprint(response):
 dbpassword = generate_password()
 
 def delete_droplet():
-	print "Fetching droplets via API..."
+	print("Fetching droplets via API...")
 	droplets = rprint(requests.get("https://api.digitalocean.com/v2/droplets", headers=headers))
 
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 
 	for droplet in droplets["droplets"]:
-		print "\nDroplet:"
-		print "Name: " + droplet["name"]
-		print "Memory: " + droplet["size_slug"]
-		print "Disk size: " + str(droplet["disk"]) + "GB"
-		print "Id: " + str(droplet["id"])
+		print("\nDroplet:")
+		print("Name: " + droplet["name"])
+		print("Memory: " + droplet["size_slug"])
+		print("Disk size: " + str(droplet["disk"]) + "GB")
+		print("Id: " + str(droplet["id"]))
 
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 	
 	dropletname = raw_input("Enter the name of the droplet which you want to delete: ");
 	
@@ -54,9 +54,9 @@ def delete_droplet():
 		if droplet["name"] == dropletname:
 			theid = droplet["id"]
 	
-	print 'Deleting droplet...'
+	print('Deleting droplet...')
 	rprint(requests.delete("https://api.digitalocean.com/v2/droplets/" + str(theid), headers=headers))
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 	final_remarks.append("You deleted a droplet named " + dropletname)
 
 
@@ -79,7 +79,7 @@ def deploy_monad_new_smallvm():
 		tanks_port = random.randrange(10000, 20000)
 
 	key = ""
-	print "If the file path below doesn't exist or is invalid, a key will be generated and provided."
+	print("If the file path below doesn't exist or is invalid, a key will be generated and provided.")
 	count = 0
 	path = "artifacts/" + hostname + "_key" + str(count)
 	while os.path.exists(path):
@@ -143,33 +143,33 @@ runcmd:
 		cloud_config = cloud_config.format(newuser, application, hostname, key.strip(), dbpassword, http_port, https_port,\
 		tanks_port, configuration_json.format(hostname, http_port, https_port, tanks_port, email, sendgrid_key, dbpassword))
 
-	print '-----------------------------------------------------------------'
-	print cloud_config
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
+	print(cloud_config)
+	print('-----------------------------------------------------------------')
 
 	if((raw_input("Cloud init good to go? [y]: ") or "y") != "y"):
-		print "Exiting."
+		print("Exiting.")
 		sys.exit(0)
 
-	print "Fetching images via API..."
+	print("Fetching images via API...")
 
 	newestimageid = 0
 	#images = rprint(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers))
 	images = json.loads(requests.get("https://api.digitalocean.com/v2/images?per_page=999&type=distribution", headers=headers).content)
 	for image in images["images"]:
 		if image["distribution"] == "CentOS" and "7" in image["name"]:
-			print "\nCentOS Image"
-			print "id: " + str(image["id"])
-			print "name: " + image["name"]
-			print "created_at: " + image["created_at"]
+			print("\nCentOS Image")
+			print("id: " + str(image["id"]))
+			print("name: " + image["name"])
+			print("created_at: " + image["created_at"])
 			if image["id"] > newestimageid:
 				newestimageid = image["id"]
 
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 
 	newdropletid = raw_input("Enter an image id (newest is recommended) [" + str(newestimageid) + "]: ") or str(newestimageid)
 
-	print "Creating droplet via API..."
+	print("Creating droplet via API...")
 
 	newdroplet = rprint(requests.post("https://api.digitalocean.com/v2/droplets", headers=headers, json={
 		"name":newname,
@@ -187,23 +187,23 @@ runcmd:
 	final_remarks.append("To connect use: ssh -i " + path + " " + hostname)
 	final_remarks.append("Your new database password is " + dbpassword)
 	
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 
 
 def switch_floating_ip():
-	print "Fetching droplets via API..."
+	print("Fetching droplets via API...")
 	droplets = rprint(requests.get("https://api.digitalocean.com/v2/droplets", headers=headers))
 
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 
 	for droplet in droplets["droplets"]:
-		print "\nDroplet:"
-		print "Name: " + droplet["name"]
-		print "Memory: " + droplet["size_slug"]
-		print "Disk size: " + str(droplet["disk"]) + "GB"
-		print "Id: " + str(droplet["id"])
+		print("\nDroplet:")
+		print("Name: " + droplet["name"])
+		print("Memory: " + droplet["size_slug"])
+		print("Disk size: " + str(droplet["disk"]) + "GB")
+		print("Id: " + str(droplet["id"]))
 
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 	
 	dropletname = raw_input("Enter the name of the droplet which you want to assign a floating IP to: ");
 	newid = 0
@@ -212,26 +212,26 @@ def switch_floating_ip():
 			newid = droplet["id"]
 
 	if newid == 0:
-		print "Bad droplet name."
+		print("Bad droplet name.")
 		sys.exit(0)
 
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 
-	print "Fetching floating IPs via API..."
+	print("Fetching floating IPs via API...")
 	fips = json.loads(requests.get("https://api.digitalocean.com/v2/floating_ips?page=1&per_page=20", headers=headers).content)
 	for fip in fips["floating_ips"]:
-		print "\nFloating IP:"
-		print fip["ip"]
-		print "Droplet: " + (fip["droplet"]["name"] if fip["droplet"] else "UNASSIGNED")
+		print("\nFloating IP:")
+		print(fip["ip"])
+		print("Droplet: " + (fip["droplet"]["name"] if fip["droplet"] else "UNASSIGNED"))
 
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 
 	newfip = raw_input("If you want to assign a floating ip to the droplet, enter the ip [n]: ") or "n";
 	if(newfip != "n"):
-		print "Setting new floating IP via API..."
+		print("Setting new floating IP via API...")
 		rprint(requests.post("https://api.digitalocean.com/v2/floating_ips/" + newfip + " /actions", headers=headers, json={"type":"assign","droplet_id":newid}))
 
-	print '-----------------------------------------------------------------'
+	print('-----------------------------------------------------------------')
 	final_remarks.append("You moved a droplet named " + dropletname + " to floating IP " + newfip)
 
 
@@ -245,6 +245,6 @@ if((raw_input("Would you like to switch a DigitalOcean floating IP to a droplet?
 	switch_floating_ip()
 
 for item in final_remarks:
-	print item
+	print(item)
 
 

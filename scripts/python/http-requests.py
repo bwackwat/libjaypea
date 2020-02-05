@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # pip install requests
 
@@ -18,23 +18,23 @@ def TEST(method, route, data={}):
 	elif(method == "DELETE"):
 		response = requests.delete(base_url + route, json=data, verify=False)
 	else:
-		print "Unknown Method: " + method
+		print("Unknown Method: " + method)
 		return {}
 	
-	print response.request.method + " " + response.url
-	print response.status_code
+	print(response.request.method + " " + response.url)
+	print(response.status_code)
 	if response.status_code != 200:
-		print "Problem!"
-		print response.headers
-		print response.text
+		print("Problem!")
+		print(response.headers)
+		print(response.text)
 		exit(1)
 	response_json = response.json()
 	if len(response.content) < 200:
-		print response_json
+		print(response_json)
 	if "error" in response_json:
-		print data
+		print(data)
 		exit()
-	print ""
+	print("")
 	return response_json
 
 

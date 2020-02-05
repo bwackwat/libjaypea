@@ -1,9 +1,9 @@
-#!/bin/python
+#!/usr/bin/python3
 
 import requests, sys
 
 if len(sys.argv) < 2:
-	print "Usage: dead-site-checker.py <hostname>"
+	print("Usage: dead-site-checker.py <hostname>")
 	sys.exit(1)
 
 url = "https://" + sys.argv[1]
@@ -18,4 +18,4 @@ while True:
 	except:
 		restart = True
 
-	print restart
+	print(restart)
