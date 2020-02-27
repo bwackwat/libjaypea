@@ -49,6 +49,6 @@ int SimpleTcpServer::accept_connection(){
 
 SimpleTcpServer::~SimpleTcpServer(){
 	if(close(this->server_fd) < 0){
-		throw std::runtime_error(this->name + " close");
+		perror("close");
 	}
 }

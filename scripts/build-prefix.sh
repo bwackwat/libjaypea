@@ -34,10 +34,10 @@ case "${argv[@]}" in
 		;;
 esac
 
-libs="-lpthread -lssl -lcryptopp -largon2"
+libs="-lpthread -pthread -lssl -lcryptopp -largon2"
 
 libcompiler="clang++ -std=c++11 -fPIC -shared -I$dir/cpp-source \
 $libs $warn $extra \
 $dir/cpp-source/*.cpp -o $library"
 
-compiler="clang++ -std=c++11 -I$dir/cpp-source $library -lcryptopp -lpqxx -largon2 $warn $extra"
+compiler="clang++ -std=c++11 -I$dir/cpp-source $library -pthread -lcryptopp -lpqxx -largon2 $warn $extra"

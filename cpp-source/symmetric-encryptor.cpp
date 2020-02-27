@@ -114,7 +114,7 @@ std::string SymmetricEncryptor::decrypt(std::string data){
 	}
 
 	CryptoPP::StringSource pipeline2(encrypted_data, true,
-		new CryptoPP::HashVerificationFilter(this->hmac, 0,
+		new CryptoPP::HashVerificationFilter(this->hmac, nullptr,
 		CryptoPP::HashVerificationFilter::THROW_EXCEPTION |
 		CryptoPP::HashVerificationFilter::HASH_AT_BEGIN));
 

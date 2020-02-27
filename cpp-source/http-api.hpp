@@ -71,38 +71,38 @@ public:
 	std::function<View(JsonObject*)> form_function;
 	std::function<std::string(JsonObject*, JsonObject*)> token_function;
 
-	std::unordered_map<std::string, JsonType> requires;
+	std::unordered_map<std::string, JsonType> required_parameters;
 	bool requires_human;
 
 	std::chrono::milliseconds minimum_ms_between_call;
 	std::unordered_map<std::string /* client identifier (IP) */, std::chrono::milliseconds> client_ms_at_call;
 
 	Route(std::function<std::string(JsonObject*)> new_function,
-		std::unordered_map<std::string, JsonType> new_requires,
+		std::unordered_map<std::string, JsonType> new_required_parameters,
 		std::chrono::milliseconds new_rate_limit,
 		bool new_requires_human)
 	:function(new_function),
-	requires(new_requires),
+	required_parameters(new_required_parameters),
 	requires_human(new_requires_human),
 	minimum_ms_between_call(new_rate_limit)
 	{}
 
 	Route(std::function<View(JsonObject*)> new_function,
-		std::unordered_map<std::string, JsonType> new_requires,
+		std::unordered_map<std::string, JsonType> new_required_parameters,
 		std::chrono::milliseconds new_rate_limit,
 		bool new_requires_human)
 	:form_function(new_function),
-	requires(new_requires),
+	required_parameters(new_required_parameters),
 	requires_human(new_requires_human),
 	minimum_ms_between_call(new_rate_limit)
 	{}
 
 	Route(std::function<std::string(JsonObject*, JsonObject*)> new_function,
-		std::unordered_map<std::string, JsonType> new_requires,
+		std::unordered_map<std::string, JsonType> new_required_parameters,
 		std::chrono::milliseconds new_rate_limit,
 		bool new_requires_human)
 	:token_function(new_function),
-	requires(new_requires),
+	required_parameters(new_required_parameters),
 	requires_human(new_requires_human),
 	minimum_ms_between_call(new_rate_limit)
 	{}
@@ -134,7 +134,7 @@ public:
 	void route(std::string method,
 		std::string path,
 		std::function<std::string(JsonObject*)> function,
-		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),
+		std::unordered_map<std::string, JsonType> required_parameters = std::unordered_map<std::string, JsonType>(),
 		std::chrono::milliseconds rate_limit = std::chrono::milliseconds(0),
 		bool requires_human = false
 	);
@@ -142,7 +142,7 @@ public:
 	void form_route(std::string method,
 		std::string path,
 		std::function<View(JsonObject*)> function,
-		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),
+		std::unordered_map<std::string, JsonType> required_parameters = std::unordered_map<std::string, JsonType>(),
 		std::chrono::milliseconds rate_limit = std::chrono::milliseconds(0),
 		bool requires_human = false
 	);
@@ -150,7 +150,7 @@ public:
 	void authenticated_route(std::string method,
 		std::string path,
 		std::function<std::string(JsonObject*, JsonObject*)> function,
-		std::unordered_map<std::string, JsonType> requires = std::unordered_map<std::string, JsonType>(),
+		std::unordered_map<std::string, JsonType> required_parameters = std::unordered_map<std::string, JsonType>(),
 		std::chrono::milliseconds rate_limit = std::chrono::milliseconds(0),
 		bool requires_human = false
 	);

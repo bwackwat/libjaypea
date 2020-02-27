@@ -73,7 +73,7 @@ bool TlsClientManager::communicate(std::string hostname, uint16_t port, const ch
 	}
 
 	struct hostent* host;
-	if((host = gethostbyname(hostname.c_str())) == 0){
+	if((host = gethostbyname(hostname.c_str())) == nullptr){
 		perror("gethostbyname");
 		return true;
 	}
@@ -89,7 +89,8 @@ bool TlsClientManager::communicate(std::string hostname, uint16_t port, const ch
 		return true;
 	}
 
-	if(connect(fd, (struct sockaddr*)&server_address, sizeof(server_address)) < 0){
+	//if(connect(fd, (struct sockaddr*)&server_address, sizeof(server_address)) < 0){
+	if(connect(fd, reinterpret_cast<struct sockaddr*>(&server_address), sizeof(server_address)) < 0){
 		perror("connect");
 		return true;
 	}
@@ -98,8 +99,8 @@ bool TlsClientManager::communicate(std::string hostname, uint16_t port, const ch
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
 
-	const SSL_METHOD *meth = TLSv1_2_client_method();
-	SSL_CTX *ctx = SSL_CTX_new(meth);
+	SSL_CTX *ctx = SSL_CTX_new(SSLv23_method());
+	SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_SSLv2);
 	SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
 
 	SSL* ssl = SSL_new(ctx);

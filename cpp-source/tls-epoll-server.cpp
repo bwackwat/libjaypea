@@ -21,14 +21,9 @@ TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key,
 	SSL_library_init();
 	SSL_load_error_strings();
 
-	if((this->ctx = SSL_CTX_new(SSLv23_server_method())) == 0){
+	if((this->ctx = SSL_CTX_new(SSLv23_server_method())) == nullptr){
 		ERR_print_errors_fp(stdout);
 		throw std::runtime_error(this->name + "SSL_CTX_new");
-	}
-	
-	if(SSL_CTX_set_ecdh_auto(this->ctx, 1) == 0){
-		ERR_print_errors_fp(stdout);
-		throw std::runtime_error(this->name + "SSL_CTX_set_ecdh_auto");
 	}
 
 	if(SSL_CTX_use_certificate_chain_file(this->ctx, certificate.c_str()) != 1){
@@ -41,13 +36,8 @@ TlsEpollServer::TlsEpollServer(std::string certificate, std::string private_key,
 		throw std::runtime_error(this->name + "SSL_CTX_use_PrivateKey_file");
 	}
 
-	// Hell yeah, use ECDH.
-	if(!SSL_CTX_set_ecdh_auto(this->ctx, 1)){
-		ERR_print_errors_fp(stdout);
-		throw std::runtime_error(this->name + "SSL_CTX_set_ecdh_auto");
-	}
+	SSL_CTX_set_ecdh_auto(this->ctx, 1);
 
-	// SSLv3 is insecure via poodles.
 	SSL_CTX_set_options(this->ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_SSLv3 | SSL_OP_NO_SSLv2);
 
 	// "Good" cipher list from the interweb.
@@ -204,7 +194,7 @@ std::function<ssize_t(int, char*, size_t)> callback){
  * If the SSL handshake fails, the the client did *not* successfully connect and is dumped.
  */
 bool TlsEpollServer::accept_continuation(int* new_client_fd){
-	if((this->client_ssl[*new_client_fd] = SSL_new(this->ctx)) == 0){
+	if((this->client_ssl[*new_client_fd] = SSL_new(this->ctx)) == nullptr){
 		ERROR("SSL_new " << *new_client_fd)
 		ERR_print_errors_fp(stdout);
 		return true;
@@ -255,7 +245,6 @@ TlsEpollServer::~TlsEpollServer(){
 		//this->client_ssl.erase(iter->first);
 	}
 	SSL_CTX_free(this->ctx);
-	ERR_remove_state(0);
 	ERR_free_strings();
 	EVP_cleanup();
 	//SSL_COMP_get_compression_methods();

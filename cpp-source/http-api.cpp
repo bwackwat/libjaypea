@@ -14,40 +14,40 @@ encryptor(new_encryptor)
 HttpApi::HttpApi(std::string new_public_directory, EpollServer* new_server)
 :public_directory(new_public_directory),
 server(new_server),
-encryptor(0)
+encryptor(nullptr)
 {
 	this->server->set_timeout(10);
 }
 
 void HttpApi::form_route(std::string method, std::string path, std::function<View(JsonObject*)> function,
-std::unordered_map<std::string, JsonType> requires,
+std::unordered_map<std::string, JsonType> required_parameters,
 std::chrono::milliseconds rate_limit,
 bool requires_human){
-	this->routemap[method + " " + path] = new Route(function, requires, rate_limit, requires_human);
+	this->routemap[method + " " + path] = new Route(function, required_parameters, rate_limit, requires_human);
 }
 
 void HttpApi::route(std::string method, std::string path, std::function<std::string(JsonObject*)> function,
-std::unordered_map<std::string, JsonType> requires,
+std::unordered_map<std::string, JsonType> required_parameters,
 std::chrono::milliseconds rate_limit,
 bool requires_human){
 	if(path[path.length() - 1] != '/'){
 		path += '/';
 	}
-	this->routemap[method + " /api" + path] = new Route(function, requires, rate_limit, requires_human);
+	this->routemap[method + " /api" + path] = new Route(function, required_parameters, rate_limit, requires_human);
 }
 
 void HttpApi::authenticated_route(std::string method, std::string path, std::function<std::string(JsonObject*, JsonObject*)> function,
-std::unordered_map<std::string, JsonType> requires,
+std::unordered_map<std::string, JsonType> required_parameters,
 std::chrono::milliseconds rate_limit,
 bool requires_human){
-	if(encryptor == 0){
+	if(encryptor == nullptr){
 		PRINT("You tried to add a route that uses an encrypted token. Please provide an encryptor in the HttpApi constructor.")
 		exit(1);
 	}
 	if(path[path.length() - 1] != '/'){
 		path += '/';
 	}
-	this->routemap[method + " /api" + path] = new Route(function, requires, rate_limit, requires_human);
+	this->routemap[method + " /api" + path] = new Route(function, required_parameters, rate_limit, requires_human);
 }
 
 static std::random_device rd;
@@ -102,18 +102,18 @@ ssize_t HttpApi::respond_parameterized_view(int fd, View* view, HttpResponse* re
 	char buffer[BUFFER_LIMIT + 32];
 
 	if((file_fd = open(view->route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
-		Util::perror("respond_parameterized_view open " + view->route);
+		Util::nperror("respond_parameterized_view open " + view->route);
 		return -1;
 	}
 
 	// Only "small html" should be "parameterized".
 	if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-		Util::perror("respond_parameterized_view read " + view->route);
+		Util::nperror("respond_parameterized_view read " + view->route);
 		return -1;
 	}
 
 	if(close(file_fd) < 0){
-		Util::perror("respond_parameterized_view read " + view->route);
+		Util::nperror("respond_parameterized_view read " + view->route);
 		return -1;
 	}
 
@@ -159,19 +159,19 @@ ssize_t HttpApi::respond_view(int fd, View* view, HttpResponse* response){
 	}
 
 	if((file_fd = open(view->route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
-		Util::perror("respond_view open " + view->route);
+		Util::nperror("respond_view open " + view->route);
 		return -1;
 	}
 
 	// Send all file data without parameterization.
 	while(file_fd > 0){
 		if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-			Util::perror("respond_view read " + view->route);
+			Util::nperror("respond_view read " + view->route);
 			return -1;
 		}
 		buffer[len] = 0;
 		if(this->server->send(fd, buffer, static_cast<size_t>(len))){
-			Util::perror("respond_view send " + view->route);
+			Util::nperror("respond_view send " + view->route);
 			return -1;
 		}
 		// Not complete packet, no more to read.
@@ -181,7 +181,7 @@ ssize_t HttpApi::respond_view(int fd, View* view, HttpResponse* response){
 	}
 
 	if(close(file_fd) < 0){
-		Util::perror("respond_view read " + view->route);
+		Util::nperror("respond_view read " + view->route);
 		return -1;
 	}
 
@@ -257,13 +257,13 @@ ssize_t HttpApi::respond_http(int fd, View* view, HttpResponse* response){
 		ssize_t len;
 		char buffer[BUFFER_LIMIT + 32];
 		if((file_fd = open(clean_route.c_str(), O_RDONLY | O_NOFOLLOW)) < 0){
-			Util::perror("respond_http open " + clean_route);
+			Util::nperror("respond_http open " + clean_route);
 			this->file_cache_mutex.unlock();
 			return -1;
 		}
 		while(file_fd > 0){
 			if((len = read(file_fd, buffer, BUFFER_LIMIT)) < 0){
-				Util::perror("respond_http read " + clean_route);
+				Util::nperror("respond_http read " + clean_route);
 				this->file_cache_mutex.unlock();
 				return -1;
 			}
@@ -275,7 +275,7 @@ ssize_t HttpApi::respond_http(int fd, View* view, HttpResponse* response){
 			}
 		}
 		if(close(file_fd) < 0){
-			Util::perror("respond_http close " + clean_route);
+			Util::nperror("respond_http close " + clean_route);
 			this->file_cache_mutex.unlock();
 			return -1;
 		}
@@ -336,7 +336,7 @@ void HttpApi::start(void){
 			new JsonObject(std::to_string(iter->second->minimum_ms_between_call.count()));
 		routes_object->objectValues[iter->first]->objectValues["parameters"] = new JsonObject(ARRAY);
 		
-		for(auto &field : iter->second->requires){
+		for(auto &field : iter->second->required_parameters){
 			routes_object->objectValues[iter->first]->objectValues["parameters"]->arrayValues.push_back(new JsonObject(field.first));
 		}
 		if(iter->second->token_function != nullptr){
@@ -431,7 +431,7 @@ void HttpApi::start(void){
 				return respond(fd, &response);
 			}
 
-			for(auto iter = this->routemap[route_key]->requires.begin(); iter != this->routemap[route_key]->requires.end(); ++iter){
+			for(auto iter = this->routemap[route_key]->required_parameters.begin(); iter != this->routemap[route_key]->required_parameters.end(); ++iter){
 				view.parameters[iter->first] = request_object.GetURLDecodedStr(iter->first);
 			}
 
@@ -459,7 +459,7 @@ void HttpApi::start(void){
 				this->routemap[route_key]->client_ms_at_call[this->server->fd_to_details_map[fd]] = now;
 			}
 
-			for(auto iter = this->routemap[route_key]->requires.begin(); iter != this->routemap[route_key]->requires.end(); ++iter){
+			for(auto iter = this->routemap[route_key]->required_parameters.begin(); iter != this->routemap[route_key]->required_parameters.end(); ++iter){
 				if(!request_object.HasObj(iter->first, iter->second) ||
 				(request_object.HasObj(iter->first, STRING) && request_object.GetStr(iter->first).empty())){
 					if(request_type == HTTP_FORM){

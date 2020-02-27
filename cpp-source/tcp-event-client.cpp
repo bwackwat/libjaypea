@@ -71,7 +71,7 @@ void EventClient::run(std::function<ssize_t(int, const char*, size_t)> new_on_re
 					PRINT("Using hostname " << connection->hostname)
 					if(!this->host_addresses.count(connection->hostname)){
 						struct hostent* host;
-						if((host = gethostbyname(connection->hostname.c_str())) == 0){
+						if((host = gethostbyname(connection->hostname.c_str())) == nullptr){
 							perror("gethostbyname");
 							this->close_client(connection);
 							break;

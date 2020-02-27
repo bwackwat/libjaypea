@@ -29,15 +29,15 @@ TlsClientManager Util::https_client;
 std::string Util::secret_captcha_url = "";
 
 void Util::define_argument(std::string name, std::string& value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_STRING, std::ref(value), 0, 0}));
+	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_STRING, std::ref(value), nullptr, nullptr}));
 }
 
 void Util::define_argument(std::string name, int* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_INTEGER, std::ref(name), value, 0}));
+	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_INTEGER, std::ref(name), value, nullptr}));
 }
 
 void Util::define_argument(std::string name, bool* value, std::vector<std::string> alts, std::function<void()> callback, bool required){
-	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_BOOLEAN, std::ref(name), 0, value}));
+	arguments.emplace_back(new struct Argument({name, alts, callback, required, false, ARG_BOOLEAN, std::ref(name), nullptr, value}));
 }
 
 static std::string get_exe_path(){
@@ -85,7 +85,7 @@ std::string Util::exec_and_wait(const char* cmd){
 	}
 	
 	while(!feof(pipe.get())){
-		if(fgets(buffer.data(), 128, pipe.get()) != NULL){
+		if(fgets(buffer.data(), 128, pipe.get()) != nullptr){
 			result += buffer.data();
 		}
 	}
@@ -197,7 +197,7 @@ void Util::parse_arguments(int argc, char** argv, std::string description){
 				};
 				break;
 			case ARG_BOOLEAN:
-				check_lambda = [argc, i, arg, argv](const char* check_sub) mutable -> bool{
+				check_lambda = [i, arg, argv](const char* check_sub) mutable -> bool{
 					if(std::strcmp(argv[i], check_sub) == 0){
 						*arg->boolean_value = true;
 						arg->set = true;
@@ -354,7 +354,7 @@ void Util::replace_all(std::string& source, const std::string& from, const std::
 	}
 }
 
-void Util::perror(std::string str){
+void Util::nperror(std::string str){
 	perror(str.c_str());
 }
 

@@ -299,7 +299,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 							perror("close timer_fd on timeout");
 							continue;
 						}
-						if(epoll_ctl(epoll_fd, EPOLL_CTL_DEL, new_fd, 0) < 0){
+						if(epoll_ctl(epoll_fd, EPOLL_CTL_DEL, new_fd, nullptr) < 0){
 							perror("epoll_ctl del timedout fd");
 						}
 						this->close_client(&new_fd, close_client_callback);
@@ -348,7 +348,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 							}
 							break;
 						}else{
-							if(inet_ntop(AF_INET, &this->accept_client.sin_addr.s_addr, client_detail, sizeof(client_detail)) != 0){
+							if(inet_ntop(AF_INET, &this->accept_client.sin_addr.s_addr, client_detail, sizeof(client_detail)) != nullptr){
 								PRINT(this->name << ": Connection from " << client_detail << " on " << new_fd << " thread " << thread_id)
 								this->fd_to_details_map[new_fd] = std::string(client_detail);
 							}else{
@@ -379,7 +379,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 									timer_spec.it_interval.tv_nsec = 0;
 									timer_spec.it_value.tv_sec = this->timeout;
 									timer_spec.it_value.tv_nsec = 0;
-									if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
+									if(timerfd_settime(timer_fd, 0, &timer_spec, nullptr) < 0){
 										perror("timerfd_settime");
 									}else{
 										timer_to_client_map[timer_fd] = new_fd;
@@ -420,7 +420,7 @@ void EpollServer::run_thread(unsigned int thread_id){
 				timer_spec.it_interval.tv_nsec = 0;
 				timer_spec.it_value.tv_sec = this->timeout;
 				timer_spec.it_value.tv_nsec = 0;
-				if(timerfd_settime(timer_fd, 0, &timer_spec, 0) < 0){
+				if(timerfd_settime(timer_fd, 0, &timer_spec, nullptr) < 0){
 					PRINT("timerfd_setting error " << the_fd << " and timer " << timer_fd)
 					perror("timerfd_settime reset");
 				}else if((len = this->recv(the_fd, packet, PACKET_LIMIT)) < 0){

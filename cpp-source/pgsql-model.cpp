@@ -232,7 +232,7 @@ JsonObject* PgSqlModel::Insert(std::unordered_map<std::string, JsonObject*> valu
 			result->objectValues["id"] = new JsonObject(res[0][0].as<const char*>());
 			return result;
 		}
-		return 0;
+		return nullptr;
 	}catch(const pqxx::pqxx_exception &e){
 		PRINT(e.base().what())
 		return Error("You provided incomplete or bad data.");

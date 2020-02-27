@@ -7,7 +7,7 @@ name("SimpleTcpClient"),
 verbose(new_verbose),
 requests(0){
 	struct hostent* host;
-	if((host = gethostbyname(hostname.c_str())) == 0){
+	if((host = gethostbyname(hostname.c_str())) == nullptr){
 		perror("Could not get host by name.");
 		this->connected = false;
 		return;
@@ -66,7 +66,7 @@ bool SimpleTcpClient::reconnect(){
 		tv.tv_usec = 0;
 		FD_ZERO(&myset);
 		FD_SET(this->fd, &myset);
-		if((res = select(this->fd + 1, NULL, &myset, NULL, &tv)) < 0){
+		if((res = select(this->fd + 1, nullptr, &myset, nullptr, &tv)) < 0){
 			perror("error in select");
 			return false;
 		}else if(res > 0){
@@ -118,6 +118,6 @@ SimpleTcpClient::~SimpleTcpClient(){
 		PRINT(this->name + " delete")
 	}
 	if(close(this->fd) < 0){
-		throw std::runtime_error(this->name + " close" + std::to_string(errno).c_str());
+		perror("close");
 	}
 }
