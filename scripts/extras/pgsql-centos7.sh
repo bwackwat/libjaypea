@@ -23,14 +23,14 @@ systemctl enable postgresql
 
 dir=$(dirname $BASH_SOURCE)
 
-cp $dir/tables.sql /tables.sql
-chmod 666 /tables.sql
-chown postgres:postgres /tables.sql
-
 cp $dir/pg_hba.conf /var/lib/pgsql/data/pg_hba.conf
 chown postgres:postgres /var/lib/pgsql/data/pg_hba.conf
 chmod 600 /var/lib/pgsql/data/pg_hba.conf
 systemctl restart postgresql
+
+cp $dir/tables.sql /tables.sql
+chmod 666 /tables.sql
+chown postgres:postgres /tables.sql
 
 psql -U postgres -c "CREATE DATABASE webservice OWNER postgres;"
 psql -U postgres -d webservice -a -f /tables.sql

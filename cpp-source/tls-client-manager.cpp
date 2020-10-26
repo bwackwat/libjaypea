@@ -111,7 +111,7 @@ bool TlsClientManager::communicate(std::string hostname, uint16_t port, const ch
 
 	SSL_set_fd(ssl, fd);
 	int err = SSL_connect(ssl);
-	if (err <= 0) {
+	if (err < 0) {
 		perror("SSL_connect");
 		return true;
 	}

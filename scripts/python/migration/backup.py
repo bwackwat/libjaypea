@@ -16,9 +16,9 @@ if os.path.exists("artifacts/backup.json"):
 		config = json.loads(f.read())
 
 if "url" not in config:
-	config["url"] = raw_input("Enter a url for JPH2: ")
+	config["url"] = input("Enter a url for JPH2: ")
 if "username" not in config:
-	config["username"] = raw_input("Enter your username for JPH2: ")
+	config["username"] = input("Enter your username for JPH2: ")
 if "password" not in config:
 	config["password"] = getpass.getpass("Enter your password for JPH2: ")
 
