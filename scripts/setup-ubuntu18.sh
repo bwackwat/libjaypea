@@ -18,6 +18,10 @@ apt-get install libcrypto++-dev libpqxx-dev libssl1.1 libssl1.0.0 clang libargon
 
 apt-get install postgresql postgis
 
+apt-get install python3-pip
+
+pip3 install psutil
+
 dir=$(dirname $BASH_SOURCE)
 
 cp $dir/extras/pg_hba.conf /etc/postgresql/10/main/pg_hba.conf
