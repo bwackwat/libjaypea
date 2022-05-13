@@ -1,0 +1,17 @@
+version: "3.9"
+networks:
+  default_network:
+    driver: bridge
+    name: default_network
+services:
+  libjaypea:
+    container_name: libjaypea
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    image: libjaypea:latest
+    restart: always
+    ports:
+      - 80:80
+    networks:
+      - default_network

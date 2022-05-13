@@ -1,12 +1,24 @@
 FROM centos:7
 
+# RUN ./scripts/setup-centos7.sh
+
+# cd $(dirname "${BASH_SOURCE[0]}")/../
+
+# openssl req -x509 -nodes -sha256 -newkey rsa:4096 -keyout extras/self-signed-ssl/ssl.key -out extras/self-signed-ssl/ssl.crt
+
+RUN yum -y update
+
+RUN yum -y install epel-release
+RUN yum -y install git firewalld fail2ban certbot ntp gperftools psmisc git-lfs
+RUN yum -y install clang gcc-c++ libpqxx-devel vim python3 python3-devel
+RUN yum -y install libstdc++-static libstdc++ cryptopp cryptopp-devel openssl openssl-devel argon2 libargon2-devel
+RUN yum -y install python3-pip
+
+RUN pip3 install psutil
+
 RUN mkdir -p /opt/libjaypea
-
 COPY . /opt/libjaypea
-
 WORKDIR /opt/libjaypea
-
-RUN ./scripts/setup-centos7.sh
 
 RUN ./scripts/build-library.sh PROD
 
