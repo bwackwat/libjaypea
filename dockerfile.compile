@@ -19,4 +19,5 @@ RUN pip3 install psutil
 WORKDIR /opt/libjaypea
 COPY . /opt/libjaypea
 
-ENTRYPOINT ["./artifacts/jph2"]
+ENTRYPOINT ["./scripts/build-all.sh"]
+CMD ["PROD"]

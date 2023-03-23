@@ -1,17 +1,25 @@
 version: "3.9"
-networks:
-  default_network:
-    driver: bridge
-    name: default_network
+
 services:
+
   libjaypea:
+    depends_on:
+      - libjaypea-compile
     container_name: libjaypea
     build:
       context: ./
-      dockerfile: ./Dockerfile
+      dockerfile: ./dockerfile
+    volumes:
+      - ./:/opt/libjaypea
     image: libjaypea:latest
-    restart: always
     ports:
       - 80:80
-    networks:
-      - default_network
+
+  libjaypea-compile:
+    container_name: libjaypea-compile
+    build:
+      context: ./
+      dockerfile: ./dockerfile.compile
+    volumes:
+      - ./:/opt/libjaypea
+    image: libjaypea-compile:latest

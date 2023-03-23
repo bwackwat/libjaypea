@@ -12,6 +12,7 @@ warn="-Wformat -Wall -Wformat-security -Werror=format-security \
 -Wno-unused-parameter -Wno-unused-exception-parameter -Wno-unused-variable "
 
 library="$dir/artifacts/libjaypea.so"
+echo $library
 
 case "${argv[@]}" in
 	 *"PROD"*)

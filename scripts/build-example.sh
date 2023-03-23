@@ -4,6 +4,9 @@ cd $(dirname "${BASH_SOURCE[0]}")/../
 
 source scripts/build-prefix.sh
 
+ls -lah $dir
+ls -lah $dir/artifacts
+
 function build {
 	if [ $argc -eq 0 ] || [[ "$1" = *"$argv"* ]]; then
 		echo "compiling artifacts/$1"
@@ -48,4 +51,3 @@ build chat-client
 
 build echo-server
 build tcp-event-client
-
