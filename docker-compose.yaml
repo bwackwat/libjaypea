@@ -1,10 +1,40 @@
 version: "3.9"
 
+networks:
+  libjaypea_network:
+    driver: bridge
+    name: revops_network
+
 services:
+
+  libjaypea-db:
+    container_name: libjaypea-db
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=webservice
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=abc123
+    ports:
+      - '5432:5432'
+    volumes: 
+      - db:/var/lib/postgresql/data
+    networks:
+      - libjaypea_network
+
+  libjaypea-compile:
+    container_name: libjaypea-compile
+    build:
+      context: ./
+      dockerfile: ./dockerfile.compile
+    volumes:
+      - ./:/opt/libjaypea
 
   libjaypea:
     depends_on:
-      - libjaypea-compile
+      libjaypea-compile:
+        condition: service_completed_successfully
+      libjaypea-db:
+        condition: service_started
     container_name: libjaypea
     build:
       context: ./
@@ -14,12 +44,5 @@ services:
     image: libjaypea:latest
     ports:
       - 80:80
-
-  libjaypea-compile:
-    container_name: libjaypea-compile
-    build:
-      context: ./
-      dockerfile: ./dockerfile.compile
-    volumes:
-      - ./:/opt/libjaypea
-    image: libjaypea-compile:latest
+    networks:
+      - libjaypea_network
